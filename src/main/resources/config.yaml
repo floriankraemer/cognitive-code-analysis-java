@@ -1,0 +1,17 @@
+metrics:
+  - lineCount:
+      enabled: true
+      threshold: 80
+      scale: 0.5
+  - ifNestingLevel:
+      enabled: true
+      threshold: 3
+      scale: 0.5
+  - ifCount:
+      enabled: true
+      threshold: 3
+      scale: 0.5
+  - switchCount:
+    enabled: true
+    threshold: 3
+    scale: 0.5
