@@ -11,6 +11,7 @@ public class CognitiveMetrics {
   private String file;
   private String className;
   private String methodName;
+  private String packageName;
 
   private int ifCount = 0;
   private double ifCountWeight = 0.0;
@@ -95,6 +96,10 @@ public class CognitiveMetrics {
   }
 
   // Getters
+  public String getPackageName() {
+    return packageName;
+  }
+
   public String getClassName() {
     return className;
   }
@@ -108,6 +113,10 @@ public class CognitiveMetrics {
   }
 
   // Setters
+  public void setPackageName(String packageName) {
+    this.packageName = packageName;
+  }
+
   public void setArgumentCount(int count) {
     argumentCount = count;
   }

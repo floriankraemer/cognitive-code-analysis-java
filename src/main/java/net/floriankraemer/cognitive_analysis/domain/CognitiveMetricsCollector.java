@@ -2,6 +2,7 @@ package net.floriankraemer.cognitive_analysis.domain;
 
 import com.github.javaparser.StaticJavaParser;
 import com.github.javaparser.ast.CompilationUnit;
+import com.github.javaparser.ast.PackageDeclaration;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.FieldDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
@@ -28,6 +29,7 @@ import org.springframework.stereotype.Component;
 public class CognitiveMetricsCollector {
 
   private Map<String, CognitiveMetrics> methodMetrics = new HashMap<>();
+  private String packageName; // New field to store package name
 
   /**
    * Analyze the given Java code to calculate cognitive metrics.
@@ -38,6 +40,12 @@ public class CognitiveMetricsCollector {
     methodMetrics = new HashMap<>();
 
     CompilationUnit compilationUnit = StaticJavaParser.parse(code);
+
+    // Extract package name from the compilation unit, if available
+    packageName = compilationUnit.getPackageDeclaration()
+        .map(PackageDeclaration::getNameAsString)
+        .orElse("");
+
     compilationUnit.accept(new ClassVisitor(), null);
   }
 
@@ -52,7 +60,7 @@ public class CognitiveMetricsCollector {
 
   private static class StatementVisitor extends VoidVisitorAdapter<Void> {
     private final CognitiveMetrics metrics;
-    private final int currentNestingLevel;  // To track the depth of nested structures
+    private final int currentNestingLevel;
 
     public StatementVisitor(CognitiveMetrics metrics, int nestingLevel) {
       this.metrics = metrics;
@@ -61,15 +69,12 @@ public class CognitiveMetricsCollector {
 
     @Override
     public void visit(IfStmt ifStmt, Void arg) {
-      // Increment the if statement count and track nesting level
       metrics.incrementIfCount();
       int nestedIfLevel = currentNestingLevel + 1;
       metrics.setIfNestingLevel(Math.max(metrics.getIfNestingLevel(), nestedIfLevel));
 
-      // Visit the 'then' statement only, without recursively re-visiting the entire structure
       ifStmt.getThenStmt().accept(new StatementVisitor(metrics, nestedIfLevel), null);
 
-      // If there is an 'else' statement, increment else count and visit it
       if (ifStmt.getElseStmt().isPresent()) {
         metrics.incrementElseCount();
         ifStmt.getElseStmt().get().accept(new StatementVisitor(metrics, nestedIfLevel), null);
@@ -80,11 +85,9 @@ public class CognitiveMetricsCollector {
     public void visit(TryStmt tryStmt, Void arg) {
       super.visit(tryStmt, arg);
 
-      // Track the nesting level for try-catch blocks
       int nestedTryLevel = currentNestingLevel + 1;
       metrics.setTryCatchNestingLevel(Math.max(metrics.getTryCatchNestingLevel(), nestedTryLevel));
 
-      // Visit the try block and catch clauses with increased nesting level
       tryStmt.getTryBlock().accept(new StatementVisitor(metrics, nestedTryLevel), null);
       tryStmt.getCatchClauses().forEach(
           catchClause -> catchClause.accept(new StatementVisitor(metrics, nestedTryLevel), null));
@@ -165,6 +168,9 @@ public class CognitiveMetricsCollector {
           className,
           methodDeclaration.getNameAsString()
       );
+
+      // Set the package name
+      metrics.setPackageName(packageName);
 
       methodMetrics.put(methodName, metrics);
 

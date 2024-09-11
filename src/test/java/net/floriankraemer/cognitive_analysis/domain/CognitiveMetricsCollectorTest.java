@@ -17,16 +17,18 @@ public class CognitiveMetricsCollectorTest {
   }
 
   @Test
-  public void testAnalyze_simpleMethod() {
+  public void testAnalyzeSimpleMethod() {
     String code = """
-            public class TestClass {
-                public void simpleMethod() {
-                    int a = 1;
-                    int b = 2;
-                    return;
-                }
+        package com.example;
+
+        public class TestClass {
+            public void simpleMethod() {
+                int a = 1;
+                int b = 2;
+                return;
             }
-            """;
+        }
+        """;
 
     collector.analyze(code);
     Map<String, CognitiveMetrics> metricsMap = collector.getMethodMetrics();
@@ -38,26 +40,29 @@ public class CognitiveMetricsCollectorTest {
     assertEquals(2, metrics.getVariableCount());
     assertEquals(0, metrics.getIfCount());
     assertEquals(0, metrics.getLoopCount());
+    assertEquals("com.example", metrics.getPackageName());  // Check package name
   }
 
   @Test
-  public void testAnalyze_methodWithControlStructures() {
+  public void testAnalyzeMethodWithControlStructures() {
     String code = """
-            public class TestClass {
-                public void complexMethod(int x) {
-                    if (x > 0) {
-                        for (int i = 0; i < x; i++) {
-                            System.out.println(i);
-                        }
-                    } else {
-                        while (x < 0) {
-                            x++;
-                        }
+        package com.example;
+
+        public class TestClass {
+            public void complexMethod(int x) {
+                if (x > 0) {
+                    for (int i = 0; i < x; i++) {
+                        System.out.println(i);
                     }
-                    return;
+                } else {
+                    while (x < 0) {
+                        x++;
+                    }
                 }
+                return;
             }
-            """;
+        }
+        """;
 
     collector.analyze(code);
     Map<String, CognitiveMetrics> metricsMap = collector.getMethodMetrics();
@@ -70,21 +75,24 @@ public class CognitiveMetricsCollectorTest {
     assertEquals(1, metrics.getElseCount());
     assertEquals(1, metrics.getIfNestingLevel());
     assertEquals(2, metrics.getLoopCount());
+    assertEquals("com.example", metrics.getPackageName());  // Check package name
   }
 
   @Test
-  public void testAnalyze_methodWithSwitch() {
+  public void testAnalyzeMethodWithSwitch() {
     String code = """
-            public class TestClass {
-                public void switchMethod(int day) {
-                    switch (day) {
-                        case 1: System.out.println("Monday"); break;
-                        case 2: System.out.println("Tuesday"); break;
-                        default: System.out.println("Other day"); break;
-                    }
+        package com.example;
+
+        public class TestClass {
+            public void switchMethod(int day) {
+                switch (day) {
+                    case 1: System.out.println("Monday"); break;
+                    case 2: System.out.println("Tuesday"); break;
+                    default: System.out.println("Other day"); break;
                 }
             }
-            """;
+        }
+        """;
 
     collector.analyze(code);
     Map<String, CognitiveMetrics> metricsMap = collector.getMethodMetrics();
@@ -95,21 +103,24 @@ public class CognitiveMetricsCollectorTest {
     assertEquals(1, metrics.getSwitchCount());
     assertEquals(0, metrics.getIfCount());
     assertEquals(0, metrics.getLoopCount());
+    assertEquals("com.example", metrics.getPackageName());  // Check package name
   }
 
   @Test
-  public void testAnalyze_methodWithTryCatch() {
+  public void testAnalyzeMethodWithTryCatch() {
     String code = """
-            public class TestClass {
-                public void tryMethod() {
-                    try {
-                        System.out.println("Try block");
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
+        package com.example;
+
+        public class TestClass {
+            public void tryMethod() {
+                try {
+                    System.out.println("Try block");
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
             }
-            """;
+        }
+        """;
 
     collector.analyze(code);
     Map<String, CognitiveMetrics> metricsMap = collector.getMethodMetrics();
@@ -120,16 +131,19 @@ public class CognitiveMetricsCollectorTest {
     assertEquals(1, metrics.getTryCatchNestingLevel());
     assertEquals(0, metrics.getIfCount());
     assertEquals(0, metrics.getLoopCount());
+    assertEquals("com.example", metrics.getPackageName());  // Check package name
   }
 
   @Test
-  public void testAnalyze_invalidJavaCode() {
+  public void testAnalyzeInvalidJavaCode() {
     String invalidCode = """
-            public class TestClass {
-                public void invalidMethod( {
-                    return;
-                }
-            """;
+        package com.example;
+
+        public class TestClass {
+            public void invalidMethod( {
+                return;
+            }
+        """;
 
     assertThrows(RuntimeException.class, () -> collector.analyze(invalidCode));
   }
