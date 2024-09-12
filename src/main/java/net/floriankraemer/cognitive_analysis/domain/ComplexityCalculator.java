@@ -49,7 +49,6 @@ public class ComplexityCalculator {
       }
     }
 
-    // Calculate the overall score
     calculateScore(metrics);
   }
 
@@ -57,56 +56,56 @@ public class ComplexityCalculator {
    * Calculate the total cognitive score by summing the weighted metrics.
    */
   private void calculateScore(final CognitiveMetrics metrics) {
-    final Double lineCountWeight = calculateLogWeight(
+    final double lineCountWeight = calculateLogWeight(
         metrics.getLineCount(),
         defaultConfig.get("lineCount").getThreshold(),
         defaultConfig.get("lineCount").getScale()
     );
     metrics.setLineCountWeight(lineCountWeight);
 
-    final Double argumentCountWeight = calculateLogWeight(
+    final double argumentCountWeight = calculateLogWeight(
         metrics.getArgumentCount(),
         defaultConfig.get("argumentCount").getThreshold(),
         defaultConfig.get("argumentCount").getScale()
     );
     metrics.setArgumentCountWeight(argumentCountWeight);
 
-    final Double returnCountWeight = calculateLogWeight(
+    final double returnCountWeight = calculateLogWeight(
         metrics.getReturnCount(),
         defaultConfig.get("returnCount").getThreshold(),
         defaultConfig.get("returnCount").getScale()
     );
     metrics.setReturnCountWeight(returnCountWeight);
 
-    final Double variableCountWeight = calculateLogWeight(
+    final double variableCountWeight = calculateLogWeight(
         metrics.getVariableCount(),
         defaultConfig.get("variableCount").getThreshold(),
         defaultConfig.get("variableCount").getScale()
     );
     metrics.setVariableCountWeight(variableCountWeight);
 
-    final Double propertyCallCountWeight = calculateLogWeight(
+    final double propertyCallCountWeight = calculateLogWeight(
         metrics.getFieldAccessCount(),
         defaultConfig.get("propertyCallCount").getThreshold(),
         defaultConfig.get("propertyCallCount").getScale()
     );
     metrics.setPropertyCallCountWeight(propertyCallCountWeight);
 
-    final Double ifCountWeight = calculateLogWeight(
+    final double ifCountWeight = calculateLogWeight(
         metrics.getIfCount(),
         defaultConfig.get("ifCount").getThreshold(),
         defaultConfig.get("ifCount").getScale()
     );
     metrics.setIfCountWeight(ifCountWeight);
 
-    final Double ifNestingWeight = calculateLogWeight(
+    final double ifNestingWeight = calculateLogWeight(
         metrics.getIfNestingLevel(),
         defaultConfig.get("ifNestingLevel").getThreshold(),
         defaultConfig.get("ifNestingLevel").getScale()
     );
     metrics.setIfNestingLevelWeight(ifNestingWeight);
 
-    final Double elseWeight = calculateLogWeight(
+    final double elseWeight = calculateLogWeight(
         metrics.getElseCount(),
         defaultConfig.get("elseCount").getThreshold(),
         defaultConfig.get("elseCount").getScale()
