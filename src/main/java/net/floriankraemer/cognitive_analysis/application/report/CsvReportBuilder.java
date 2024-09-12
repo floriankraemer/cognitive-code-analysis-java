@@ -1,6 +1,7 @@
 package net.floriankraemer.cognitive_analysis.application.report;
 
 import net.floriankraemer.cognitive_analysis.domain.CognitiveMetrics;
+import net.floriankraemer.cognitive_analysis.domain.MetricsCollection;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
 import org.springframework.stereotype.Component;
@@ -13,13 +14,13 @@ import java.util.Map;
 public class CsvReportBuilder extends AbstractReportBuilder {
 
   @Override
-  public void build(Map<String, Map<String, CognitiveMetrics>> allMetrics, String outputPath) {
-    String csvContent = buildCsvReport(allMetrics);
+  public void build(MetricsCollection metricsCollection, String outputPath) {
+    String csvContent = buildCsvReport(metricsCollection);
     writeToFile(csvContent, outputPath);
   }
 
   // Method to build the CSV content from the metrics
-  private String buildCsvReport(Map<String, Map<String, CognitiveMetrics>> allMetrics) {
+  private String buildCsvReport(MetricsCollection metricsCollection) {
     StringWriter out = new StringWriter();
 
     try (CSVPrinter printer = new CSVPrinter(out, CSVFormat.DEFAULT
@@ -27,7 +28,7 @@ public class CsvReportBuilder extends AbstractReportBuilder {
             "Switch Count", "Method Call Count", "Return Count", "Argument Count", "Try-Catch Nesting Level", "Complexity"))) {
 
       // Iterate through each file's metrics
-      allMetrics.forEach((fileName, methodMetrics) -> {
+      metricsCollection.forEach((fileName, methodMetrics) -> {
         methodMetrics.forEach((methodName, metrics) -> {
           try {
             printer.printRecord(

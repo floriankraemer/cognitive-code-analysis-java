@@ -46,9 +46,9 @@ public class CognitiveMetricsFacade {
    *
    * @param directoryPath The path to the directory containing the Java files.
    */
-  public HashMap<String, Map<String, CognitiveMetrics>> calculateCognitiveMetrics(String directoryPath) {
+  public MetricsCollection calculateCognitiveMetrics(String directoryPath) {
     List<File> files = fileFinder.findJavaFiles(directoryPath);
-    HashMap<String, Map<String, CognitiveMetrics>> allMetrics = new HashMap<>();
+    MetricsCollection metricsCollection = new MetricsCollection();
 
     files.forEach(file -> {
       String code;
@@ -61,9 +61,9 @@ public class CognitiveMetricsFacade {
       cognitiveMetricsCollector.analyze(code);
       Map<String, CognitiveMetrics> methodMetrics = cognitiveMetricsCollector.getMethodMetrics();
 
-      allMetrics.put(file.getAbsolutePath(), methodMetrics);
+      metricsCollection.put(file.getAbsolutePath(), methodMetrics);
     });
 
-    return allMetrics;
+    return metricsCollection;
   }
 }

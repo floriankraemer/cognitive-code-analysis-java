@@ -7,13 +7,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-import java.util.HashMap;
 import java.util.Map;
 
 import net.floriankraemer.cognitive_analysis.application.report.ReportBuilder;
 import net.floriankraemer.cognitive_analysis.domain.CognitiveMetrics;
 import net.floriankraemer.cognitive_analysis.domain.CognitiveMetricsFacade;
 
+import net.floriankraemer.cognitive_analysis.domain.MetricsCollection;
 import org.jline.utils.AttributedString;
 
 import org.springframework.shell.standard.ShellComponent;
@@ -54,25 +54,25 @@ public class ShellCommands {
       return;
     }
 
-    HashMap<String, Map<String, CognitiveMetrics>> allMetrics =
+    MetricsCollection metricsCollection =
         cognitiveMetricsFacade.calculateCognitiveMetrics(directoryPath);
 
     if (!reportType.isEmpty() && !output.isEmpty()) {
-      generateReport(output, reportType, allMetrics);
+      generateReport(output, reportType, metricsCollection);
       return;
     }
 
-    consoleOutput(allMetrics, directoryPath);
+    consoleOutput(metricsCollection, directoryPath);
   }
 
   private void generateReport(
       String output,
       String reportType,
-      HashMap<String, Map<String, CognitiveMetrics>> allMetrics
+      MetricsCollection metricsCollection
   ) throws IOException {
     try {
       ReportBuilder.ReportType type = ReportBuilder.ReportType.valueOf(reportType);
-      reportBuilder.build(type, output, allMetrics);
+      reportBuilder.build(type, output, metricsCollection);
 
       System.out.println("Report generated at: " + output);
     } catch (Exception e) {
@@ -81,10 +81,10 @@ public class ShellCommands {
   }
 
   private void consoleOutput(
-      HashMap<String, Map<String, CognitiveMetrics>> allMetrics,
+      MetricsCollection metricsCollection,
       String directoryPath
   ) throws IOException {
-    for (Map.Entry<String, Map<String, CognitiveMetrics>> entry : allMetrics.entrySet()) {
+    for (Map.Entry<String, Map<String, CognitiveMetrics>> entry : metricsCollection.entrySet()) {
       System.out.println("\nFile: " + entry.getKey() + "\n");
       final String table = resultTableBuilder.build(entry.getValue());
       System.out.println(AttributedString.fromAnsi(table));

@@ -2,7 +2,7 @@ package net.floriankraemer.cognitive_analysis.application.report;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import net.floriankraemer.cognitive_analysis.domain.CognitiveMetrics;
+import net.floriankraemer.cognitive_analysis.domain.MetricsCollection;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -14,16 +14,16 @@ import java.util.Map;
 public class JsonReportBuilder extends AbstractReportBuilder {
 
   @Override
-  public void build(Map<String, Map<String, CognitiveMetrics>> allMetrics, String outputPath) {
-    String jsonReport = buildJsonReport(allMetrics);
+  public void build(MetricsCollection metricsCollection, String outputPath) {
+    String jsonReport = buildJsonReport(metricsCollection);
     writeToFile(jsonReport, outputPath);
   }
 
-  private String buildJsonReport(Map<String, Map<String, CognitiveMetrics>> allMetrics) {
+  private String buildJsonReport(MetricsCollection metricsCollection) {
     List<Map<String, Object>> report = new ArrayList<>();
 
     // Convert metrics map to a report-friendly structure
-    allMetrics.forEach((fileName, metrics) -> {
+    metricsCollection.forEach((fileName, metrics) -> {
       Map<String, Object> fileMetrics = new HashMap<>();
       fileMetrics.put("file", fileName);
       fileMetrics.put("metrics", new ArrayList<>(metrics.values()));

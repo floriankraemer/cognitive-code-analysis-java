@@ -1,7 +1,6 @@
 package net.floriankraemer.cognitive_analysis.application.report;
 
-import java.util.Map;
-import net.floriankraemer.cognitive_analysis.domain.CognitiveMetrics;
+import net.floriankraemer.cognitive_analysis.domain.MetricsCollection;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -29,17 +28,16 @@ public class ReportBuilder {
     this.jsonReportBuilder = jsonReportBuilder;
   }
 
-  public void build(ReportType type, String filePath,
-                    Map<String, Map<String, CognitiveMetrics>> allMetrics) {
+  public void build(ReportType type, String filePath, MetricsCollection metricsCollection) {
     switch (type) {
       case HTML:
-        htmlReportBuilder.build(allMetrics, filePath);
+        htmlReportBuilder.build(metricsCollection, filePath);
         break;
       case CSV:
-        csvReportBuilder.build(allMetrics, filePath);
+        csvReportBuilder.build(metricsCollection, filePath);
         break;
       case JSON:
-        jsonReportBuilder.build(allMetrics, filePath);
+        jsonReportBuilder.build(metricsCollection, filePath);
         break;
       default:
         throw new IllegalArgumentException("Unsupported report type: " + type);

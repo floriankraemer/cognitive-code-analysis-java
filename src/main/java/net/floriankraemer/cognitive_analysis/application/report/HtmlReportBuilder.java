@@ -4,12 +4,13 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Map;
 import net.floriankraemer.cognitive_analysis.domain.CognitiveMetrics;
+import net.floriankraemer.cognitive_analysis.domain.MetricsCollection;
 import org.springframework.stereotype.Component;
 
 @Component
 public class HtmlReportBuilder extends AbstractReportBuilder {
 
-  public void build(Map<String, Map<String, CognitiveMetrics>> allMetrics, String outputPath) {
+  public void build(MetricsCollection metricsCollection, String outputPath) {
     StringBuilder html = new StringBuilder();
 
     // Add Bootstrap 5 CDN and HTML header
@@ -23,7 +24,7 @@ public class HtmlReportBuilder extends AbstractReportBuilder {
         .append("<h1 class=\"mt-5\">Cognitive Metrics Report</h1>\n");
 
     // Loop over all files and generate a table for each file
-    for (Map.Entry<String, Map<String, CognitiveMetrics>> fileEntry : allMetrics.entrySet()) {
+    for (Map.Entry<String, Map<String, CognitiveMetrics>> fileEntry : metricsCollection.entrySet()) {
       String fileName = fileEntry.getKey();
       Map<String, CognitiveMetrics> methodMetrics = fileEntry.getValue();
 
