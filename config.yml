@@ -1,0 +1,35 @@
+complexityThreshold: 0.5
+
+metricConfigs:
+  - name: lineCount
+    enabled: true
+    threshold: 60
+    scale: 2.0
+  - name: argumentCount
+    enabled: true
+    threshold: 4
+    scale: 1.0
+  - name: returnCount
+    enabled: true
+    threshold: 2
+    scale: 5.0
+  - name: ifCount
+    enabled: true
+    threshold: 2
+    scale: 1.0
+  - name: ifNestingLevel
+    enabled: true
+    threshold: 2
+    scale: 1.0
+  - name: elseNestingLevel
+    enabled: true
+    threshold: 2
+    scale: 1.0
+  - name: loopCount
+    enabled: true
+    threshold: 2
+    scale: 1.0
+  - name: returnCount
+    enabled: true
+    threshold: 2
+    scale: 5.0
