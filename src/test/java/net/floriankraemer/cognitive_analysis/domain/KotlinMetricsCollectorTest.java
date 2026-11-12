@@ -389,6 +389,16 @@ class KotlinMetricsCollectorTest {
   }
 
   @Test
+  void leavesAClassAloneWhenTheTagTrailsThePackageDirectiveOnItsLine() throws Exception {
+    assertThat(collector.collect("A.kt", """
+        package p // @cca-ignore trails the package directive
+        class A {
+            fun a() {}
+        }
+        """)).containsOnlyKeys("p.A::a");
+  }
+
+  @Test
   void countsTheReceiverOfACallableReferenceAsAnOperand() throws Exception {
     final HalsteadMetrics halstead = collector.collect("A.kt", """
         class A {
