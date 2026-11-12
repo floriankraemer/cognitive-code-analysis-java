@@ -45,6 +45,11 @@ public class JsonReportBuilder extends AbstractReportBuilder {
       method.put(name.key() + "Weight", metrics.weight(name));
     }
     method.put("score", metrics.getCognitiveComplexity());
+    method.put("cyclomaticComplexity", metrics.getCyclomatic().complexity());
+    method.put("cyclomaticRiskLevel", metrics.getCyclomatic().riskLevel());
+    method.put("halsteadVolume", metrics.getHalstead().volume());
+    method.put("halsteadDifficulty", metrics.getHalstead().difficulty());
+    method.put("halsteadEffort", metrics.getHalstead().effort());
     return method;
   }
 

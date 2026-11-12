@@ -1,4 +1,4 @@
-package net.floriankraemer.cognitive_analysis.cache;
+package net.floriankraemer.cognitive_analysis.domain;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.MapperFeature;
@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -17,15 +18,16 @@ import java.util.HexFormat;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Properties;
 import net.floriankraemer.cognitive_analysis.config.CognitiveConfig;
-import net.floriankraemer.cognitive_analysis.domain.CognitiveMetrics;
 
 /**
  * Stores the collected metrics of each source file, so an unchanged file is not parsed again.
  *
- * <p>An entry is valid for one file state and one configuration: its key hashes the absolute path, the
- * modification time, the size and the canonical form of the configuration. Entries live at
- * {@code <directory>/<key[0:2]>/<key>.json}. A disabled cache never touches the file system.
+ * <p>An entry is valid for one file state, one configuration and one build of the tool: its key hashes the
+ * absolute path, the modification time, the size, the canonical form of the configuration and the build
+ * fingerprint. Entries live at {@code <directory>/<key[0:2]>/<key>.json}. A disabled cache never touches the
+ * file system.
  */
 public final class MetricsCache {
 
@@ -34,6 +36,11 @@ public final class MetricsCache {
 
   /** Keeps the insertion order of the methods, so a cache hit prints the same as a fresh analysis. */
   private static final ObjectMapper PAYLOAD_MAPPER = JsonMapper.builder().build();
+
+  private static final String BUILD_RESOURCE = "/jcca-build.properties";
+
+  /** The version and build time of this build, so entries of another build are not reused. */
+  private static final String BUILD_FINGERPRINT = buildFingerprint();
 
   /** The canonical form of the configuration: properties and map entries in a fixed order. */
   private static final ObjectMapper CANONICAL_MAPPER = JsonMapper.builder()
@@ -73,7 +80,8 @@ public final class MetricsCache {
       final String state = file.toAbsolutePath().normalize() + "|"
           + Files.getLastModifiedTime(file).toMillis() + "|"
           + Files.size(file) + "|"
-          + configHash;
+          + configHash + "|"
+          + BUILD_FINGERPRINT;
       return Optional.of(sha256Hex(state));
     } catch (IOException e) {
       return Optional.empty();
@@ -134,6 +142,20 @@ public final class MetricsCache {
     } catch (JsonProcessingException e) {
       throw new IllegalStateException("The configuration cannot be serialized", e);
     }
+  }
+
+  /** Read once, from the resource that Maven filters with the project version and the build time. */
+  private static String buildFingerprint() {
+    final Properties build = new Properties();
+    try (InputStream in = MetricsCache.class.getResourceAsStream(BUILD_RESOURCE)) {
+      if (in == null) {
+        throw new IllegalStateException("Missing resource " + BUILD_RESOURCE);
+      }
+      build.load(in);
+    } catch (IOException e) {
+      throw new IllegalStateException("Cannot read resource " + BUILD_RESOURCE, e);
+    }
+    return build.getProperty("version") + "|" + build.getProperty("build.timestamp");
   }
 
   private static String sha256Hex(final String text) {

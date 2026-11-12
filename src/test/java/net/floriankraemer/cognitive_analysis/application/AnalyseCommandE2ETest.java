@@ -363,7 +363,27 @@ class AnalyseCommandE2ETest {
     assertThat(Files.readString(report))
         .startsWith("[")
         .contains("\"className\" : \"test.testcode.ClassToAnalyze\"")
-        .contains("\"methodName\" : \"simpleMethod\"");
+        .contains("\"methodName\" : \"simpleMethod\"")
+        .contains("\"cyclomaticComplexity\" : ", "\"cyclomaticRiskLevel\" : \"", "\"halsteadVolume\" : ",
+            "\"halsteadDifficulty\" : ", "\"halsteadEffort\" : ");
+  }
+
+  @Test
+  void writesTheCyclomaticAndHalsteadValuesOfAMethodToTheJsonReport() throws Exception {
+    Path report = tempDir.resolve("report.json");
+
+    int exitCode = run("analyse", "src/test/resources/fixtures/halstead/Operations.java", "-r", "json", "-f", report.toString());
+
+    assertThat(exitCode).isZero();
+    // add(int a, int b) { return a + b; }: n1=1, n2=2, N1=1, N2=2, so volume 3 * log2(3), difficulty 0.5.
+    var add = new com.fasterxml.jackson.databind.ObjectMapper().readTree(report.toFile()).get(0).get("metrics").get(1);
+    double volume = 3 * Math.log(3) / Math.log(2);
+    assertThat(add.get("methodName").asText()).isEqualTo("add");
+    assertThat(add.get("cyclomaticComplexity").asInt()).isEqualTo(1);
+    assertThat(add.get("cyclomaticRiskLevel").asText()).isEqualTo("low");
+    assertThat(add.get("halsteadVolume").asDouble()).isCloseTo(volume, org.assertj.core.api.Assertions.within(1e-9));
+    assertThat(add.get("halsteadDifficulty").asDouble()).isEqualTo(0.5);
+    assertThat(add.get("halsteadEffort").asDouble()).isCloseTo(volume * 0.5, org.assertj.core.api.Assertions.within(1e-9));
   }
 
   @Test

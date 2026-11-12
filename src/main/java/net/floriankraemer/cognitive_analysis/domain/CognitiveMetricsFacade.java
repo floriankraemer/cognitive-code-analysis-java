@@ -9,7 +9,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import net.floriankraemer.cognitive_analysis.CognitiveAnalysisException;
-import net.floriankraemer.cognitive_analysis.cache.MetricsCache;
 import net.floriankraemer.cognitive_analysis.config.CognitiveConfig;
 
 /** Finds the files, collects and scores their methods, and applies the exclusions of the config. */

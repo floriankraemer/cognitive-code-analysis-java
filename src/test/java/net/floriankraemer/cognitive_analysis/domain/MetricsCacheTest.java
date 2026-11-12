@@ -1,4 +1,4 @@
-package net.floriankraemer.cognitive_analysis.cache;
+package net.floriankraemer.cognitive_analysis.domain;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -14,7 +14,6 @@ import java.util.stream.Stream;
 import net.floriankraemer.cognitive_analysis.config.CognitiveConfig;
 import net.floriankraemer.cognitive_analysis.config.MetricName;
 import net.floriankraemer.cognitive_analysis.config.TestConfigs;
-import net.floriankraemer.cognitive_analysis.domain.CognitiveMetrics;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 

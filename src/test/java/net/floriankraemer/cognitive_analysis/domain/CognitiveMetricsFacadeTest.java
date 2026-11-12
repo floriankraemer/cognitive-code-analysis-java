@@ -11,6 +11,8 @@ import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
 import java.util.List;
 import java.util.stream.Stream;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import net.floriankraemer.cognitive_analysis.CognitiveAnalysisException;
 import net.floriankraemer.cognitive_analysis.config.CognitiveConfig;
 import net.floriankraemer.cognitive_analysis.config.MetricName;
@@ -158,6 +160,22 @@ class CognitiveMetricsFacadeTest {
     MetricsCollection retimed = facade(config).calculateCognitiveMetrics(List.of(srcDir()));
 
     assertThat(retimed.get(source.toString())).containsOnlyKeys("A::a");
+  }
+
+  @Test
+  void aCacheHitRestoresEveryMetricOfTheFreshAnalysis() throws Exception {
+    write("src/A.java", "class A { int a(int x) { if (x > 0 && x < 9) { return 1; } else { return x; } } }");
+    CognitiveConfig config = cachedIn(tempDir.resolve("cache"));
+    MetricsCollection fresh = facade(config).calculateCognitiveMetrics(List.of(srcDir()));
+
+    MetricsCollection cached = facade(config).calculateCognitiveMetrics(List.of(srcDir()));
+
+    CognitiveMetrics method = cached.values().iterator().next().get("A::a");
+    assertThat(method.getCyclomatic().complexity()).isGreaterThan(1);
+    assertThat(method.getHalstead().length()).isPositive();
+    assertThat(entries()).hasSize(1);
+    ObjectMapper json = JsonMapper.builder().build();
+    assertThat(json.writeValueAsString(cached)).isEqualTo(json.writeValueAsString(fresh));
   }
 
   @Test

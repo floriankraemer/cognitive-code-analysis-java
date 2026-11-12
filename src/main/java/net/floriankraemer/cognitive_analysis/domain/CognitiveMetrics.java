@@ -25,6 +25,8 @@ public class CognitiveMetrics {
 
   @JsonProperty("cognitiveComplexity")
   private double cognitiveComplexity;
+  private CyclomaticComplexity cyclomatic = new CyclomaticVisitor().result();
+  private HalsteadMetrics halstead = new HalsteadMetrics(0, 0, 0, 0);
 
   /**
    * @param className the fully qualified class name, nested classes separated by dots
@@ -104,5 +106,23 @@ public class CognitiveMetrics {
 
   public void setCognitiveComplexity(final double cognitiveComplexity) {
     this.cognitiveComplexity = cognitiveComplexity;
+  }
+
+  /** The cyclomatic complexity, 1 until set. */
+  public CyclomaticComplexity getCyclomatic() {
+    return cyclomatic;
+  }
+
+  public void setCyclomatic(final CyclomaticComplexity cyclomatic) {
+    this.cyclomatic = cyclomatic;
+  }
+
+  /** The Halstead metrics, all 0 until set. */
+  public HalsteadMetrics getHalstead() {
+    return halstead;
+  }
+
+  public void setHalstead(final HalsteadMetrics halstead) {
+    this.halstead = halstead;
   }
 }
