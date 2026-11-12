@@ -190,8 +190,16 @@ public class CognitiveMetricsCollector {
 
     final MethodBodyVisitor visitor = new MethodBodyVisitor(
         unit.parameters().stream().map(Parameter::getNameAsString).collect(toSet()));
-    unit.body().ifPresent(body -> body.accept(visitor, null));
+    final CyclomaticVisitor cyclomatic = new CyclomaticVisitor();
+    final HalsteadVisitor halstead = new HalsteadVisitor();
+    unit.body().ifPresent(body -> {
+      body.accept(visitor, null);
+      body.accept(cyclomatic, null);
+      body.accept(halstead, null);
+    });
     visitor.writeTo(metrics);
+    metrics.setCyclomatic(cyclomatic.result());
+    metrics.setHalstead(halstead.result());
     return metrics;
   }
 }
