@@ -21,7 +21,8 @@ public class CognitiveMetricsFacade {
   private final CognitiveConfig config;
   private final PrintWriter warnings;
   private final FileFinder fileFinder = new FileFinder();
-  private final CognitiveMetricsCollector collector = new CognitiveMetricsCollector();
+  private final CognitiveMetricsCollector javaCollector = new CognitiveMetricsCollector();
+  private final KotlinMetricsCollector kotlinCollector = new KotlinMetricsCollector();
   private final ComplexityCalculator calculator;
   private final MetricsCache cache;
   private final AnalysisStatistics statistics = new AnalysisStatistics();
@@ -39,7 +40,7 @@ public class CognitiveMetricsFacade {
   }
 
   /**
-   * Analyses the Java files found in the given files and directories.
+   * Analyses the Java and Kotlin files found in the given files and directories.
    *
    * <p>Each file is analysed once, however often the paths name it. A method key
    * ({@code pkg.Class::method}) that occurs in several files, for example in the default package or in
@@ -54,9 +55,9 @@ public class CognitiveMetricsFacade {
     return analyse(findFiles(paths), file -> { });
   }
 
-  /** The Java files of the given paths, each once and sorted, without the excluded ones. */
+  /** The Java and Kotlin files of the given paths, each once and sorted, without the excluded ones. */
   public List<Path> findFiles(final List<String> paths) throws CognitiveAnalysisException {
-    final List<Path> files = fileFinder.findJavaFiles(paths, config.excludeFilePatterns());
+    final List<Path> files = fileFinder.findSourceFiles(paths, config.excludeFilePatterns());
     statistics.filesFound(files.size());
     return files;
   }
@@ -103,7 +104,7 @@ public class CognitiveMetricsFacade {
   }
 
   /**
-   * The metrics of a file as the collector reports them, from the cache when the content is unchanged.
+   * The metrics of a file as the collector of its language reports them, from the cache when the content is unchanged.
    * The key and the parsed text come from the same bytes, so a change made while the file is read cannot
    * be stored under the key of an earlier state.
    */
@@ -119,7 +120,10 @@ public class CognitiveMetricsFacade {
     if (key.isPresent()) {
       statistics.cacheMiss();
     }
-    final Map<String, CognitiveMetrics> collected = collector.collect(decode(file, content));
+    final String code = decode(file, content);
+    final Map<String, CognitiveMetrics> collected = FileFinder.isKotlinFile(file)
+        ? kotlinCollector.collect(file.getFileName().toString(), code)
+        : javaCollector.collect(code);
     key.ifPresent(cacheKey -> cache.store(cacheKey, file, collected));
     return collected;
   }

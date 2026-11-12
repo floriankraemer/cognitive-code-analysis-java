@@ -28,7 +28,8 @@ import net.floriankraemer.cognitive_analysis.config.CognitiveConfig;
  *
  * <p>An entry is valid for one file content, one configuration and one build of the tool: its key hashes the
  * absolute path, the SHA-256 of the content, the canonical form of the configuration and the build
- * fingerprint. Entries live at {@code <directory>/<key[0:2]>/<key>.json}. A disabled cache never touches the
+ * fingerprint. The path ends with the extension that selects the parser (Java or Kotlin), so the language
+ * is part of the key, and both languages store the same payload. Entries live at {@code <directory>/<key[0:2]>/<key>.json}. A disabled cache never touches the
  * file system.
  */
 public final class MetricsCache {

@@ -1,0 +1,44 @@
+Config: src/test/resources/fixtures/no-cache.yaml
+Cache: disabled
+
+Found 2 files. Starting analysis.
+
+Class: shop.Invoice
+File: src/test/resources/fixtures/kotlin/mixed/Invoice.java
+┌─────────────┬────────┬───────────┬─────────┬───────────┬──────────┬───────┬────────────┬───────┬────────────┐
+│ Method Name │ Lines  │ Arguments │ Returns │ Variables │ Property │  If   │ If Nesting │ Else  │ Cognitive  │
+│             │        │           │         │           │ Accesses │       │   Level    │       │ Complexity │
+├─────────────┼────────┼───────────┼─────────┼───────────┼──────────┼───────┼────────────┼───────┼────────────┤
+│ Invoice     │ 3 (0)  │   1 (0)   │  0 (0)  │   1 (0)   │  1 (0)   │ 0 (0) │   0 (0)    │ 0 (0) │   0.000    │
+│ total       │ 11 (0) │   1 (0)   │  1 (0)  │   3 (0)   │  1 (0)   │ 1 (0) │   1 (0)    │ 1 (0) │   0.000    │
+└─────────────┴────────┴───────────┴─────────┴───────────┴──────────┴───────┴────────────┴───────┴────────────┘
+
+Class: shop.OrderService
+File: src/test/resources/fixtures/kotlin/mixed/OrderService.kt
+┌─────────────┬────────┬───────────┬─────────┬───────────┬──────────┬───────┬────────────┬───────┬────────────┐
+│ Method Name │ Lines  │ Arguments │ Returns │ Variables │ Property │  If   │ If Nesting │ Else  │ Cognitive  │
+│             │        │           │         │           │ Accesses │       │   Level    │       │ Complexity │
+├─────────────┼────────┼───────────┼─────────┼───────────┼──────────┼───────┼────────────┼───────┼────────────┤
+│ status      │ 5 (0)  │   2 (0)   │  0 (0)  │   0 (0)   │  0 (0)   │ 1 (0) │   1 (0)    │ 1 (0) │   0.000    │
+│ totals      │ 10 (0) │   1 (0)   │  1 (0)  │   4 (0)   │  1 (0)   │ 1 (0) │   1 (0)    │ 0 (0) │   0.000    │
+└─────────────┴────────┴───────────┴─────────┴───────────┴──────────┴───────┴────────────┴───────┴────────────┘
+
+Class: shop.OrderService.Companion
+File: src/test/resources/fixtures/kotlin/mixed/OrderService.kt
+┌─────────────┬───────┬───────────┬─────────┬───────────┬──────────┬───────┬────────────┬───────┬────────────┐
+│ Method Name │ Lines │ Arguments │ Returns │ Variables │ Property │  If   │ If Nesting │ Else  │ Cognitive  │
+│             │       │           │         │           │ Accesses │       │   Level    │       │ Complexity │
+├─────────────┼───────┼───────────┼─────────┼───────────┼──────────┼───────┼────────────┼───────┼────────────┤
+│ create      │ 1 (0) │   0 (0)   │  0 (0)  │   0 (0)   │  0 (0)   │ 0 (0) │   0 (0)    │ 0 (0) │   0.000    │
+└─────────────┴───────┴───────────┴─────────┴───────────┴──────────┴───────┴────────────┴───────┴────────────┘
+
+Class: shop.OrderServiceKt
+File: src/test/resources/fixtures/kotlin/mixed/OrderService.kt
+┌─────────────┬───────┬───────────┬─────────┬───────────┬──────────┬───────┬────────────┬───────┬────────────┐
+│ Method Name │ Lines │ Arguments │ Returns │ Variables │ Property │  If   │ If Nesting │ Else  │ Cognitive  │
+│             │       │           │         │           │ Accesses │       │   Level    │       │ Complexity │
+├─────────────┼───────┼───────────┼─────────┼───────────┼──────────┼───────┼────────────┼───────┼────────────┤
+│ firstStatus │ 1 (0) │   1 (0)   │  0 (0)  │   0 (0)   │  0 (0)   │ 0 (0) │   0 (0)    │ 0 (0) │   0.000    │
+└─────────────┴───────┴───────────┴─────────┴───────────┴──────────┴───────┴────────────┴───────┴────────────┘
+
+Cognitive metrics calculated for src/test/resources/fixtures/kotlin/mixed
