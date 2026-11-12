@@ -11,12 +11,14 @@ import java.nio.file.Path;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import net.floriankraemer.cognitive_analysis.CognitiveAnalysisException;
 import net.floriankraemer.cognitive_analysis.churn.TreemapMath.Item;
+import net.floriankraemer.cognitive_analysis.coverage.CoverageData;
 import net.floriankraemer.cognitive_analysis.churn.TreemapMath.Rect;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
@@ -89,14 +91,29 @@ public final class ChurnReportBuilder {
     }
   }
 
+  private static boolean hasCoverage(final List<ChurnMetrics> metrics) {
+    return metrics.stream().anyMatch(metric -> metric.coverage() != null);
+  }
+
   private static String csv(final List<ChurnMetrics> metrics) throws CognitiveAnalysisException {
+    final boolean withCoverage = hasCoverage(metrics);
     final StringWriter out = new StringWriter();
     final CSVFormat format = CSVFormat.DEFAULT.builder().setRecordSeparator("\n").get();
     try (CSVPrinter printer = new CSVPrinter(out, format)) {
-      printer.printRecord("Class", "File", "Score", "Churn", "Times Changed");
+      final List<String> header = new ArrayList<>(List.of("Class", "File", "Score", "Churn", "Times Changed"));
+      if (withCoverage) {
+        header.addAll(List.of("Risk Churn", "Coverage", "Risk Level"));
+      }
+      printer.printRecord(header);
       for (final ChurnMetrics metric : metrics) {
-        printer.printRecord(
-            metric.className(), metric.file(), plain(metric.score()), plain(metric.churn()), metric.timesChanged());
+        final List<Object> record = new ArrayList<>(List.of(
+            metric.className(), metric.file(), plain(metric.score()), plain(metric.churn()), metric.timesChanged()));
+        if (withCoverage) {
+          record.addAll(List.of(
+              optional(metric.riskChurn()), optional(metric.coverage()),
+              metric.riskLevel() == null ? "" : metric.riskLevel().name()));
+        }
+        printer.printRecord(record);
       }
     } catch (IOException e) {
       throw new CognitiveAnalysisException("Failed to build the CSV report", e);
@@ -115,7 +132,12 @@ public final class ChurnReportBuilder {
         .append("<h1 class=\"mb-4\">Churn Metrics Report - ").append(timestamp()).append("</h1>\n")
         .append("<p>This report contains the churn metrics for ").append(metrics.size()).append(" classes.</p>\n")
         .append("<table class=\"table table-bordered\">\n<thead>\n<tr>\n");
-    for (final String column : List.of("Class", "Score", "Times Changed", "Churn")) {
+    final boolean withCoverage = hasCoverage(metrics);
+    final List<String> columns = new ArrayList<>(List.of("Class", "Score", "Times Changed", "Churn"));
+    if (withCoverage) {
+      columns.addAll(List.of("Risk Churn", "Coverage", "Risk Level"));
+    }
+    for (final String column : columns) {
       html.append("<th class=\"table-secondary\">").append(column).append("</th>\n");
     }
     html.append("</tr>\n</thead>\n<tbody>\n");
@@ -124,29 +146,44 @@ public final class ChurnReportBuilder {
           .append("<td>").append(escape(metric.className())).append("</td>\n")
           .append("<td>").append(plain(metric.score())).append("</td>\n")
           .append("<td>").append(metric.timesChanged()).append("</td>\n")
-          .append("<td>").append(fixed(metric.churn())).append("</td>\n")
-          .append("</tr>\n");
+          .append("<td>").append(fixed(metric.churn())).append("</td>\n");
+      if (withCoverage) {
+        html.append("<td>").append(metric.riskChurn() == null ? "N/A" : fixed(metric.riskChurn())).append("</td>\n")
+            .append("<td>").append(CoverageData.percent(metric.coverage())).append("</td>\n")
+            .append("<td>").append(metric.riskLevel() == null ? "N/A" : metric.riskLevel()).append("</td>\n");
+      }
+      html.append("</tr>\n");
     }
     html.append("</tbody>\n</table>\n</div>\n</body>\n</html>\n");
     return html.toString();
   }
 
   private String markdown(final List<ChurnMetrics> metrics) {
+    final boolean withCoverage = hasCoverage(metrics);
     final StringBuilder markdown = new StringBuilder()
         .append("# Churn Metrics Report\n\n")
         .append("Generated: ").append(timestamp()).append("\n\n")
         .append("Total Classes: ").append(metrics.size()).append("\n\n")
-        .append("| Class | Score | Churn | Times Changed |\n")
-        .append("| --- | --- | --- | --- |\n");
+        .append(withCoverage
+            ? "| Class | Score | Churn | Risk Churn | Times Changed | Coverage | Risk Level |\n"
+                + "| --- | --- | --- | --- | --- | --- | --- |\n"
+            : "| Class | Score | Churn | Times Changed |\n| --- | --- | --- | --- |\n");
     for (final ChurnMetrics metric : metrics) {
       if (metric.score() == 0 || metric.churn() == 0) {
         continue;
       }
       markdown.append("| ").append(metric.className().replace("|", "\\|"))
           .append(" | ").append(plain(metric.score()))
-          .append(" | ").append(plain(metric.churn()))
-          .append(" | ").append(metric.timesChanged())
-          .append(" |\n");
+          .append(" | ").append(plain(metric.churn()));
+      if (withCoverage) {
+        markdown.append(" | ").append(metric.riskChurn() == null ? "N/A" : plain(metric.riskChurn()));
+      }
+      markdown.append(" | ").append(metric.timesChanged());
+      if (withCoverage) {
+        markdown.append(" | ").append(CoverageData.percent(metric.coverage()))
+            .append(" | ").append(metric.riskLevel() == null ? "N/A" : metric.riskLevel());
+      }
+      markdown.append(" |\n");
     }
     return markdown.toString();
   }
@@ -200,6 +237,10 @@ public final class ChurnReportBuilder {
   /** The shortest exact decimal form: {@code 8.06}, {@code 5} instead of {@code 5.0}. */
   private static String plain(final double value) {
     return BigDecimal.valueOf(value).stripTrailingZeros().toPlainString();
+  }
+
+  private static String optional(final Double value) {
+    return value == null ? "" : plain(value);
   }
 
   static String fixed(final double value) {

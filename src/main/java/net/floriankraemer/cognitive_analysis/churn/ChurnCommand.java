@@ -7,17 +7,22 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.Callable;
 import net.floriankraemer.cognitive_analysis.CognitiveAnalysisException;
 import net.floriankraemer.cognitive_analysis.application.TextTable;
 import net.floriankraemer.cognitive_analysis.config.CognitiveConfig;
 import net.floriankraemer.cognitive_analysis.config.ConfigLoader;
+import net.floriankraemer.cognitive_analysis.coverage.CoverageData;
+import net.floriankraemer.cognitive_analysis.coverage.CoverageOptions;
 import net.floriankraemer.cognitive_analysis.domain.CognitiveMetricsFacade;
 import net.floriankraemer.cognitive_analysis.domain.MetricsCollection;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.ITypeConverter;
+import picocli.CommandLine.Mixin;
 import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
@@ -75,6 +80,9 @@ public class ChurnCommand implements Callable<Integer> {
   @Option(names = {"-f", "--report-file"}, description = "File the report is written to. Requires --report-type.")
   String reportFile;
 
+  @Mixin
+  CoverageOptions coverage = new CoverageOptions();
+
   /** Replaceable by tests, to get reproducible timestamps and to simulate a missing git. */
   Clock clock = Clock.systemDefaultZone();
   String gitExecutable = SUPPORTED_VCS;
@@ -100,18 +108,19 @@ public class ChurnCommand implements Callable<Integer> {
     }
 
     try {
+      final Optional<CoverageData> coverageData = coverage.load();
       final CognitiveConfig config =
           new ConfigLoader(Path.of("")).load(configFile == null ? null : Path.of(configFile));
       final MetricsCollection metrics = new CognitiveMetricsFacade(config, err, Path.of("")).calculateCognitiveMetrics(paths());
       final List<ChurnMetrics> churn =
-          ChurnCalculator.calculate(metrics, new GitChangeCounter(gitExecutable, sinceDate, GIT_TIMEOUT));
+          ChurnCalculator.calculate(metrics, new GitChangeCounter(gitExecutable, sinceDate, GIT_TIMEOUT), coverageData);
 
       final PrintWriter out = spec.commandLine().getOut();
       if (reportType != null) {
         new ChurnReportBuilder(clock).build(reportType, reportFile, churn);
         out.println("Report generated at: " + reportFile);
       } else {
-        out.println(renderTable(churn));
+        out.println(renderTable(churn, coverageData.isPresent()));
       }
       return 0;
     } catch (CognitiveAnalysisException | RuntimeException e) {
@@ -130,15 +139,30 @@ public class ChurnCommand implements Callable<Integer> {
   }
 
   /** The classes that changed and have a score; classes without either have no churn worth showing. */
-  private static String renderTable(final List<ChurnMetrics> churn) {
+  private static String renderTable(final List<ChurnMetrics> churn, final boolean withCoverage) {
     final List<List<String>> rows = churn.stream()
         .filter(metric -> metric.score() != 0 && metric.churn() != 0)
-        .map(metric -> List.of(
-            metric.className(),
-            BigDecimal.valueOf(metric.score()).stripTrailingZeros().toPlainString(),
-            ChurnReportBuilder.fixed(metric.churn()),
-            String.valueOf(metric.timesChanged())))
+        .map(metric -> row(metric, withCoverage))
         .toList();
-    return new TextTable(1).render(List.of("Class", "Score", "Churn", "Times Changed"), rows);
+    final List<String> header = withCoverage
+        ? List.of("Class", "Score", "Churn", "Risk Churn", "Times Changed", "Coverage", "Risk Level")
+        : List.of("Class", "Score", "Churn", "Times Changed");
+    return new TextTable(1).render(header, rows);
+  }
+
+  private static List<String> row(final ChurnMetrics metric, final boolean withCoverage) {
+    final List<String> row = new ArrayList<>(List.of(
+        metric.className(),
+        BigDecimal.valueOf(metric.score()).stripTrailingZeros().toPlainString(),
+        ChurnReportBuilder.fixed(metric.churn())));
+    if (withCoverage) {
+      row.add(ChurnReportBuilder.fixed(metric.riskChurn()));
+    }
+    row.add(String.valueOf(metric.timesChanged()));
+    if (withCoverage) {
+      row.add(CoverageData.percent(metric.coverage()));
+      row.add(metric.riskLevel().name());
+    }
+    return row;
   }
 }

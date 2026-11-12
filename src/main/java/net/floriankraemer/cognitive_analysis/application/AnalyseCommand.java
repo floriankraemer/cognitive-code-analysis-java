@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.function.Supplier;
 import java.util.function.LongSupplier;
@@ -17,6 +18,8 @@ import net.floriankraemer.cognitive_analysis.application.report.ReportType;
 import net.floriankraemer.cognitive_analysis.application.report.ReportWriter;
 import net.floriankraemer.cognitive_analysis.config.CognitiveConfig;
 import net.floriankraemer.cognitive_analysis.config.ConfigLoader;
+import net.floriankraemer.cognitive_analysis.coverage.CoverageData;
+import net.floriankraemer.cognitive_analysis.coverage.CoverageOptions;
 import net.floriankraemer.cognitive_analysis.domain.Baseline;
 import net.floriankraemer.cognitive_analysis.domain.BaselineReader;
 import net.floriankraemer.cognitive_analysis.domain.CognitiveMetricsFacade;
@@ -25,6 +28,7 @@ import net.floriankraemer.cognitive_analysis.domain.MetricsSorter;
 import net.floriankraemer.cognitive_analysis.domain.ScoredMethod;
 import picocli.CommandLine.Help.Ansi;
 import picocli.CommandLine.Command;
+import picocli.CommandLine.Mixin;
 import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
@@ -116,6 +120,9 @@ public class AnalyseCommand implements Callable<Integer> {
   )
   boolean generateBaseline;
 
+  @Mixin
+  CoverageOptions coverage = new CoverageOptions();
+
   @Option(names = "--debug", description = "Print the time of each stage and statistics after the run.")
   boolean debug;
 
@@ -148,6 +155,7 @@ public class AnalyseCommand implements Callable<Integer> {
       final ConsoleRenderer console = new ConsoleRenderer(config, ansi);
       final List<String> warnings = new ArrayList<>();
       final Baseline baseline = loadBaseline(config, warnings);
+      final Optional<CoverageData> coverageData = coverage.load();
       summary.endStage("config");
 
       final CognitiveMetricsFacade facade = new CognitiveMetricsFacade(config, err, workingDirectory);
@@ -160,6 +168,8 @@ public class AnalyseCommand implements Callable<Integer> {
       final MetricsCollection analysed = facade.analyse(files, file -> progress.advance());
       progress.clear();
       summary.endStage("analysis");
+      // Coverage is applied to the analysed metrics, never to what the cache stores.
+      coverageData.ifPresent(data -> data.applyTo(analysed.methods()));
 
       final List<ScoredMethod> methods = sorter.sort(analysed.methods());
       if (baseline != null) {

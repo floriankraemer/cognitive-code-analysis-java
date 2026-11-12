@@ -1,0 +1,48 @@
+package net.floriankraemer.cognitive_analysis.coverage;
+
+import java.nio.file.Path;
+import java.util.EnumMap;
+import java.util.Map;
+import java.util.Optional;
+import net.floriankraemer.cognitive_analysis.CognitiveAnalysisException;
+import picocli.CommandLine.Option;
+
+/** The {@code --coverage-*} options shared by the commands that can use a coverage report. */
+public final class CoverageOptions {
+
+  @Option(names = "--coverage-jacoco", paramLabel = "<file>", description = "JaCoCo XML coverage report.")
+  String jacoco;
+
+  @Option(names = "--coverage-cobertura", paramLabel = "<file>", description = "Cobertura XML coverage report.")
+  String cobertura;
+
+  @Option(names = "--coverage-clover", paramLabel = "<file>", description = "Clover XML coverage report.")
+  String clover;
+
+  /**
+   * Reads the coverage report that was given.
+   *
+   * @return empty when no coverage option was given
+   * @throws CognitiveAnalysisException when several formats are given, or the file is missing or invalid
+   */
+  public Optional<CoverageData> load() throws CognitiveAnalysisException {
+    final Map<CoverageFormat, String> given = new EnumMap<>(CoverageFormat.class);
+    if (jacoco != null) {
+      given.put(CoverageFormat.JACOCO, jacoco);
+    }
+    if (cobertura != null) {
+      given.put(CoverageFormat.COBERTURA, cobertura);
+    }
+    if (clover != null) {
+      given.put(CoverageFormat.CLOVER, clover);
+    }
+    if (given.size() > 1) {
+      throw new CognitiveAnalysisException("Only one coverage format can be specified at a time.");
+    }
+    if (given.isEmpty()) {
+      return Optional.empty();
+    }
+    final Map.Entry<CoverageFormat, String> only = given.entrySet().iterator().next();
+    return Optional.of(only.getKey().read(Path.of(only.getValue())));
+  }
+}

@@ -29,24 +29,29 @@ final class JsonReport implements Report {
     return ReportSupport.toJson(body(metrics, true)) + "\n";
   }
 
-  /** The classes with their methods; the deltas against a baseline only when asked for. */
-  static Map<String, Object> body(final List<ScoredMethod> metrics, final boolean withDeltas) {
+  /**
+   * The classes with their methods; the deltas against a baseline and the coverage, when there is any, only
+   * when asked for. A baseline holds neither.
+   */
+  static Map<String, Object> body(final List<ScoredMethod> metrics, final boolean asReport) {
     final Map<String, Object> classes = new LinkedHashMap<>();
-    ReportSupport.byClass(ReportSupport.rows(metrics))
-        .forEach((key, rows) -> classes.put(key, toClass(rows, withDeltas)));
+    final List<Row> allRows = ReportSupport.rows(metrics);
+    final boolean withCoverage = asReport && ReportSupport.hasCoverage(allRows);
+    ReportSupport.byClass(allRows).forEach((key, rows) -> classes.put(key, toClass(rows, asReport, withCoverage)));
     return classes;
   }
 
-  private static Map<String, Object> toClass(final List<Row> rows, final boolean withDeltas) {
+  private static Map<String, Object> toClass(
+      final List<Row> rows, final boolean withDeltas, final boolean withCoverage) {
     final Map<String, Object> methods = new LinkedHashMap<>();
-    rows.forEach(row -> methods.put(row.metrics().getMethodName(), toMethod(row, withDeltas)));
+    rows.forEach(row -> methods.put(row.metrics().getMethodName(), toMethod(row, withDeltas, withCoverage)));
     final Map<String, Object> entry = new LinkedHashMap<>();
     entry.put("file", rows.get(0).file());
     entry.put("methods", methods);
     return entry;
   }
 
-  private static Map<String, Object> toMethod(final Row row, final boolean withDeltas) {
+  private static Map<String, Object> toMethod(final Row row, final boolean withDeltas, final boolean withCoverage) {
     final CognitiveMetrics metrics = row.metrics();
     final Map<String, Object> method = new LinkedHashMap<>();
     method.put("class", metrics.getClassName());
@@ -65,6 +70,9 @@ final class JsonReport implements Report {
     method.put("halsteadEffort", ReportSupport.rounded(metrics.getHalstead().effort()));
     method.put("understandability", metrics.getUnderstandability().complexity());
     method.put("understandabilityRiskLevel", metrics.getUnderstandability().riskLevel());
+    if (withCoverage) {
+      method.put("coverage", metrics.coverage().map(ReportSupport::rounded).orElse(null));
+    }
     final Map<String, Object> deltas = new LinkedHashMap<>();
     for (final MetricName name : MetricName.values()) {
       metrics.delta(name).ifPresent(delta -> deltas.put(name.key() + "Weight", ReportSupport.rounded(delta.getValue())));

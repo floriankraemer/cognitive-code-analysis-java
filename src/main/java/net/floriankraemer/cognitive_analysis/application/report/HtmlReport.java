@@ -7,6 +7,7 @@ import java.util.Map;
 import net.floriankraemer.cognitive_analysis.application.report.ReportSupport.Row;
 import net.floriankraemer.cognitive_analysis.config.CognitiveConfig;
 import net.floriankraemer.cognitive_analysis.config.MetricName;
+import net.floriankraemer.cognitive_analysis.coverage.CoverageData;
 import net.floriankraemer.cognitive_analysis.domain.CognitiveMetrics;
 import net.floriankraemer.cognitive_analysis.domain.Delta;
 import net.floriankraemer.cognitive_analysis.domain.ScoredMethod;
@@ -47,20 +48,22 @@ final class HtmlReport implements Report {
       html.append("<p class=\"text-muted\">Only showing methods with a score above the threshold of ")
           .append(ReportSupport.fixed(config.scoreThreshold())).append(".</p>\n");
     }
+    final boolean withCoverage = ReportSupport.hasCoverage(rows);
     if (config.groupByClass()) {
       classes.forEach((className, classRows) -> {
         html.append("<h2 class=\"h4 mt-4\">").append(escape(className)).append("</h2>\n")
             .append("<p class=\"text-muted\">").append(escape(classRows.get(0).file())).append("</p>\n");
-        appendTable(html, false, classRows);
+        appendTable(html, false, classRows, withCoverage);
       });
     } else {
       html.append("<h2 class=\"h4 mt-4\">All Methods (").append(rows.size()).append(" total)</h2>\n");
-      appendTable(html, true, rows);
+      appendTable(html, true, rows, withCoverage);
     }
     return html.append("</div>\n</body>\n</html>\n").toString();
   }
 
-  private void appendTable(final StringBuilder html, final boolean withClass, final List<Row> rows) {
+  private void appendTable(
+      final StringBuilder html, final boolean withClass, final List<Row> rows, final boolean withCoverage) {
     final List<String> columns = new ArrayList<>();
     if (withClass) {
       columns.add("Class");
@@ -72,18 +75,22 @@ final class HtmlReport implements Report {
     }
     columns.addAll(List.of("Score", "Cyclomatic", "Halstead Volume", "Halstead Difficulty", "Halstead Effort",
         "Understandability"));
+    if (withCoverage) {
+      columns.add(withClass ? "Coverage" : "Line Coverage");
+    }
     html.append("<div class=\"table-responsive\">\n<table class=\"table table-sm table-striped table-hover align-middle\">\n")
         .append("<thead class=\"table-dark\">\n<tr>");
     for (int i = 0; i < columns.size(); i++) {
-      final boolean numeric = i >= columns.size() - (MetricName.values().length + 7);
+      final boolean numeric = i >= (withClass ? 2 : 1);
       html.append(numeric ? "<th class=\"num\">" : "<th>").append(escape(columns.get(i))).append("</th>");
     }
     html.append("</tr>\n</thead>\n<tbody>\n");
-    rows.forEach(row -> appendRow(html, withClass, row.metrics()));
+    rows.forEach(row -> appendRow(html, withClass, withCoverage, row.metrics()));
     html.append("</tbody>\n</table>\n</div>\n");
   }
 
-  private void appendRow(final StringBuilder html, final boolean withClass, final CognitiveMetrics metrics) {
+  private void appendRow(
+      final StringBuilder html, final boolean withClass, final boolean withCoverage, final CognitiveMetrics metrics) {
     html.append("<tr>");
     if (withClass) {
       html.append("<td>").append(escape(metrics.getClassName())).append("</td>");
@@ -108,6 +115,9 @@ final class HtmlReport implements Report {
         .append(ReportSupport.withRisk(
             metrics.getUnderstandability().complexity(), metrics.getUnderstandability().riskLevel()))
         .append("</td>");
+    if (withCoverage) {
+      html.append("<td class=\"num\">").append(CoverageData.percent(metrics.coverage().orElse(null))).append("</td>");
+    }
     html.append("</tr>\n");
   }
 

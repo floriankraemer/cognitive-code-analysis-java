@@ -257,6 +257,7 @@
 						<param>net.floriankraemer.cognitive_analysis.domain.*</param>
 						<param>net.floriankraemer.cognitive_analysis.config.*</param>
 						<param>net.floriankraemer.cognitive_analysis.churn.*</param>
+						<param>net.floriankraemer.cognitive_analysis.coverage.*</param>
 						<param>net.floriankraemer.cognitive_analysis.application.report.*</param>
 					</targetClasses>
 					<mutationThreshold>80</mutationThreshold>

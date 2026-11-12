@@ -37,6 +37,23 @@ class ChurnReportBuilderTest {
             "src/Business/MetricsFacade.java", 0.693, 8, 5.544, null, null, null));
   }
 
+  /** One class per risk level, and one with nothing to be at risk. */
+  private static List<ChurnMetrics> covered() {
+    return List.of(
+        covered("a.Critical", 8, 5.0, 0.25),
+        covered("a.High", 5, 5.0, 0.6),
+        covered("a.Medium", 3, 5.0, 0.75),
+        covered("a.Low", 2, 5.0, 1.0),
+        covered("a.Unknown", 1, 0.5, 0.0));
+  }
+
+  private static ChurnMetrics covered(
+      final String className, final int timesChanged, final double score, final double coverage) {
+    final double churn = ChurnCalculator.churn(timesChanged, score);
+    return new ChurnMetrics(className, className + ".java", score, timesChanged, churn, coverage,
+        ChurnCalculator.riskChurn(timesChanged, score, coverage), ChurnCalculator.riskLevel(churn, coverage));
+  }
+
   private static List<ChurnMetrics> awkward() {
     return List.of(
         new ChurnMetrics("a.B<T>|\"x\"&'y'", "f<1>.java", 1.0, 2, 2.0, 0.5, 1.0, RiskLevel.LOW),
@@ -66,12 +83,41 @@ class ChurnReportBuilderTest {
   @Test
   void csvQuotesFieldsThatNeedIt() throws Exception {
     assertThat(render(ChurnReportType.CSV, awkward()))
-        .contains("\"a.B<T>|\"\"x\"\"&'y'\",f<1>.java,1,2,2\n");
+        .contains("\"a.B<T>|\"\"x\"\"&'y'\",f<1>.java,1,2,2,1,0.5,LOW\n");
   }
 
   @Test
   void html() throws Exception {
     Approvals.verify(render(ChurnReportType.HTML, sample()), new Options().forFile().withExtension(".html"));
+  }
+
+  @Test
+  void csvWithCoverage() throws Exception {
+    Approvals.verify(render(ChurnReportType.CSV, covered()), new Options().forFile().withExtension(".csv"));
+  }
+
+  @Test
+  void htmlWithCoverage() throws Exception {
+    Approvals.verify(render(ChurnReportType.HTML, covered()), new Options().forFile().withExtension(".html"));
+  }
+
+  @Test
+  void markdownWithCoverage() throws Exception {
+    Approvals.verify(render(ChurnReportType.MARKDOWN, covered()), new Options().forFile().withExtension(".md"));
+  }
+
+  @Test
+  void jsonHasEveryRiskLevel() throws Exception {
+    assertThat(render(ChurnReportType.JSON, covered()))
+        .contains("\"riskLevel\" : \"CRITICAL\"", "\"riskLevel\" : \"HIGH\"", "\"riskLevel\" : \"MEDIUM\"",
+            "\"riskLevel\" : \"LOW\"");
+  }
+
+  @Test
+  void reportsWithoutCoverageHaveNoCoverageColumns() throws Exception {
+    assertThat(render(ChurnReportType.CSV, sample())).doesNotContain("Coverage", "Risk");
+    assertThat(render(ChurnReportType.HTML, sample())).doesNotContain("Coverage", "Risk");
+    assertThat(render(ChurnReportType.MARKDOWN, sample())).doesNotContain("Coverage", "Risk");
   }
 
   @Test
@@ -90,7 +136,7 @@ class ChurnReportBuilderTest {
   void markdownEscapesPipesCountsAllClassesAndSkipsClassesWithoutChurn() throws Exception {
     assertThat(render(ChurnReportType.MARKDOWN, awkward()))
         .contains("Total Classes: 3\n")
-        .contains("| a.B<T>\\|\"x\"&'y' | 1 | 2 | 2 |\n")
+        .contains("| a.B<T>\\|\"x\"&'y' | 1 | 2 | 1 | 2 | 50.00% | LOW |\n")
         .doesNotContain("NoChurn")
         .doesNotContain("NoScore");
   }
