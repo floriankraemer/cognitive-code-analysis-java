@@ -12,9 +12,6 @@ import java.util.Map;
 public record CyclomaticComplexity(int complexity, Map<String, Integer> breakdown) {
 
   private static final int BASE = 1;
-  private static final int LOW_MAX = 5;
-  private static final int MEDIUM_MAX = 10;
-  private static final int HIGH_MAX = 15;
 
   /** @param decisionPoints the count per kind, in the order to report */
   static CyclomaticComplexity of(final Map<String, Integer> decisionPoints) {
@@ -28,12 +25,6 @@ public record CyclomaticComplexity(int complexity, Map<String, Integer> breakdow
 
   /** @return low up to 5, medium up to 10, high up to 15, else very_high */
   public String riskLevel() {
-    if (complexity <= LOW_MAX) {
-      return "low";
-    }
-    if (complexity <= MEDIUM_MAX) {
-      return "medium";
-    }
-    return complexity <= HIGH_MAX ? "high" : "very_high";
+    return RiskLevel.of(complexity);
   }
 }

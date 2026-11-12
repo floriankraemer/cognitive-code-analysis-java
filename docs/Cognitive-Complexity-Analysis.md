@@ -73,6 +73,32 @@ Anonymous and local classes are left out, both as units of their own and from th
   - **Description**: The number of `else` and `else if` branches.
   - **Purpose**: Helps measure the complexity of branching logic. A high else count might indicate complex or tightly coupled conditional logic.
 
+## Understandability
+
+Understandability is the cognitive complexity as specified by SonarSource in the white paper "Cognitive Complexity" by G. Ann Campbell.
+It is measured per method next to the metrics above and does not enter the score.
+
+- **Structural increments** add 1 plus the current nesting level and nest their body: `if`, the conditional expression `?:`, `switch` (once, not per case), `for`, enhanced `for`, `while`, `do`-`while` and `catch`.
+- **Hybrid increments** add 1 without a nesting penalty: `else` and `else if`.
+  The body of an `else if` is nested on the level of its `if`, not one level deeper.
+- **Lambdas** raise the nesting level of their body without an increment.
+- **Fundamental increments** add 1 each:
+  - every run of like operators in a sequence of `&&` and `||`, so `a && b && c` is 1 and `a && b || c` is 2. Parentheses do not break a sequence, while a negation `!(...)` or a method argument starts a new one;
+  - every `break` or `continue` with a label;
+  - recursion, once per method however often the method calls itself.
+- Conditions, `switch` selectors and loop headers stay on the level of their statement; only bodies are nested.
+- `try`, `finally`, `synchronized`, the bitwise operators `&` and `|`, and `break` or `continue` without a label do not count.
+- Anonymous and local classes are left out, as for the other metrics.
+
+A call is recursion when it has the name of the method and calls it without a scope (`find(n)`), on `this` (`this.find(n)`), on the class as `Own.this` (`Own.this.find(n)`) or on the class name (`Own.find(n)`), where `Own` is the simple name of the class that declares the method.
+Overloads match by name, so `find(int)` calling `find(String)` counts.
+A call on `super`, on an outer class (`Outer.this.find(n)` or `Outer.find(n)` from a nested class) or on any other object is not recursion.
+Constructors are never recursive.
+
+The breakdown reports the number of structural, hybrid and fundamental increments, the points added for nesting, and `recursion` as 1 when the method is recursive, which is also one of the fundamental increments.
+The total is the sum of structural, hybrid, fundamental and nesting.
+The risk level uses the bands of the cyclomatic complexity: low up to 5, medium up to 10, high up to 15, and very high above.
+
 ## Analysed Methods
 
 The methods and constructors of top-level and nested classes, enums, records and interfaces are analysed.

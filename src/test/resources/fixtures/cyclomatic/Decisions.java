@@ -135,4 +135,10 @@ class Decisions {
       }
     };
   }
+
+  void doWhileBodyCounts(boolean a) {
+    do {
+      if (a) {}
+    } while (a);
+  }
 }
