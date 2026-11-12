@@ -163,15 +163,17 @@ public class KotlinMetricsCollector {
       for (final KtDeclaration member : members) {
         if (member instanceof KtClassOrObject nested && !(member instanceof KtEnumEntry)) {
           scanType(nested, nestedPrefix + simpleName(nested));
-          continue;
-        }
-        final Optional<Unit> unit = unitOf(member, classSimpleName, isInterface);
-        if (unit.isPresent() && !isIgnored(member)) {
-          final Unit found = unit.get();
-          final String methodName = nameCounts.get(found.name()) > 1 ? found.name() + signature(found) : found.name();
-          metrics.putIfAbsent(className + "::" + methodName, measure(className, methodName, found));
+        } else {
+          unitOf(member, classSimpleName, isInterface)
+              .filter(unit -> !isIgnored(member))
+              .ifPresent(unit -> record(className, unit, nameCounts));
         }
       }
+    }
+
+    private void record(final String className, final Unit unit, final Map<String, Long> nameCounts) {
+      final String methodName = nameCounts.get(unit.name()) > 1 ? unit.name() + signature(unit) : unit.name();
+      metrics.putIfAbsent(className + "::" + methodName, measure(className, methodName, unit));
     }
 
     /**
@@ -219,7 +221,11 @@ public class KotlinMetricsCollector {
       final CognitiveMetrics result = new CognitiveMetrics(className, methodName, firstLine);
       result.setValue(MetricName.LINE_COUNT, lastLine - firstLine + 1);
       result.setValue(MetricName.ARG_COUNT, unit.declaration().getValueParameters().size());
+      applyVisitors(result, className, unit);
+      return result;
+    }
 
+    private static void applyVisitors(final CognitiveMetrics result, final String className, final Unit unit) {
       final Set<String> parameters = unit.declaration().getValueParameters().stream()
           .map(KtParameter::getName)
           .collect(Collectors.toSet());
@@ -239,7 +245,6 @@ public class KotlinMetricsCollector {
       result.setCyclomatic(cyclomatic.result());
       result.setHalstead(halstead.result());
       result.setUnderstandability(understandability.result());
-      return result;
     }
 
     /** The children that are code: the lines start at the annotations, not at the KDoc. */
