@@ -29,7 +29,8 @@ Numbers use a dot and three decimals, whatever the locale is.
 Classes are sorted by name, methods keep the order of the analysis.
 Weights, score and Halstead values are rounded to three decimals.
 `deltas` holds the change of each weight against a baseline, and is left out when there is none.
-A class that is split over several files, or methods with equal names, share one key.
+When the same class name occurs in more than one file, for example in the default package, every occurrence is keyed `<class>@<file>`, with the file as shown in the reports, so nothing is lost.
+Overloaded methods have distinct keys, as their parameter types are part of the name.
 
 ## CSV
 

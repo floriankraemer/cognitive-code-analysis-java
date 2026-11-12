@@ -84,6 +84,18 @@ class ReportE2ETest {
   }
 
   @Test
+  void keysTheSameClassInTwoFilesByClassAndFileInTheJsonReport() throws Exception {
+    final Path report = tempDir.resolve("report.json");
+
+    final int exitCode = run("analyse", "src/test/resources/fixtures/duplicates", "-r", "json", "-f", report.toString());
+
+    assertThat(exitCode).isZero();
+    assertThat(new ObjectMapper().readTree(report.toFile()).fieldNames()).toIterable()
+        .containsExactly("Main@src/test/resources/fixtures/duplicates/m1/Main.java",
+            "Main@src/test/resources/fixtures/duplicates/m2/Main.java");
+  }
+
+  @Test
   void failsOnAnInvalidReportType() {
     final Path report = tempDir.resolve("report.xml");
 

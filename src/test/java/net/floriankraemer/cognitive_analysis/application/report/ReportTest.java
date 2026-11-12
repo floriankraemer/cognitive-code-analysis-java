@@ -293,6 +293,32 @@ class ReportTest {
   }
 
   @Test
+  void jsonKeysAClassInSeveralFilesByClassAndFile() throws Exception {
+    final MetricsCollection collection = new MetricsCollection();
+    add(collection, "src/one/Main.java", method("Main", "run", 1, 1.0, 0));
+    add(collection, "src/two/Main.java", method("Main", "run", 2, 2.0, 1));
+    add(collection, "src/one/Other.java", method("Other", "run", 3, 3.0, 2));
+
+    final var json = new com.fasterxml.jackson.databind.ObjectMapper().readTree(render(ReportType.JSON, GROUPED, collection));
+
+    assertThat(json.fieldNames()).toIterable().containsExactly("Main@src/one/Main.java", "Main@src/two/Main.java", "Other");
+    assertThat(json.get("Main@src/one/Main.java").get("methods").get("run").get("line").asInt()).isEqualTo(1);
+    assertThat(json.get("Main@src/two/Main.java").get("methods").get("run").get("line").asInt()).isEqualTo(2);
+  }
+
+  @Test
+  void jsonKeepsOverloadedMethods() throws Exception {
+    final MetricsCollection collection = new MetricsCollection();
+    add(collection, "A.java", method("A", "m(int)", 1, 1.0, 0));
+    add(collection, "A.java", method("A", "m(String)", 2, 2.0, 1));
+
+    final var methods = new com.fasterxml.jackson.databind.ObjectMapper()
+        .readTree(render(ReportType.JSON, GROUPED, collection)).get("A").get("methods");
+
+    assertThat(methods.fieldNames()).toIterable().containsExactly("m(int)", "m(String)");
+  }
+
+  @Test
   void anEmptyCollectionGivesValidReports() throws Exception {
     final MetricsCollection none = new MetricsCollection();
 
