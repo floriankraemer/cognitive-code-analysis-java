@@ -30,9 +30,28 @@ final class HtmlReport implements Report {
   @Override
   public String render(final List<ScoredMethod> metrics) {
     final List<Row> rows = ReportSupport.visible(ReportSupport.rows(metrics), config);
-    final Map<String, List<Row>> classes = ReportSupport.byClass(rows);
-    final String title = "Cognitive Metrics Report - " + ReportSupport.timestamp(clock);
-    final StringBuilder html = new StringBuilder()
+    final StringBuilder html = startPage("Cognitive Metrics Report - " + ReportSupport.timestamp(clock), rows);
+    if (config.showOnlyMethodsExceedingThreshold()) {
+      html.append("<p class=\"text-muted\">Only showing methods with a score above the threshold of ")
+          .append(ReportSupport.fixed(config.scoreThreshold())).append(".</p>\n");
+    }
+    final boolean withCoverage = ReportSupport.hasCoverage(rows);
+    if (config.groupByClass()) {
+      ReportSupport.byClass(rows).forEach((className, classRows) -> {
+        html.append("<h2 class=\"h4 mt-4\">").append(escape(className)).append("</h2>\n")
+            .append("<p class=\"text-muted\">").append(escape(classRows.get(0).file())).append("</p>\n");
+        appendTable(html, false, classRows, withCoverage);
+      });
+    } else {
+      html.append("<h2 class=\"h4 mt-4\">All Methods (").append(rows.size()).append(" total)</h2>\n");
+      appendTable(html, true, rows, withCoverage);
+    }
+    return html.append("</div>\n</body>\n</html>\n").toString();
+  }
+
+  /** The document up to the summary line. */
+  private static StringBuilder startPage(final String title, final List<Row> rows) {
+    return new StringBuilder()
         .append("<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n")
         .append("<meta charset=\"UTF-8\">\n")
         .append("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n")
@@ -44,22 +63,6 @@ final class HtmlReport implements Report {
         .append("<h1 class=\"mb-3\">").append(escape(title)).append("</h1>\n")
         .append("<p>This report contains ").append(ReportSupport.classCount(rows)).append(ReportSupport.classCount(rows) == 1 ? " class" : " classes")
         .append(" and ").append(rows.size()).append(rows.size() == 1 ? " method" : " methods").append(".</p>\n");
-    if (config.showOnlyMethodsExceedingThreshold()) {
-      html.append("<p class=\"text-muted\">Only showing methods with a score above the threshold of ")
-          .append(ReportSupport.fixed(config.scoreThreshold())).append(".</p>\n");
-    }
-    final boolean withCoverage = ReportSupport.hasCoverage(rows);
-    if (config.groupByClass()) {
-      classes.forEach((className, classRows) -> {
-        html.append("<h2 class=\"h4 mt-4\">").append(escape(className)).append("</h2>\n")
-            .append("<p class=\"text-muted\">").append(escape(classRows.get(0).file())).append("</p>\n");
-        appendTable(html, false, classRows, withCoverage);
-      });
-    } else {
-      html.append("<h2 class=\"h4 mt-4\">All Methods (").append(rows.size()).append(" total)</h2>\n");
-      appendTable(html, true, rows, withCoverage);
-    }
-    return html.append("</div>\n</body>\n</html>\n").toString();
   }
 
   private void appendTable(
