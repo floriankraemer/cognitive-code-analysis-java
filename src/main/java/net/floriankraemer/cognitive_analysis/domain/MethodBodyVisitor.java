@@ -47,6 +47,7 @@ final class MethodBodyVisitor extends VoidVisitorAdapter<Void> {
 
   static final String THIS = "this";
   private static final String UNNAMED = "_";
+  private static final int MIN_PACKAGE_SEGMENTS = 2;
 
   private int returnCount;
   private int ifCount;
@@ -189,12 +190,30 @@ final class MethodBodyVisitor extends VoidVisitorAdapter<Void> {
   }
 
   /**
-   * True for {@code java} and {@code java.util} in {@code java.util.List}. An expression whose parent
-   * is a field access is always its scope.
+   * True for {@code java} and {@code java.util} in {@code java.util.List}: part of a chain of at least
+   * two lower-case names that is qualified by an upper-case type name. A single name, as in
+   * {@code other.MAX}, is a variable or field, not a package. An expression whose parent is a field
+   * access is always its scope.
    */
   private static boolean isPackageQualifier(final Expression expression) {
-    final Node parent = expression.getParentNode().orElseThrow();
-    return parent instanceof FieldAccessExpr access
-        && (isTypeName(access.getNameAsString()) || isPackageQualifier(access));
+    Expression chain = expression;
+    while (chain.getParentNode().orElseThrow() instanceof FieldAccessExpr access
+        && !isTypeName(access.getNameAsString())) {
+      chain = access;
+    }
+    return chain.getParentNode().orElseThrow() instanceof FieldAccessExpr
+        && lowerCaseNameSegments(chain) >= MIN_PACKAGE_SEGMENTS;
+  }
+
+  /** The number of names in a chain like {@code a.b.c}, or 0 when it holds anything else. */
+  private static int lowerCaseNameSegments(final Expression expression) {
+    if (expression instanceof NameExpr name) {
+      return isTypeName(name.getNameAsString()) ? 0 : 1;
+    }
+    if (expression instanceof FieldAccessExpr access && !isTypeName(access.getNameAsString())) {
+      final int scopeSegments = lowerCaseNameSegments(access.getScope());
+      return scopeSegments == 0 ? 0 : scopeSegments + 1;
+    }
+    return 0;
   }
 }

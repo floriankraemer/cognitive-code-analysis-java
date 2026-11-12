@@ -155,6 +155,22 @@ class AnalyseCommandE2ETest {
   }
 
   @Test
+  void reportsTheSameClassAndMethodInDifferentFilesForEachFile() {
+    String dir = "src/test/resources/fixtures/duplicates";
+
+    int exitCode = run("analyse", dir + "," + dir + "/m1/Main.java");
+
+    assertThat(exitCode).isZero();
+    assertThat(err.toString()).isEmpty();
+    assertThat(out.toString().lines().filter(line -> line.startsWith("File: ") || line.startsWith("│Main")))
+        .containsExactly(
+            "File: " + dir + "/m1/Main.java",
+            "│Main │main  │  3  │    1    │   0   │    0    │   0    │0 │    0     │ 0  │  0.000   │",
+            "File: " + dir + "/m2/Main.java",
+            "│Main │main  │  5  │    1    │   0   │    0    │   1    │1 │    1     │ 0  │  0.000   │");
+  }
+
+  @Test
   void failsWhenOneOfSeveralPathsDoesNotExist() {
     int exitCode = run("analyse", FIXTURE_DIR + ",missing");
 

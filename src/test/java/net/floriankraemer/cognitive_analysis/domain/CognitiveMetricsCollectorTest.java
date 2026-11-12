@@ -192,6 +192,71 @@ class CognitiveMetricsCollectorTest {
   }
 
   @Test
+  void readsASingleLowerCaseNameBeforeAConstantAsAnImplicitThisField() throws Exception {
+    Map<String, CognitiveMetrics> metrics = collector.collect("""
+        class A {
+          A other;
+          A holder;
+          static final int MAX = 1;
+          static final A INSTANCE = null;
+          int fields() {
+            return other.MAX + holder.INSTANCE.hashCode();
+          }
+          int parameterAndLocal(A other) {
+            A holder = other;
+            return other.MAX + holder.INSTANCE.hashCode();
+          }
+        }
+        """);
+
+    // this; the fields other and holder, but not the constants MAX and INSTANCE
+    assertThat(metrics.get("A::fields").value(MetricName.VARIABLE_COUNT)).isEqualTo(1);
+    assertThat(metrics.get("A::fields").value(MetricName.PROPERTY_CALL_COUNT)).isEqualTo(2);
+    // only the local holder
+    assertThat(metrics.get("A::parameterAndLocal").value(MetricName.VARIABLE_COUNT)).isEqualTo(1);
+    assertThat(metrics.get("A::parameterAndLocal").value(MetricName.PROPERTY_CALL_COUNT)).isZero();
+  }
+
+  @Test
+  void readsALowerCaseChainBeforeATypeAsAPackageOnlyWithAtLeastTwoNames() throws Exception {
+    CognitiveMetrics metrics = collector.collect("""
+        class A {
+          Object a(Object value) {
+            Object list = java.util.List.of(value);
+            return com.acme.Outer.Inner.CONSTANT + list;
+          }
+        }
+        """).get("A::a");
+
+    assertThat(metrics.value(MetricName.VARIABLE_COUNT)).isEqualTo(1);
+    assertThat(metrics.value(MetricName.PROPERTY_CALL_COUNT)).isZero();
+  }
+
+  @Test
+  void skipsLocalInterfacesLikeLocalClasses() throws Exception {
+    CognitiveMetrics metrics = collector.collect("""
+        class A {
+          int a() {
+            interface Local {
+              default int value() { if (true) { return 1; } return 2; }
+            }
+            return 0;
+          }
+        }
+        """).get("A::a");
+
+    assertThat(metrics.value(MetricName.RETURN_COUNT)).isEqualTo(1);
+    assertThat(metrics.value(MetricName.IF_COUNT)).isZero();
+  }
+
+  @Test
+  void rejectsALocalEnumAsJavaParserCannotParseIt() {
+    assertThatThrownBy(() -> collector.collect("class A {\n  void a() {\n    enum Kind { ONE, TWO }\n  }\n}\n"))
+        .isInstanceOf(SourceParseException.class)
+        .hasMessageStartingWith("(line 3,col ");
+  }
+
+  @Test
   void keysClassesWithoutAPackageByTheirSimpleName() throws Exception {
     assertThat(collector.collect("class A { void a() {} }")).containsOnlyKeys("A::a");
   }

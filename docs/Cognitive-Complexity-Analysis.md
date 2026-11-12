@@ -55,6 +55,8 @@ Anonymous and local classes are left out, both as units of their own and from th
     Static accesses on a type, such as `System.out` or `Integer.MAX_VALUE`, do not count.
   - **Limits**: Names are not resolved against the classpath.
     A name starting with an upper-case letter is taken for a type or a constant and counts neither as a variable nor as a field.
+    A chain of at least two lower-case names before an upper-case name, as `java.util` in `java.util.List`, is taken for a package.
+    A single lower-case name before an upper-case one, as `other` in `other.MAX`, is a parameter, a local or an implicit `this.other`.
     A name declared anywhere in the method is a local everywhere in it, so a field read before a local of the same name is declared counts as that local.
     `array.length` counts as a field access.
   - **Purpose**: Frequent property accesses may indicate a method that is highly coupled to the internal state of the object, which can make the code harder to test and maintain.
@@ -81,10 +83,16 @@ The bodies of enum constants are anonymous classes and are left out.
 A class is named by its fully qualified name, with nested classes separated by dots, such as `com.example.Outer.Inner`.
 A method is named `com.example.Outer.Inner::method`, and a constructor is named after its class.
 When a class declares several methods or constructors with the same name, all of them get their parameter types as written, without type arguments, such as `find(List,String...)`.
-When the same method name occurs in several files, only the first file in path order is reported.
+When the same method name occurs in several files, for example in the default package or in the same package of two source roots, it is reported for each file.
 
 To leave a class or method out, put `@cca-ignore` into its Javadoc or into any comment between the previous declaration and its name.
 Ignoring a class also ignores its nested classes.
+
+### Limits
+
+JavaParser 3.28.2, the latest release, cannot parse a local `enum`, that is an enum declared inside a method body (Java 16 and later).
+A file that contains one is reported as `Parser failed for file <path>: ...` and skipped, and the analysis goes on with the other files.
+Local classes, records and interfaces are parsed, and are left out as described above.
 
 ## Result Interpretation
 

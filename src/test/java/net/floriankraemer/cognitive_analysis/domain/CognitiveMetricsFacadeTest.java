@@ -43,15 +43,29 @@ class CognitiveMetricsFacadeTest {
   }
 
   @Test
-  void reportsAMethodKeyThatOccursInSeveralFilesForTheFirstFileOnly() throws Exception {
+  void reportsAMethodKeyThatOccursInSeveralFilesForEachFile() throws Exception {
     Path first = write("a/Dup.java", "package p; class Dup { void same() {} void onlyA() {} }");
     Path second = write("b/Dup.java", "package p; class Dup { void same() { return; } void onlyB() {} }");
 
-    MetricsCollection result = facade(TestConfigs.defaults()).calculateCognitiveMetrics(List.of(tempDir.toString()));
+    MetricsCollection result = facade(TestConfigs.defaults()).calculateCognitiveMetrics(
+        List.of(tempDir.toString(), first.toString()));
 
+    assertThat(result.keySet()).containsExactly(first.toString(), second.toString());
     assertThat(result.get(first.toString())).containsOnlyKeys("p.Dup::same", "p.Dup::onlyA");
     assertThat(result.get(first.toString()).get("p.Dup::same").value(MetricName.RETURN_COUNT)).isZero();
-    assertThat(result.get(second.toString())).containsOnlyKeys("p.Dup::onlyB");
+    assertThat(result.get(second.toString())).containsOnlyKeys("p.Dup::same", "p.Dup::onlyB");
+    assertThat(result.get(second.toString()).get("p.Dup::same").value(MetricName.RETURN_COUNT)).isEqualTo(1);
+  }
+
+  @Test
+  void reportsAFileWithALocalEnumAsAParserFailureAndContinues() throws Exception {
+    Path localEnum = write("LocalEnum.java", "class LocalEnum { void m() { enum Kind { A, B } } }");
+    Path valid = write("Valid.java", "class Valid { void valid() {} }");
+
+    MetricsCollection result = facade(TestConfigs.defaults()).calculateCognitiveMetrics(List.of(tempDir.toString()));
+
+    assertThat(result).containsOnlyKeys(valid.toString());
+    assertThat(warnings.toString()).startsWith("Parser failed for file " + localEnum + ": (line 1,col ");
   }
 
   @Test

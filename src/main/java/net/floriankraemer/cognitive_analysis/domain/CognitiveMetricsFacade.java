@@ -4,11 +4,9 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import net.floriankraemer.cognitive_analysis.CognitiveAnalysisException;
 import net.floriankraemer.cognitive_analysis.config.CognitiveConfig;
 
@@ -31,9 +29,10 @@ public class CognitiveMetricsFacade {
   /**
    * Analyses the Java files found in the given files and directories.
    *
-   * <p>A method key ({@code pkg.Class::method}) that occurs in several files is reported for the first
-   * file in path order only. Files that cannot be parsed are reported to the warnings writer and
-   * skipped; files without any reported method are left out.
+   * <p>Each file is analysed once, however often the paths name it. A method key
+   * ({@code pkg.Class::method}) that occurs in several files, for example in the default package or in
+   * the same package of two source roots, is reported for each of them. Files that cannot be parsed
+   * are reported to the warnings writer and skipped; files without any reported method are left out.
    *
    * @return the scored methods per file, in path order
    * @throws CognitiveAnalysisException when a path does not exist or a file cannot be read
@@ -41,7 +40,6 @@ public class CognitiveMetricsFacade {
   public MetricsCollection calculateCognitiveMetrics(final List<String> paths)
       throws CognitiveAnalysisException {
     final MetricsCollection result = new MetricsCollection();
-    final Set<String> seenKeys = new HashSet<>();
 
     for (final Path file : fileFinder.findJavaFiles(paths, config.excludeFilePatterns())) {
       final Map<String, CognitiveMetrics> collected;
@@ -54,7 +52,7 @@ public class CognitiveMetricsFacade {
 
       final Map<String, CognitiveMetrics> methods = new LinkedHashMap<>();
       collected.forEach((key, metrics) -> {
-        if (!isExcluded(key) && seenKeys.add(key)) {
+        if (!isExcluded(key)) {
           calculator.calculate(metrics);
           methods.put(key, metrics);
         }
