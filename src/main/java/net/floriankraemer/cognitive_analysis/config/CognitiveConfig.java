@@ -4,15 +4,18 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.regex.Pattern;
 
 /**
  * The validated "cognitive" configuration section.
  *
+ * @param excludeFilePatterns skip a file when one is found in its absolute path with {@code /} separators
+ * @param excludePatterns skip a method when one is found in its key {@code pkg.Class::method}
  * @param source the user configuration file that was merged over the bundled defaults, if any
  */
 public record CognitiveConfig(
-    List<String> excludeFilePatterns,
-    List<String> excludePatterns,
+    List<Pattern> excludeFilePatterns,
+    List<Pattern> excludePatterns,
     double scoreThreshold,
     boolean showOnlyMethodsExceedingThreshold,
     boolean showHalsteadComplexity,

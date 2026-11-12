@@ -38,7 +38,7 @@
 		<assertj.version>3.27.7</assertj.version>
 		<jackson.version>2.18.12</jackson.version>
 		<picocli.version>4.7.7</picocli.version>
-		<javaparser.version>3.26.4</javaparser.version>
+		<javaparser.version>3.28.2</javaparser.version>
 		<commons-csv.version>1.14.1</commons-csv.version>
 		<approvaltests.version>24.8.0</approvaltests.version>
 	</properties>

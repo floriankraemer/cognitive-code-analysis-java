@@ -3,6 +3,7 @@ package net.floriankraemer.cognitive_analysis.domain;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
 
+import net.floriankraemer.cognitive_analysis.config.MetricName;
 import net.floriankraemer.cognitive_analysis.config.TestConfigs;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -15,45 +16,41 @@ class ComplexityCalculatorTest {
 
   @BeforeEach
   void setUp() {
-    metrics = new CognitiveMetrics();
-    metrics.setLineCount(100);
-    metrics.setArgCount(5);
-    for (int i = 0; i < 3; i++) {
-      metrics.incrementReturnCount();
-    }
-    for (int i = 0; i < 4; i++) {
-      metrics.incrementIfCount();
-    }
-    metrics.setIfNestingLevel(2);
-    metrics.incrementElseCount();
+    metrics = newMetrics();
+    metrics.setValue(MetricName.LINE_COUNT, 100);
+    metrics.setValue(MetricName.ARG_COUNT, 5);
+    metrics.setValue(MetricName.RETURN_COUNT, 3);
+    metrics.setValue(MetricName.IF_COUNT, 4);
+    metrics.setValue(MetricName.IF_NESTING_LEVEL, 2);
+    metrics.setValue(MetricName.ELSE_COUNT, 1);
   }
 
   @Test
   void scoresWithTheBundledDefaultsAndStoresUnroundedWeights() {
     new ComplexityCalculator(TestConfigs.defaults()).calculate(metrics);
 
-    assertThat(metrics.getLineCountWeight()).isCloseTo(Math.log(1 + 40 / 25.0), within(EXACT));
-    assertThat(metrics.getArgCountWeight()).isCloseTo(Math.log(2), within(EXACT));
-    assertThat(metrics.getReturnCountWeight()).isCloseTo(Math.log(1 + 1 / 5.0), within(EXACT));
-    assertThat(metrics.getIfCountWeight()).isCloseTo(Math.log(2), within(EXACT));
-    assertThat(metrics.getIfNestingLevelWeight()).isCloseTo(Math.log(2), within(EXACT));
-    assertThat(metrics.getElseCountWeight()).isZero();
-    assertThat(metrics.getVariableCountWeight()).isZero();
-    assertThat(metrics.getPropertyCallCountWeight()).isZero();
+    assertThat(metrics.weight(MetricName.LINE_COUNT)).isCloseTo(Math.log(1 + 40 / 25.0), within(EXACT));
+    assertThat(metrics.weight(MetricName.ARG_COUNT)).isCloseTo(Math.log(2), within(EXACT));
+    assertThat(metrics.weight(MetricName.RETURN_COUNT)).isCloseTo(Math.log(1 + 1 / 5.0), within(EXACT));
+    assertThat(metrics.weight(MetricName.IF_COUNT)).isCloseTo(Math.log(2), within(EXACT));
+    assertThat(metrics.weight(MetricName.IF_NESTING_LEVEL)).isCloseTo(Math.log(2), within(EXACT));
+    assertThat(metrics.weight(MetricName.ELSE_COUNT)).isZero();
+    assertThat(metrics.weight(MetricName.VARIABLE_COUNT)).isZero();
+    assertThat(metrics.weight(MetricName.PROPERTY_CALL_COUNT)).isZero();
     assertThat(metrics.getCognitiveComplexity()).isEqualTo(3.217);
   }
 
   @Test
   void aValueEqualToTheThresholdHasNoWeightButOneAboveDoes() {
-    metrics = new CognitiveMetrics();
-    metrics.setArgCount(4);
+    metrics = newMetrics();
+    metrics.setValue(MetricName.ARG_COUNT, 4);
     new ComplexityCalculator(TestConfigs.defaults()).calculate(metrics);
-    assertThat(metrics.getArgCountWeight()).isZero();
+    assertThat(metrics.weight(MetricName.ARG_COUNT)).isZero();
     assertThat(metrics.getCognitiveComplexity()).isZero();
 
-    metrics.setArgCount(5);
+    metrics.setValue(MetricName.ARG_COUNT, 5);
     new ComplexityCalculator(TestConfigs.defaults()).calculate(metrics);
-    assertThat(metrics.getArgCountWeight()).isCloseTo(Math.log(2), within(EXACT));
+    assertThat(metrics.weight(MetricName.ARG_COUNT)).isCloseTo(Math.log(2), within(EXACT));
     assertThat(metrics.getCognitiveComplexity()).isEqualTo(0.693);
   }
 
@@ -85,8 +82,8 @@ class ComplexityCalculatorTest {
 
     new ComplexityCalculator(config).calculate(metrics);
 
-    assertThat(metrics.getLineCountWeight()).isZero();
-    assertThat(metrics.getArgCountWeight()).isPositive();
+    assertThat(metrics.weight(MetricName.LINE_COUNT)).isZero();
+    assertThat(metrics.weight(MetricName.ARG_COUNT)).isPositive();
     assertThat(metrics.getCognitiveComplexity()).isEqualTo(2.262);
   }
 
@@ -97,12 +94,16 @@ class ComplexityCalculatorTest {
           metrics:
             argCount: {threshold: 0, scale: 1000.0}
         """);
-    metrics = new CognitiveMetrics();
-    metrics.setArgCount(1);
+    metrics = newMetrics();
+    metrics.setValue(MetricName.ARG_COUNT, 1);
 
     new ComplexityCalculator(config).calculate(metrics);
 
-    assertThat(metrics.getArgCountWeight()).isCloseTo(Math.log(1.001), within(EXACT));
+    assertThat(metrics.weight(MetricName.ARG_COUNT)).isCloseTo(Math.log(1.001), within(EXACT));
     assertThat(metrics.getCognitiveComplexity()).isEqualTo(0.001);
+  }
+
+  private static CognitiveMetrics newMetrics() {
+    return new CognitiveMetrics("A", "a", 1);
   }
 }

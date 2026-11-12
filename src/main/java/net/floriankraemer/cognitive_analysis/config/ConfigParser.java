@@ -10,6 +10,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 import java.util.stream.Collectors;
 import net.floriankraemer.cognitive_analysis.CognitiveAnalysisException;
 import net.floriankraemer.cognitive_analysis.config.CognitiveConfig.CacheSettings;
@@ -39,8 +41,8 @@ final class ConfigParser {
     }
 
     return new CognitiveConfig(
-        stringList(cognitive, "excludeFilePatterns"),
-        stringList(cognitive, "excludePatterns"),
+        patternList(cognitive, "excludeFilePatterns"),
+        patternList(cognitive, "excludePatterns"),
         scoreThreshold,
         bool(cognitive, ROOT, "showOnlyMethodsExceedingThreshold"),
         bool(cognitive, ROOT, "showHalsteadComplexity"),
@@ -129,6 +131,20 @@ final class ConfigParser {
       result.put(key, new ReporterSettings(className.asText(), jar == null || jar.isNull() ? null : jar.asText()));
     }
     return Map.copyOf(result);
+  }
+
+  private static List<Pattern> patternList(final JsonNode parent, final String key)
+      throws CognitiveAnalysisException {
+    final List<Pattern> result = new ArrayList<>();
+    for (final String regex : stringList(parent, key)) {
+      try {
+        result.add(Pattern.compile(regex));
+      } catch (PatternSyntaxException e) {
+        throw invalid(ROOT + "." + key,
+            "\"" + regex + "\" is not a valid regular expression (" + e.getDescription() + ")");
+      }
+    }
+    return List.copyOf(result);
   }
 
   private static List<String> stringList(final JsonNode parent, final String key)

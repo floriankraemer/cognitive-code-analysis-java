@@ -1,133 +1,139 @@
 package net.floriankraemer.cognitive_analysis.domain;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.io.File;
-import net.floriankraemer.cognitive_analysis.CognitiveAnalysisException;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.List;
+import net.floriankraemer.cognitive_analysis.CognitiveAnalysisException;
+import net.floriankraemer.cognitive_analysis.config.CognitiveConfig;
+import net.floriankraemer.cognitive_analysis.config.MetricName;
+import net.floriankraemer.cognitive_analysis.config.TestConfigs;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+class CognitiveMetricsFacadeTest {
 
-public class CognitiveMetricsFacadeTest {
+  @TempDir
+  Path tempDir;
 
-  private CognitiveMetricsFacade cognitiveMetricsFacade;
-  private File tempDir;
+  private final StringWriter warnings = new StringWriter();
 
-  @BeforeEach
-  public void setUp() throws IOException {
-    // Create a temporary directory for testing
-    tempDir = Files.createTempDirectory("test-java-files").toFile();
+  @Test
+  void collectsAndScoresTheMethodsOfEachFileInPathOrder() throws Exception {
+    Path second = write("b/Second.java", """
+        class Second {
+          void second(int a, int b, int c, int d, int e) {}
+        }
+        """);
+    Path first = write("a/First.java", "class First { void first() {} }");
 
-    // Instantiate the actual components used in the facade
-    FileFinder fileFinder = new FileFinder();
-    CognitiveMetricsCollector cognitiveMetricsCollector = new CognitiveMetricsCollector(new PrintWriter(new StringWriter()));
-    ComplexityCalculator complexityCalculator = new ComplexityCalculator(net.floriankraemer.cognitive_analysis.config.TestConfigs.defaults());
+    MetricsCollection result = facade(TestConfigs.defaults()).calculateCognitiveMetrics(List.of(tempDir.toString()));
 
-    cognitiveMetricsFacade = new CognitiveMetricsFacade(
-        fileFinder,
-        cognitiveMetricsCollector,
-        complexityCalculator
-    );
-
-    // Create temporary Java files
-    createTestFile("TestClass1.java", """
-            public class TestClass1 {
-                public void method1() {
-                    for (int i = 0; i < 10; i++) {
-                        System.out.println(i);
-                    }
-                }
-            }
-            """);
-
-    createTestFile("TestClass2.java", """
-            public class TestClass2 {
-                public void method2() {
-                    if (true) {
-                        System.out.println("Hello");
-                    } else {
-                        System.out.println("World");
-                    }
-                }
-            }
-            """);
-  }
-
-  @AfterEach
-  public void tearDown() throws IOException {
-    Files.walk(tempDir.toPath())
-        .map(Path::toFile)
-        .forEach(File::delete);
+    assertThat(result).containsOnlyKeys(first.toString(), second.toString());
+    assertThat(result.keySet()).containsExactly(first.toString(), second.toString());
+    CognitiveMetrics scored = result.get(second.toString()).get("Second::second");
+    assertThat(scored.value(MetricName.ARG_COUNT)).isEqualTo(5);
+    assertThat(scored.getCognitiveComplexity()).isEqualTo(0.693);
+    assertThat(warnings.toString()).isEmpty();
   }
 
   @Test
-  public void testCalculateCognitiveMetrics() throws Exception {
-    String directoryPath = tempDir.getAbsolutePath();
-    HashMap<String, Map<String, CognitiveMetrics>> result = cognitiveMetricsFacade.calculateCognitiveMetrics(directoryPath);
+  void reportsAMethodKeyThatOccursInSeveralFilesForEachFile() throws Exception {
+    Path first = write("a/Dup.java", "package p; class Dup { void same() {} void onlyA() {} }");
+    Path second = write("b/Dup.java", "package p; class Dup { void same() { return; } void onlyB() {} }");
 
-    // Verify that metrics are collected for both files
-    assertNotNull(result);
-    assertEquals(2, result.size());
+    MetricsCollection result = facade(TestConfigs.defaults()).calculateCognitiveMetrics(
+        List.of(tempDir.toString(), first.toString()));
 
-    // Use Path to build the file paths in a platform-independent way
-    Path testClass1Path = Path.of(tempDir.getAbsolutePath(), "TestClass1.java");
-    Path testClass2Path = Path.of(tempDir.getAbsolutePath(), "TestClass2.java");
-
-    assertNotNull(result.get(testClass1Path.toString()));
-    assertNotNull(result.get(testClass2Path.toString()));
-
-    // Verify metrics for TestClass1
-    CognitiveMetrics metrics1 = result.get(testClass1Path.toString()).get("TestClass1.method1");
-    assertNotNull(metrics1);
-    assertEquals(1, metrics1.getLoopCount());
-
-    // Verify metrics for TestClass2
-    CognitiveMetrics metrics2 = result.get(testClass2Path.toString()).get("TestClass2.method2");
-    assertNotNull(metrics2);
-    assertEquals(1, metrics2.getIfCount());
-    assertEquals(1, metrics2.getElseCount());
+    assertThat(result.keySet()).containsExactly(first.toString(), second.toString());
+    assertThat(result.get(first.toString())).containsOnlyKeys("p.Dup::same", "p.Dup::onlyA");
+    assertThat(result.get(first.toString()).get("p.Dup::same").value(MetricName.RETURN_COUNT)).isZero();
+    assertThat(result.get(second.toString())).containsOnlyKeys("p.Dup::same", "p.Dup::onlyB");
+    assertThat(result.get(second.toString()).get("p.Dup::same").value(MetricName.RETURN_COUNT)).isEqualTo(1);
   }
 
   @Test
-  public void testUnreadableFileFailsWithTheFilePath() throws IOException {
-    Path broken = Path.of(tempDir.getAbsolutePath(), "Broken.java");
+  void reportsAFileWithALocalEnumAsAParserFailureAndContinues() throws Exception {
+    Path localEnum = write("LocalEnum.java", "class LocalEnum { void m() { enum Kind { A, B } } }");
+    Path valid = write("Valid.java", "class Valid { void valid() {} }");
+
+    MetricsCollection result = facade(TestConfigs.defaults()).calculateCognitiveMetrics(List.of(tempDir.toString()));
+
+    assertThat(result).containsOnlyKeys(valid.toString());
+    assertThat(warnings.toString()).startsWith("Parser failed for file " + localEnum + ": (line 1,col ");
+  }
+
+  @Test
+  void excludesMethodsWhoseKeyMatchesAPatternAndLeavesOutFilesWithoutMethods() throws Exception {
+    Path kept = write("Kept.java", "package p; class Kept { void getName() {} void run() {} }");
+    write("Gone.java", "package p; class Gone { void getAll() {} }");
+    CognitiveConfig config = TestConfigs.load("""
+        cognitive:
+          excludePatterns: ["::get", "^p\\\\.Unrelated::"]
+        """);
+
+    MetricsCollection result = facade(config).calculateCognitiveMetrics(List.of(tempDir.toString()));
+
+    assertThat(result).containsOnlyKeys(kept.toString());
+    assertThat(result.get(kept.toString())).containsOnlyKeys("p.Kept::run");
+  }
+
+  @Test
+  void excludesFilesWhosePathMatchesAPattern() throws Exception {
+    write("generated/Gen.java", "class Gen { void gen() {} }");
+    Path kept = write("Kept.java", "class Kept { void kept() {} }");
+    CognitiveConfig config = TestConfigs.load("""
+        cognitive:
+          excludeFilePatterns: ["/generated/"]
+        """);
+
+    MetricsCollection result = facade(config).calculateCognitiveMetrics(List.of(tempDir.toString()));
+
+    assertThat(result).containsOnlyKeys(kept.toString());
+  }
+
+  @Test
+  void reportsAFileThatCannotBeParsedAndContinues() throws Exception {
+    Path broken = write("Broken.java", "class Broken {\n  void oops( {\n}\n");
+    Path valid = write("Valid.java", "class Valid { void valid() {} }");
+
+    MetricsCollection result = facade(TestConfigs.defaults()).calculateCognitiveMetrics(List.of(tempDir.toString()));
+
+    assertThat(result).containsOnlyKeys(valid.toString());
+    assertThat(warnings.toString())
+        .startsWith("Parser failed for file " + broken + ": (line 2,col 12) Parse error. Found \"{\"")
+        .endsWith(System.lineSeparator())
+        .hasLineCount(1);
+  }
+
+  @Test
+  void failsWithTheFilePathWhenAFileIsNotUtf8() throws Exception {
+    Path broken = tempDir.resolve("Broken.java");
     Files.write(broken, new byte[] {(byte) 0xC3, (byte) 0x28});
 
-    CognitiveAnalysisException exception = assertThrows(
-        CognitiveAnalysisException.class,
-        () -> cognitiveMetricsFacade.calculateCognitiveMetrics(tempDir.getAbsolutePath()));
-
-    assertEquals("Error reading file: " + broken, exception.getMessage());
-    assertTrue(exception.getCause() instanceof IOException);
+    assertThatThrownBy(() -> facade(TestConfigs.defaults()).calculateCognitiveMetrics(List.of(tempDir.toString())))
+        .isInstanceOf(CognitiveAnalysisException.class)
+        .hasMessage("Error reading file: " + broken)
+        .hasCauseInstanceOf(IOException.class);
   }
 
   @Test
-  public void testFilesAreAnalysedInPathOrder() throws Exception {
-    createTestFile("A.java", "class A { void a() {} }");
-
-    MetricsCollection result = cognitiveMetricsFacade.calculateCognitiveMetrics(tempDir.getAbsolutePath());
-
-    assertEquals(
-        java.util.List.of(
-            Path.of(tempDir.getAbsolutePath(), "A.java").toString(),
-            Path.of(tempDir.getAbsolutePath(), "TestClass1.java").toString(),
-            Path.of(tempDir.getAbsolutePath(), "TestClass2.java").toString()),
-        new java.util.ArrayList<>(result.keySet()));
+  void returnsNothingForAnEmptyDirectory() throws Exception {
+    assertThat(facade(TestConfigs.defaults()).calculateCognitiveMetrics(List.of(tempDir.toString()))).isEmpty();
   }
 
-  private void createTestFile(String fileName, String content) throws IOException {
-    Path filePath = Path.of(tempDir.getAbsolutePath(), fileName);
-    Files.writeString(filePath, content);
+  private CognitiveMetricsFacade facade(CognitiveConfig config) {
+    return new CognitiveMetricsFacade(config, new PrintWriter(warnings, true));
+  }
+
+  private Path write(String relativePath, String content) throws IOException {
+    Path file = tempDir.resolve(relativePath);
+    Files.createDirectories(file.getParent());
+    return Files.writeString(file, content);
   }
 }

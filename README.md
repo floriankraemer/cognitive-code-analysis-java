@@ -20,6 +20,15 @@ Analyse a directory and print the result tables to the console:
 java -jar target/cognitive-analysis.jar analyse src/main/java
 ```
 
+The path can also be a single file or a comma-separated list of files and directories:
+
+```bash
+java -jar target/cognitive-analysis.jar analyse src/main/java,tools/Generator.java
+```
+
+Directories are searched recursively for `.java` files, skipping hidden directories.
+A file that cannot be parsed is reported and skipped, and the analysis goes on.
+
 Write an HTML, CSV or JSON report instead:
 
 ```bash
@@ -63,25 +72,20 @@ These pages and papers provide more information on cognitive limitations and rea
 ## Example
 
 ```text
-File: C:\Users\florian\Desktop\Java\cognitive-code-analysis\.\src\main\java\net\floriankraemer\cognitive_analysis\domain\ScoreCalculator.java
+File: src/main/java/net/floriankraemer/cognitive_analysis/domain/ComplexityCalculator.java
+┌─────────────────────────────────────────────────────────────────┬────────────────────┬─────┬─────────┬───────┬─────────┬────────┬──┬──────────┬────┬──────────┐
+│Class                                                            │Method              │Lines│Arguments│Returns│Variables│Property│If│If Nesting│Else│Cognitive │
+│                                                                 │                    │     │         │       │         │Accesses│  │  Level   │    │Complexity│
+├─────────────────────────────────────────────────────────────────┼────────────────────┼─────┼─────────┼───────┼─────────┼────────┼──┼──────────┼────┼──────────┤
+│net.floriankraemer.cognitive_analysis.domain.ComplexityCalculator│ComplexityCalculator│  3  │    1    │   0   │    1    │   1    │0 │    0     │ 0  │  0.000   │
+├─────────────────────────────────────────────────────────────────┼────────────────────┼─────┼─────────┼───────┼─────────┼────────┼──┼──────────┼────┼──────────┤
+│net.floriankraemer.cognitive_analysis.domain.ComplexityCalculator│calculate           │ 11  │    1    │   0   │    5    │   1    │0 │    0     │ 0  │  0.182   │
+│                                                                 │                    │     │         │       │  0.182  │        │  │          │    │          │
+├─────────────────────────────────────────────────────────────────┼────────────────────┼─────┼─────────┼───────┼─────────┼────────┼──┼──────────┼────┼──────────┤
+│net.floriankraemer.cognitive_analysis.domain.ComplexityCalculator│weight              │  6  │    2    │   2   │    0    │   0    │1 │    1     │ 0  │  0.000   │
+└─────────────────────────────────────────────────────────────────┴────────────────────┴─────┴─────────┴───────┴─────────┴────────┴──┴──────────┴────┴──────────┘
 
-┌───────────────┬──────────────────┬─────┬─────┬──────────┬─────┬─────┬──────┬──────┬──────┬────────┬─────────┬──────────┐
-│Class          │Method            │Line │ If  │If-Nesting│Else │Loop │Switch│Method│Return│Argument│Try-Catch│Complexity│
-│               │                  │Count│Count│  Level   │Count│Count│Count │ Call │Count │ Count  │ Nesting │          │
-│               │                  │     │     │          │     │     │      │Count │      │        │  Level  │          │
-├───────────────┼──────────────────┼─────┼─────┼──────────┼─────┼─────┼──────┼──────┼──────┼────────┼─────────┼──────────┤
-│ScoreCalculator│calculateScore    │ 55  │  0  │    0     │  0  │  0  │  0   │  50  │  0   │   1    │    0    │0,875     │
-├───────────────┼──────────────────┼─────┼─────┼──────────┼─────┼─────┼──────┼──────┼──────┼────────┼─────────┼──────────┤
-│ScoreCalculator│getThreshold      │  3  │  0  │    0     │  0  │  0  │  0   │  0   │  1   │   0    │    0    │0,000     │
-├───────────────┼──────────────────┼─────┼─────┼──────────┼─────┼─────┼──────┼──────┼──────┼────────┼─────────┼──────────┤
-│ScoreCalculator│getScale          │  3  │  0  │    0     │  0  │  0  │  0   │  0   │  1   │   0    │    0    │0,000     │
-├───────────────┼──────────────────┼─────┼─────┼──────────┼─────┼─────┼──────┼──────┼──────┼────────┼─────────┼──────────┤
-├───────────────┼──────────────────┼─────┼─────┼──────────┼─────┼─────┼──────┼──────┼──────┼────────┼─────────┼──────────┤
-├───────────────┼──────────────────┼─────┼─────┼──────────┼─────┼─────┼──────┼──────┼──────┼────────┼─────────┼──────────┤
-│ScoreCalculator│calculate         │ 25  │  1  │    1     │  0  │  0  │  0   │  10  │  0   │   2    │    0    │0,182     │
-├───────────────┼──────────────────┼─────┼─────┼──────────┼─────┼─────┼──────┼──────┼──────┼────────┼─────────┼──────────┤
-│ScoreCalculator│calculateLogWeight│  6  │  1  │    1     │  0  │  0  │  0   │  1   │  3   │   3    │    0    │0,182     │
-└───────────────┴──────────────────┴─────┴─────┴──────────┴─────┴─────┴──────┴──────┴──────┴────────┴─────────┴──────────┘
+Cognitive metrics calculated for src/main/java/net/floriankraemer/cognitive_analysis/domain/ComplexityCalculator.java
 ```
 
 ## License

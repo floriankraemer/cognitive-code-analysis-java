@@ -30,6 +30,8 @@ public class DeltaTest {
 
     Delta delta2 = new Delta(1, 2);
     assertFalse(delta2.hasDecreased());
+
+    assertFalse(new Delta(1, 1).hasDecreased());
   }
 
   @Test

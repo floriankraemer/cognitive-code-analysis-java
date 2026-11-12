@@ -53,7 +53,7 @@ class AnalyseCommandE2ETest {
       int exitCode = run("analyse", FIXTURE_DIR);
 
       assertThat(exitCode).isZero();
-      assertThat(out.toString()).contains("3.178").contains("0.693").doesNotContain("3,178");
+      assertThat(out.toString()).contains("2.197").contains("1.099").doesNotContain("2,197");
     } finally {
       Locale.setDefault(original);
     }
@@ -64,7 +64,8 @@ class AnalyseCommandE2ETest {
     int exitCode = run("analyse", "src/test/resources/fixtures/parse-error");
 
     assertThat(exitCode).isZero();
-    assertThat(err.toString()).startsWith("Error parsing code: ");
+    assertThat(err.toString())
+        .startsWith("Parser failed for file src/test/resources/fixtures/parse-error/Broken.java: (line 2,col 12) Parse error.");
     assertThat(out.toString()).contains("Cognitive metrics calculated for");
   }
 
@@ -97,9 +98,9 @@ class AnalyseCommandE2ETest {
     assertThat(err.toString()).isEmpty();
     assertThat(out.toString()).contains("Cognitive metrics calculated for " + FIXTURE_DIR);
     assertThat(out.toString()).isNotEqualTo(defaultOutput);
-    // argCount threshold 0 adds ln(1 + 2) to the default score of 3.178
-    assertThat(defaultOutput).contains("3.178").doesNotContain("4.277");
-    assertThat(out.toString()).contains("4.277").doesNotContain("3.178");
+    // argCount threshold 0 adds ln(1 + 2) to the default score of 2.197
+    assertThat(defaultOutput).contains("2.197").doesNotContain("3.296");
+    assertThat(out.toString()).contains("3.296").doesNotContain("2.197");
   }
 
   @Test
@@ -127,7 +128,101 @@ class AnalyseCommandE2ETest {
 
     assertThat(exitCode).isEqualTo(1);
     assertThat(out.toString()).isEmpty();
-    assertThat(err.toString()).isEqualTo("Directory does not exist: does/not/exist" + System.lineSeparator());
+    assertThat(err.toString()).isEqualTo("Path does not exist: does/not/exist" + System.lineSeparator());
+  }
+
+  @Test
+  void printsTheMetricsOfEveryJavaConstruct() {
+    int exitCode = run("analyse", "src/test/resources/fixtures/cognitive");
+
+    assertThat(exitCode).isZero();
+    assertThat(err.toString()).isEmpty();
+    Approvals.verify(out.toString().replace("\r\n", "\n"));
+  }
+
+  @Test
+  void analysesACommaSeparatedListOfFilesAndDirectoriesOnceEachInPathOrder() {
+    int exitCode = run("analyse",
+        " src/test/resources/fixtures/multi , " + FIXTURE_DIR + "/ClassToAnalyze.java,,src/test/resources/fixtures/multi/Beta.java");
+
+    assertThat(exitCode).isZero();
+    assertThat(err.toString()).isEmpty();
+    assertThat(out.toString().lines().filter(line -> line.startsWith("File: ")))
+        .containsExactly(
+            "File: src/test/resources/fixtures/multi/Alpha.java",
+            "File: src/test/resources/fixtures/multi/Beta.java",
+            "File: " + FIXTURE_DIR + "/ClassToAnalyze.java");
+  }
+
+  @Test
+  void reportsTheSameClassAndMethodInDifferentFilesForEachFile() {
+    String dir = "src/test/resources/fixtures/duplicates";
+
+    int exitCode = run("analyse", dir + "," + dir + "/m1/Main.java");
+
+    assertThat(exitCode).isZero();
+    assertThat(err.toString()).isEmpty();
+    assertThat(out.toString().lines().filter(line -> line.startsWith("File: ") || line.startsWith("│Main")))
+        .containsExactly(
+            "File: " + dir + "/m1/Main.java",
+            "│Main │main  │  3  │    1    │   0   │    0    │   0    │0 │    0     │ 0  │  0.000   │",
+            "File: " + dir + "/m2/Main.java",
+            "│Main │main  │  5  │    1    │   0   │    0    │   1    │1 │    1     │ 0  │  0.000   │");
+  }
+
+  @Test
+  void failsWhenOneOfSeveralPathsDoesNotExist() {
+    int exitCode = run("analyse", FIXTURE_DIR + ",missing");
+
+    assertThat(exitCode).isEqualTo(1);
+    assertThat(out.toString()).isEmpty();
+    assertThat(err.toString()).isEqualTo("Path does not exist: missing" + System.lineSeparator());
+  }
+
+  @Test
+  void failsWhenThePathListIsBlank() {
+    int exitCode = run("analyse", " , ");
+
+    assertThat(exitCode).isEqualTo(1);
+    assertThat(out.toString()).isEmpty();
+    assertThat(err.toString()).isEqualTo("No path given." + System.lineSeparator());
+  }
+
+  @Test
+  void printsOnlyTheSummaryForAnEmptyDirectory() {
+    int exitCode = run("analyse", tempDir.toString());
+
+    assertThat(exitCode).isZero();
+    assertThat(err.toString()).isEmpty();
+    assertThat(out.toString()).isEqualTo(
+        System.lineSeparator() + "Cognitive metrics calculated for " + tempDir + System.lineSeparator());
+  }
+
+  @Test
+  void appliesTheFileAndMethodExcludePatternsOfTheConfig() {
+    int exitCode = run("analyse", "src/test/resources/fixtures/multi", "-c", "src/test/resources/fixtures/exclude-config.yaml");
+
+    assertThat(exitCode).isZero();
+    assertThat(err.toString()).isEmpty();
+    assertThat(out.toString())
+        .contains("File: src/test/resources/fixtures/multi/Alpha.java")
+        .contains("│second")
+        .doesNotContain("Beta.java")
+        .doesNotContain("│first")
+        .doesNotContain("multi.Helper");
+  }
+
+  @Test
+  void failsOnAnInvalidExcludePattern() throws Exception {
+    Path config = Files.writeString(tempDir.resolve("bad.yaml"), "cognitive:\n  excludePatterns: ['get(']\n");
+
+    int exitCode = run("analyse", FIXTURE_DIR, "-c", config.toString());
+
+    assertThat(exitCode).isEqualTo(1);
+    assertThat(out.toString()).isEmpty();
+    assertThat(err.toString()).isEqualTo(
+        "Invalid configuration value \"cognitive.excludePatterns\": \"get(\" is not a valid regular expression"
+            + " (Unclosed group)." + System.lineSeparator());
   }
 
   @Test
@@ -168,7 +263,7 @@ class AnalyseCommandE2ETest {
     assertThat(out.toString()).isEqualTo("Report generated at: " + report + System.lineSeparator());
     assertThat(Files.readString(report))
         .startsWith("<!DOCTYPE html>")
-        .contains("<td>ClassToAnalyze</td>")
+        .contains("<td>test.testcode.ClassToAnalyze</td>")
         .contains("<td>methodWithTwoArguments</td>");
   }
 
@@ -180,9 +275,9 @@ class AnalyseCommandE2ETest {
 
     assertThat(exitCode).isZero();
     assertThat(Files.readAllLines(report))
-        .first().asString().startsWith("Package,Class,Method,Line Count");
+        .first().asString().isEqualTo("File,Class,Method,Line,lineCount,argCount,returnCount,variableCount,propertyCallCount,ifCount,ifNestingLevel,elseCount,score");
     assertThat(Files.readAllLines(report))
-        .anyMatch(line -> line.startsWith("test.testcode,ClassToAnalyze,methodWithTwoArguments,"));
+        .anyMatch(line -> line.equals(FIXTURE_DIR + "/ClassToAnalyze.java,test.testcode.ClassToAnalyze,methodWithTwoArguments,9,16,2,0,0,0,3,3,3,2.197"));
   }
 
   @Test
@@ -194,7 +289,7 @@ class AnalyseCommandE2ETest {
     assertThat(exitCode).isZero();
     assertThat(Files.readString(report))
         .startsWith("[")
-        .contains("\"className\" : \"ClassToAnalyze\"")
+        .contains("\"className\" : \"test.testcode.ClassToAnalyze\"")
         .contains("\"methodName\" : \"simpleMethod\"");
   }
 
