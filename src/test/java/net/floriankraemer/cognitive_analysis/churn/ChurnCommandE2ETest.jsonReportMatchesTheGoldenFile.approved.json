@@ -1,0 +1,32 @@
+{
+  "createdAt" : "2023-10-01 12:00:00",
+  "classes" : {
+    "churn.Busy" : {
+      "file" : "<repo>/Busy.java",
+      "score" : 2.197,
+      "timesChanged" : 3,
+      "churn" : 6.591,
+      "coverage" : null,
+      "riskChurn" : null,
+      "riskLevel" : null
+    },
+    "churn.Light" : {
+      "file" : "<repo>/Light.java",
+      "score" : 0.693,
+      "timesChanged" : 2,
+      "churn" : 1.386,
+      "coverage" : null,
+      "riskChurn" : null,
+      "riskLevel" : null
+    },
+    "churn.Calm" : {
+      "file" : "<repo>/Calm.java",
+      "score" : 0.0,
+      "timesChanged" : 1,
+      "churn" : 0.0,
+      "coverage" : null,
+      "riskChurn" : null,
+      "riskLevel" : null
+    }
+  }
+}

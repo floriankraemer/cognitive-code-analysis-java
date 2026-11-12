@@ -35,6 +35,14 @@ Write an HTML, CSV or JSON report instead:
 java -jar target/cognitive-analysis.jar analyse src/main/java --report-type html --report-file report.html
 ```
 
+Find the classes that are complex and change often with the `churn` command, which asks git for the number of changes per file:
+
+```bash
+java -jar target/cognitive-analysis.jar churn src/main/java --since 2024-01-01
+```
+
+See [Churn](./docs/Churn.md) for the options and report formats.
+
 Run `java -jar target/cognitive-analysis.jar --help` for all options.
 
 ## Documentation
@@ -48,6 +56,8 @@ Run `java -jar target/cognitive-analysis.jar --help` for all options.
     * [Configuration](./docs/Configuration.md#configuration)
         * [Tuning the calculation](./docs/Configuration.md#tuning-the-calculation)
     * [Example](#example)
+
+* [Churn](./docs/Churn.md)
 
 * [Halstead Complexity Analysis](./docs/Halstead-Complexity-Analysis.md)
 

@@ -1,0 +1,4 @@
+Class,File,Score,Churn,Times Changed
+Phauthentic.Business.Cognitive.CognitiveMetrics,src/Business/Cognitive/CognitiveMetrics.java,2.042,12.252,6
+Phauthentic.Command.Presentation.CognitiveMetricTextRenderer,src/Command/Presentation/CognitiveMetricTextRenderer.java,0.806,8.06,10
+Phauthentic.Business.MetricsFacade,src/Business/MetricsFacade.java,0.693,5.544,8
