@@ -5,10 +5,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
-import java.io.ByteArrayOutputStream;
+import net.floriankraemer.cognitive_analysis.CognitiveAnalysisException;
 import java.io.IOException;
-import java.io.PrintStream;
-import java.nio.charset.StandardCharsets;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
@@ -16,6 +16,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class CognitiveMetricsFacadeTest {
@@ -30,7 +31,7 @@ public class CognitiveMetricsFacadeTest {
 
     // Instantiate the actual components used in the facade
     FileFinder fileFinder = new FileFinder();
-    CognitiveMetricsCollector cognitiveMetricsCollector = new CognitiveMetricsCollector();
+    CognitiveMetricsCollector cognitiveMetricsCollector = new CognitiveMetricsCollector(new PrintWriter(new StringWriter()));
     ComplexityCalculator complexityCalculator = new ComplexityCalculator();
 
     cognitiveMetricsFacade = new CognitiveMetricsFacade(
@@ -71,7 +72,7 @@ public class CognitiveMetricsFacadeTest {
   }
 
   @Test
-  public void testCalculateCognitiveMetrics() {
+  public void testCalculateCognitiveMetrics() throws Exception {
     String directoryPath = tempDir.getAbsolutePath();
     HashMap<String, Map<String, CognitiveMetrics>> result = cognitiveMetricsFacade.calculateCognitiveMetrics(directoryPath);
 
@@ -99,22 +100,30 @@ public class CognitiveMetricsFacadeTest {
   }
 
   @Test
-  public void testUnreadableFilesAreReportedAndSkipped() throws IOException {
-    Files.write(Path.of(tempDir.getAbsolutePath(), "Broken.java"), new byte[] {(byte) 0xC3, (byte) 0x28});
+  public void testUnreadableFileFailsWithTheFilePath() throws IOException {
+    Path broken = Path.of(tempDir.getAbsolutePath(), "Broken.java");
+    Files.write(broken, new byte[] {(byte) 0xC3, (byte) 0x28});
 
-    PrintStream originalErr = System.err;
-    ByteArrayOutputStream err = new ByteArrayOutputStream();
-    System.setErr(new PrintStream(err, true, StandardCharsets.UTF_8));
-    MetricsCollection result;
-    try {
-      result = cognitiveMetricsFacade.calculateCognitiveMetrics(tempDir.getAbsolutePath());
-    } finally {
-      System.setErr(originalErr);
-    }
+    CognitiveAnalysisException exception = assertThrows(
+        CognitiveAnalysisException.class,
+        () -> cognitiveMetricsFacade.calculateCognitiveMetrics(tempDir.getAbsolutePath()));
 
-    assertEquals(2, result.size());
-    assertTrue(err.toString(StandardCharsets.UTF_8)
-        .contains("Error reading file: " + Path.of(tempDir.getAbsolutePath(), "Broken.java")));
+    assertEquals("Error reading file: " + broken, exception.getMessage());
+    assertTrue(exception.getCause() instanceof IOException);
+  }
+
+  @Test
+  public void testFilesAreAnalysedInPathOrder() throws Exception {
+    createTestFile("A.java", "class A { void a() {} }");
+
+    MetricsCollection result = cognitiveMetricsFacade.calculateCognitiveMetrics(tempDir.getAbsolutePath());
+
+    assertEquals(
+        java.util.List.of(
+            Path.of(tempDir.getAbsolutePath(), "A.java").toString(),
+            Path.of(tempDir.getAbsolutePath(), "TestClass1.java").toString(),
+            Path.of(tempDir.getAbsolutePath(), "TestClass2.java").toString()),
+        new java.util.ArrayList<>(result.keySet()));
   }
 
   private void createTestFile(String fileName, String content) throws IOException {

@@ -3,10 +3,9 @@ package net.floriankraemer.cognitive_analysis.domain;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.List;
-import java.util.Map;
 
+import net.floriankraemer.cognitive_analysis.CognitiveAnalysisException;
+import java.util.Map;
 
 public class CognitiveMetricsFacade {
 
@@ -28,31 +27,29 @@ public class CognitiveMetricsFacade {
    * Calculate cognitive metrics for all Java files in the given directory.
    *
    * @param directoryPath The path to the directory containing the Java files.
+   * @throws CognitiveAnalysisException if a file cannot be read.
    */
-  public MetricsCollection calculateCognitiveMetrics(String directoryPath) {
-    List<File> files = fileFinder.findJavaFiles(directoryPath);
+  public MetricsCollection calculateCognitiveMetrics(String directoryPath)
+      throws CognitiveAnalysisException {
     MetricsCollection metricsCollection = new MetricsCollection();
 
-    files.forEach(file -> {
-      String code = "";
-
-      try {
-        code = Files.readString(Path.of(file.getAbsolutePath()));
-      } catch (IOException e) {
-        System.err.println("Error reading file: " + file.getAbsolutePath());
-        return;
-      }
-
-      cognitiveMetricsCollector.analyze(code);
+    for (File file : fileFinder.findJavaFiles(directoryPath)) {
+      cognitiveMetricsCollector.analyze(readFile(file));
       Map<String, CognitiveMetrics> methodMetrics = cognitiveMetricsCollector.getMethodMetrics();
 
-      methodMetrics.forEach((methodName, metrics) ->
-        scoreCalculator.calculate(metrics, null)
-      );
+      methodMetrics.values().forEach(metrics -> scoreCalculator.calculate(metrics, null));
 
       metricsCollection.put(file.getPath(), methodMetrics);
-    });
+    }
 
     return metricsCollection;
+  }
+
+  private String readFile(File file) throws CognitiveAnalysisException {
+    try {
+      return Files.readString(file.toPath());
+    } catch (IOException e) {
+      throw new CognitiveAnalysisException("Error reading file: " + file.getPath(), e);
+    }
   }
 }

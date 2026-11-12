@@ -5,18 +5,18 @@ import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.ByteArrayOutputStream;
-import java.io.PrintStream;
-import java.nio.charset.StandardCharsets;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.Map;
 
 public class CognitiveMetricsCollectorTest {
 
+  private final StringWriter warnings = new StringWriter();
   private CognitiveMetricsCollector collector;
 
   @BeforeEach
   public void setUp() {
-    collector = new CognitiveMetricsCollector();
+    collector = new CognitiveMetricsCollector(new PrintWriter(warnings, true));
   }
 
   @Test
@@ -178,16 +178,9 @@ public class CognitiveMetricsCollectorTest {
             }
         """;
 
-    PrintStream originalErr = System.err;
-    ByteArrayOutputStream err = new ByteArrayOutputStream();
-    System.setErr(new PrintStream(err, true, StandardCharsets.UTF_8));
-    try {
-      collector.analyze(invalidCode);
-    } finally {
-      System.setErr(originalErr);
-    }
+    collector.analyze(invalidCode);
 
     assertTrue(collector.getMethodMetrics().isEmpty());
-    assertTrue(err.toString(StandardCharsets.UTF_8).startsWith("Error parsing code: "));
+    assertTrue(warnings.toString().startsWith("Error parsing code: "));
   }
 }

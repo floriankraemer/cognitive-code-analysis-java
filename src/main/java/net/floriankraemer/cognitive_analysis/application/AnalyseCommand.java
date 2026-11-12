@@ -66,8 +66,6 @@ public class AnalyseCommand implements Callable<Integer> {
   @Option(names = {"-f", "--report-file"}, description = "File the report is written to. Requires --report-type.")
   String reportFile;
 
-  private final CognitiveMetricsFacade facade = new CognitiveMetricsFacade(
-      new FileFinder(), new CognitiveMetricsCollector(), new ComplexityCalculator());
   private final ResultTableBuilder resultTableBuilder = new ResultTableBuilder();
   private final ReportBuilder reportBuilder = new ReportBuilder(
       new HtmlReportBuilder(), new CsvReportBuilder(), new JsonReportBuilder());
@@ -90,6 +88,8 @@ public class AnalyseCommand implements Callable<Integer> {
         new AppConfigService().loadFromFile(configFile);
       }
 
+      final CognitiveMetricsFacade facade = new CognitiveMetricsFacade(
+          new FileFinder(), new CognitiveMetricsCollector(err), new ComplexityCalculator());
       final MetricsCollection metrics = facade.calculateCognitiveMetrics(path);
       final PrintWriter out = spec.commandLine().getOut();
 
@@ -101,9 +101,14 @@ public class AnalyseCommand implements Callable<Integer> {
       }
       return 0;
     } catch (CognitiveAnalysisException | RuntimeException e) {
-      err.println(e.getMessage());
+      err.println(describe(e));
       return 1;
     }
+  }
+
+  /** Falls back to the exception type when there is no message, so users never see "null". */
+  static String describe(final Exception e) {
+    return e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
   }
 
   private void renderConsoleOutput(final PrintWriter out, final MetricsCollection metrics) {

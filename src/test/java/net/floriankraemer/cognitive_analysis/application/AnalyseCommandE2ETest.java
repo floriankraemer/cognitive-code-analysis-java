@@ -27,18 +27,6 @@ class AnalyseCommandE2ETest {
 
   private final StringWriter out = new StringWriter();
   private final StringWriter err = new StringWriter();
-  private Locale originalLocale;
-
-  @BeforeEach
-  void setUp() {
-    originalLocale = Locale.getDefault();
-    Locale.setDefault(Locale.US);
-  }
-
-  @AfterEach
-  void tearDown() {
-    Locale.setDefault(originalLocale);
-  }
 
   @Test
   void printsOneTablePerFileToTheConsole() {
@@ -47,6 +35,54 @@ class AnalyseCommandE2ETest {
     assertThat(exitCode).isZero();
     assertThat(err.toString()).isEmpty();
     Approvals.verify(out.toString().replace("\r\n", "\n"));
+  }
+
+  @Test
+  void printsFilesAndMethodsInStableSortedOrder() {
+    int exitCode = run("analyse", "src/test/resources/fixtures/multi");
+
+    assertThat(exitCode).isZero();
+    Approvals.verify(out.toString().replace("\r\n", "\n"));
+  }
+
+  @Test
+  void usesDotDecimalsRegardlessOfTheDefaultLocale() {
+    Locale original = Locale.getDefault();
+    Locale.setDefault(Locale.GERMANY);
+    try {
+      int exitCode = run("analyse", FIXTURE_DIR);
+
+      assertThat(exitCode).isZero();
+      assertThat(out.toString()).contains("3.178").contains("0.693").doesNotContain("3,178");
+    } finally {
+      Locale.setDefault(original);
+    }
+  }
+
+  @Test
+  void continuesAfterAParseErrorAndWarnsOnTheErrWriter() {
+    int exitCode = run("analyse", "src/test/resources/fixtures/parse-error");
+
+    assertThat(exitCode).isZero();
+    assertThat(err.toString()).startsWith("Error parsing code: ");
+    assertThat(out.toString()).contains("Cognitive metrics calculated for");
+  }
+
+  @Test
+  void failsWhenAFileCannotBeRead() throws Exception {
+    Path broken = Files.write(tempDir.resolve("Broken.java"), new byte[] {(byte) 0xC3, (byte) 0x28});
+
+    int exitCode = run("analyse", tempDir.toString());
+
+    assertThat(exitCode).isEqualTo(1);
+    assertThat(out.toString()).isEmpty();
+    assertThat(err.toString()).isEqualTo("Error reading file: " + broken + System.lineSeparator());
+  }
+
+  @Test
+  void describesExceptionsWithoutAMessageByTheirType() {
+    assertThat(AnalyseCommand.describe(new IllegalStateException())).isEqualTo("IllegalStateException");
+    assertThat(AnalyseCommand.describe(new IllegalStateException("boom"))).isEqualTo("boom");
   }
 
   @Test

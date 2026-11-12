@@ -2,6 +2,7 @@ package net.floriankraemer.cognitive_analysis.domain;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 
@@ -17,7 +18,7 @@ public class FileFinder {
    * Find all Java files in the given directory.
    *
    * @param directoryPath The path to the directory to search for Java files.
-   * @return A list of Java files in the directory.
+   * @return The Java files in the directory, sorted by path.
    */
   public List<File> findJavaFiles(final String directoryPath) {
     final File directory = new File(directoryPath);
@@ -25,6 +26,7 @@ public class FileFinder {
 
     assertDirectoryExists(directory);
     findJavaFilesRecursive(directory, javaFiles);
+    javaFiles.sort(Comparator.comparing(File::getPath));
 
     return javaFiles;
   }

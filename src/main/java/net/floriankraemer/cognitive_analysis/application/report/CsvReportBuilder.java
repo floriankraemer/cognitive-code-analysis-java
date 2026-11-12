@@ -5,6 +5,7 @@ import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
 
 import java.io.IOException;
+import java.util.Locale;
 import java.io.StringWriter;
 
 public class CsvReportBuilder extends AbstractReportBuilder {
@@ -42,7 +43,7 @@ public class CsvReportBuilder extends AbstractReportBuilder {
                 metrics.getReturnCount(),
                 metrics.getArgumentCount(),
                 metrics.getTryCatchNestingLevel(),
-                String.format("%.3f", metrics.getCognitiveComplexity())
+                String.format(Locale.ROOT, "%.3f", metrics.getCognitiveComplexity())
             );
           } catch (IOException e) {
             throw new RuntimeException("Error writing CSV record", e);

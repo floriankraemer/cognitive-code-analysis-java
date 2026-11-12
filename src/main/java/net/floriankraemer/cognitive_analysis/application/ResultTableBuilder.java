@@ -1,6 +1,7 @@
 package net.floriankraemer.cognitive_analysis.application;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import net.floriankraemer.cognitive_analysis.domain.CognitiveMetrics;
 
@@ -36,11 +37,11 @@ public class ResultTableBuilder {
         formatValue(metrics.getReturnCount(), metrics.getReturnCountWeight()),
         formatValue(metrics.getArgumentCount(), metrics.getArgumentCountWeight()),
         formatValue(metrics.getTryCatchNestingLevel(), metrics.getTryCatchNestingLevelWeight()),
-        String.format("%.3f", metrics.getCognitiveComplexity())
+        String.format(Locale.ROOT, "%.3f", metrics.getCognitiveComplexity())
     );
   }
 
   private String formatValue(final int value, final double weight) {
-    return (weight != 0.0) ? value + "\n" + String.format("%.3f", weight) : String.valueOf(value);
+    return (weight != 0.0) ? value + "\n" + String.format(Locale.ROOT, "%.3f", weight) : String.valueOf(value);
   }
 }
