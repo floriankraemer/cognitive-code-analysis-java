@@ -1,13 +1,16 @@
 package net.floriankraemer.cognitive_analysis.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermissions;
 import net.floriankraemer.cognitive_analysis.App;
 import net.floriankraemer.cognitive_analysis.config.CognitiveConfig;
 import net.floriankraemer.cognitive_analysis.config.ConfigInitializer;
@@ -43,8 +46,11 @@ class InitCommandTest {
 
   /** Runs {@code init} with the given answers on stdin, as on an interactive console. */
   private int runInteractive(final String answers, final String... args) {
-    CommandLine commandLine = new CommandLine(
-        new InitCommand(new BufferedReader(new StringReader(answers)), () -> true));
+    return runWithReader(new BufferedReader(new StringReader(answers)), args);
+  }
+
+  private int runWithReader(final BufferedReader reader, final String... args) {
+    CommandLine commandLine = new CommandLine(new InitCommand(reader, () -> true));
     commandLine.setOut(new PrintWriter(out, true));
     commandLine.setErr(new PrintWriter(err, true));
     return commandLine.execute(args);
@@ -88,10 +94,27 @@ class InitCommandTest {
   }
 
   @Test
+  void silentModeDoesNotConsultTheTerminal() {
+    CommandLine commandLine = new CommandLine(new InitCommand(
+        new BufferedReader(new StringReader("")),
+        () -> {
+          throw new AssertionError("the terminal must not be checked with --silent");
+        }));
+    commandLine.setOut(new PrintWriter(out, true));
+    commandLine.setErr(new PrintWriter(err, true));
+
+    assertThat(commandLine.execute("--silent", "-p", target("jcca.yaml").toString())).isZero();
+  }
+
+  @Test
   void nonInteractiveRunsSkipTheQuestionsAndUseDefaults() throws Exception {
     Path file = target("jcca.yaml");
+    CommandLine commandLine = new CommandLine(new InitCommand(
+        new BufferedReader(new StringReader("0.1\nyes\n")), () -> false));
+    commandLine.setOut(new PrintWriter(out, true));
+    commandLine.setErr(new PrintWriter(err, true));
 
-    int exitCode = runInteractive("0.1\nyes\n", "-p", file.toString(), "--silent");
+    int exitCode = commandLine.execute("-p", file.toString());
 
     assertThat(exitCode).isZero();
     assertThat(out.toString()).doesNotContain("Score threshold");
@@ -178,6 +201,29 @@ class InitCommandTest {
   }
 
   @Test
+  void aFileCreatedWhileAnsweringIsNotOverwritten() throws Exception {
+    Path file = target("jcca.yaml");
+    boolean[] created = {false};
+    BufferedReader racing = new BufferedReader(new StringReader("\n\n\n\n\n\n\n")) {
+      @Override
+      public String readLine() throws IOException {
+        if (!created[0]) {
+          created[0] = true;
+          Files.writeString(file, "concurrent\n");
+        }
+        return super.readLine();
+      }
+    };
+
+    int exitCode = runWithReader(racing, "-p", file.toString());
+
+    assertThat(exitCode).isEqualTo(1);
+    assertThat(err.toString())
+        .isEqualTo("Config file already exists at " + file + ". Use --force to overwrite." + System.lineSeparator());
+    assertThat(Files.readString(file)).isEqualTo("concurrent\n");
+  }
+
+  @Test
   void anExistingFileIsNotOverwrittenWithoutForceAndNoQuestionIsAsked() throws Exception {
     Path file = Files.writeString(target("jcca.yaml"), "cognitive: {}\n");
 
@@ -212,6 +258,8 @@ class InitCommandTest {
     assertThat(exitCode).isZero();
     assertThat(out.toString()).contains("Created config at: " + file);
     assertThat(loadConfig(file).scoreThreshold()).isEqualTo(0.5);
+    assertThat(Files.list(dir).map(entry -> entry.getFileName().toString()).toList())
+        .containsExactly("jcca.yaml");
   }
 
   @Test
@@ -219,6 +267,24 @@ class InitCommandTest {
     Path file = Files.writeString(target("jcca.yaml"), "cognitive: {}\n");
 
     assertThat(runInit("--silent", "-f", "-p", file.toString())).isZero();
+  }
+
+  @Test
+  void aFailedForceWriteKeepsTheOldFile() throws Exception {
+    Path file = Files.writeString(target("jcca.yaml"), "previous\n");
+    makeReadOnly(dir);
+    try {
+      assumeFalse(Files.isWritable(dir), "file permissions do not apply to this user");
+
+      int exitCode = runInit("--silent", "--force", "-p", file.toString());
+
+      assertThat(exitCode).isEqualTo(1);
+      assertThat(err.toString())
+          .isEqualTo("Cannot write config file " + file + ": permission denied." + System.lineSeparator());
+    } finally {
+      makeWritable(dir);
+    }
+    assertThat(Files.readString(file)).isEqualTo("previous\n");
   }
 
   @Test
@@ -241,9 +307,54 @@ class InitCommandTest {
     assertThat(exitCode).isEqualTo(1);
     assertThat(out.toString()).isEmpty();
     assertThat(err.toString())
-        .isEqualTo("Cannot write config file " + file + ": a parent path exists and is not a directory"
+        .isEqualTo("Cannot write config file " + file + ": a parent path is not a directory."
             + System.lineSeparator());
     assertThat(err.toString()).doesNotContain("Exception").doesNotContain("\tat ");
+  }
+
+  @Test
+  void aReadOnlyDirectoryReportsPermissionDenied() throws Exception {
+    Path file = target("jcca.yaml");
+    makeReadOnly(dir);
+    try {
+      assumeFalse(Files.isWritable(dir), "file permissions do not apply to this user");
+
+      int exitCode = runInit("--silent", "-p", file.toString());
+
+      assertThat(exitCode).isEqualTo(1);
+      assertThat(err.toString())
+          .isEqualTo("Cannot write config file " + file + ": permission denied." + System.lineSeparator());
+      assertThat(file).doesNotExist();
+    } finally {
+      makeWritable(dir);
+    }
+  }
+
+  @Test
+  void aDirectoryIsRejectedWithAndWithoutForceAndNeverDeleted() throws Exception {
+    Path directory = Files.createDirectory(target("out"));
+    Files.writeString(directory.resolve("keep.txt"), "keep");
+
+    for (String[] flags : new String[][] {{"--silent"}, {"--silent", "-f"}}) {
+      out.getBuffer().setLength(0);
+      err.getBuffer().setLength(0);
+
+      int exitCode = runInit(concat(flags, "-p", directory.toString()));
+
+      assertThat(exitCode).isEqualTo(1);
+      assertThat(err.toString())
+          .isEqualTo("Cannot write config file " + directory + ": it is a directory." + System.lineSeparator());
+    }
+    assertThat(Files.readString(directory.resolve("keep.txt"))).isEqualTo("keep");
+  }
+
+  @Test
+  void anEmptyPathIsRejected() {
+    int exitCode = runInit("--silent", "-p", "");
+
+    assertThat(exitCode).isEqualTo(1);
+    assertThat(out.toString()).isEmpty();
+    assertThat(err.toString()).isEqualTo("Invalid path: path must not be empty." + System.lineSeparator());
   }
 
   @Test
@@ -255,22 +366,42 @@ class InitCommandTest {
   }
 
   @Test
-  void theAnswersMatchTheDefaultsOfTheSettingsRecord() throws Exception {
+  void theInteractiveDefaultsAreTheBundledDefaults() throws Exception {
     Path file = target("jcca.yaml");
 
     runInteractive("\n\n\n\n\n\n\n", "-p", file.toString());
 
-    CognitiveConfig config = loadConfig(file);
-    Settings written = new Settings(
-        config.scoreThreshold(),
-        config.showOnlyMethodsExceedingThreshold(),
-        config.showHalsteadComplexity(),
-        config.showCyclomaticComplexity(),
-        config.showUnderstandability(),
-        config.groupByClass(),
-        config.showDetailedCognitiveMetrics());
-    assertThat(written).isEqualTo(Settings.DEFAULTS);
-    assertThat(Files.readString(file)).isEqualTo(ConfigInitializer.render(Settings.DEFAULTS));
+    assertThat(Files.readString(file))
+        .isEqualTo(ConfigInitializer.render(Settings.fromConfig(TestConfigs.defaults())));
+  }
+
+  @Test
+  void aConsoleThatIsNotATerminalAsksNoQuestions() {
+    assertThat(InitCommand.isInteractive(null, console -> true)).isFalse();
+    assertThat(InitCommand.isInteractive("console", console -> false)).isFalse();
+    assertThat(InitCommand.isInteractive("console", console -> true)).isTrue();
+  }
+
+  @Test
+  void theTerminalCheckIsNotConsultedWithoutAConsole() {
+    assertThat(InitCommand.isInteractive(null, console -> {
+      throw new AssertionError("no console to check");
+    })).isFalse();
+  }
+
+  private void makeReadOnly(final Path directory) throws IOException {
+    Files.setPosixFilePermissions(directory, PosixFilePermissions.fromString("r-xr-xr-x"));
+  }
+
+  private void makeWritable(final Path directory) throws IOException {
+    Files.setPosixFilePermissions(directory, PosixFilePermissions.fromString("rwxr-xr-x"));
+  }
+
+  private static String[] concat(final String[] first, final String... rest) {
+    String[] all = new String[first.length + rest.length];
+    System.arraycopy(first, 0, all, 0, first.length);
+    System.arraycopy(rest, 0, all, first.length, rest.length);
+    return all;
   }
 
   private static String repeat(final String line, final int times) {

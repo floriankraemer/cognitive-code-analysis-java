@@ -17,7 +17,7 @@ java -jar cognitive-analysis.jar analyse <path-to-folder> --config <path-to-conf
 
 ## Creating a config file
 
-`init` writes a config file with the bundled defaults, so you can start from a complete, documented file.
+`init` writes a config file with the bundled defaults, so you can start from a complete file.
 
 ```bash
 java -jar cognitive-analysis.jar init
@@ -39,6 +39,7 @@ Options:
 - `--silent` skips the questions and writes the defaults.
   Questions are also skipped when standard input is not a console, such as when input is piped.
 - `--force`, `-f` overwrites an existing file.
+  The new content is written next to the file first and moved over it, so a failed write keeps the old file.
   Without it, `init` refuses to replace the file and exits with status 1.
 
 ## Merge rules

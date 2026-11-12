@@ -8,9 +8,15 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.AtomicMoveNotSupportedException;
+import java.nio.file.FileAlreadyExistsException;
+import java.nio.file.FileSystemException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
 import java.util.Locale;
+import java.util.UUID;
 
 /** Writes a new user configuration file: the bundled defaults with the chosen settings applied. */
 public final class ConfigInitializer {
@@ -24,10 +30,7 @@ public final class ConfigInitializer {
       .disable(YAMLGenerator.Feature.SPLIT_LINES)
       .build());
 
-  /**
-   * The settings the {@code init} command asks for. The defaults match the bundled
-   * {@code jcca-defaults.yaml}; a test keeps the two in sync.
-   */
+  /** The settings the {@code init} command asks for. */
   public record Settings(
       double scoreThreshold,
       boolean showOnlyMethodsExceedingThreshold,
@@ -37,7 +40,17 @@ public final class ConfigInitializer {
       boolean groupByClass,
       boolean showDetailedCognitiveMetrics) {
 
-    public static final Settings DEFAULTS = new Settings(0.5, false, false, false, false, true, true);
+    /** The settings of a loaded configuration, so the defaults come from the bundled file only. */
+    public static Settings fromConfig(final CognitiveConfig config) {
+      return new Settings(
+          config.scoreThreshold(),
+          config.showOnlyMethodsExceedingThreshold(),
+          config.showHalsteadComplexity(),
+          config.showCyclomaticComplexity(),
+          config.showUnderstandability(),
+          config.groupByClass(),
+          config.showDetailedCognitiveMetrics());
+    }
 
     /**
      * @throws IllegalArgumentException when the text is not a finite number greater than 0
@@ -91,16 +104,59 @@ public final class ConfigInitializer {
   }
 
   /**
-   * Creates missing parent directories and writes the rendered configuration, replacing an existing file.
+   * Writes the configuration to {@code target}, creating missing parent directories.
    *
-   * @throws IOException when a directory cannot be created or the file cannot be written
+   * <p>Without {@code overwrite} the file must not exist, and creating it is atomic, so a file that appears while
+   * the questions are answered is never replaced. With {@code overwrite} the content is written next to the target
+   * and then moved over it, so a failed write leaves the previous file intact.
+   *
+   * @throws FileAlreadyExistsException when {@code overwrite} is false and the file exists
+   * @throws FileSystemException when the target is a directory or a parent path is not a directory
+   * @throws IOException when the file cannot be written
    */
-  public static void write(final Path target, final Settings settings) throws IOException {
+  public static void write(final Path target, final Settings settings, final boolean overwrite) throws IOException {
+    if (Files.isDirectory(target)) {
+      throw new FileSystemException(target.toString(), null, "it is a directory");
+    }
+    final String yaml = render(settings);
     final Path parent = target.toAbsolutePath().getParent();
     if (parent != null) {
-      Files.createDirectories(parent);
+      createDirectories(parent);
     }
-    Files.writeString(target, render(settings), StandardCharsets.UTF_8);
+    if (overwrite) {
+      replace(target, yaml);
+    } else {
+      Files.writeString(
+          target, yaml, StandardCharsets.UTF_8, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
+    }
+  }
+
+  private static void createDirectories(final Path parent) throws IOException {
+    try {
+      Files.createDirectories(parent);
+    } catch (FileAlreadyExistsException e) {
+      throw new FileSystemException(parent.toString(), null, "a parent path is not a directory");
+    }
+  }
+
+  private static void replace(final Path target, final String yaml) throws IOException {
+    final Path temp = target.toAbsolutePath().resolveSibling(
+        "." + target.getFileName() + "." + UUID.randomUUID() + ".tmp");
+    try {
+      Files.writeString(temp, yaml, StandardCharsets.UTF_8, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
+      moveOver(temp, target);
+    } finally {
+      Files.deleteIfExists(temp);
+    }
+  }
+
+  private static void moveOver(final Path temp, final Path target) throws IOException {
+    try {
+      Files.move(temp, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+    } catch (AtomicMoveNotSupportedException e) {
+      // Some file systems cannot rename atomically; a plain replace is the best available.
+      Files.move(temp, target, StandardCopyOption.REPLACE_EXISTING);
+    }
   }
 
   private static ObjectNode bundledDefaults() {

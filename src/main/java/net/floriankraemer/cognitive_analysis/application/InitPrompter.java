@@ -13,16 +13,17 @@ import net.floriankraemer.cognitive_analysis.config.ConfigInitializer.Settings;
  */
 final class InitPrompter {
 
-  private static final Settings DEFAULTS = Settings.DEFAULTS;
-
   private final BufferedReader input;
   private final PrintWriter out;
   private final PrintWriter err;
+  private final Settings defaults;
 
-  InitPrompter(final BufferedReader input, final PrintWriter out, final PrintWriter err) {
+  InitPrompter(
+      final BufferedReader input, final PrintWriter out, final PrintWriter err, final Settings defaults) {
     this.input = input;
     this.out = out;
     this.err = err;
+    this.defaults = defaults;
   }
 
   Settings ask() throws CognitiveAnalysisException {
@@ -30,37 +31,37 @@ final class InitPrompter {
         ask(
             "Methods with a score above this threshold are considered complex and are highlighted.",
             "Score threshold",
-            DEFAULTS.scoreThreshold(),
+            defaults.scoreThreshold(),
             Settings::parseScoreThreshold),
         ask(
             "Show only methods whose score exceeds the threshold, to focus on the most complex ones.",
             "Show only methods exceeding the threshold?",
-            DEFAULTS.showOnlyMethodsExceedingThreshold(),
+            defaults.showOnlyMethodsExceedingThreshold(),
             Settings::parseBoolean),
         ask(
             "Include Halstead complexity (program length and vocabulary) in the output.",
             "Show Halstead complexity?",
-            DEFAULTS.showHalsteadComplexity(),
+            defaults.showHalsteadComplexity(),
             Settings::parseBoolean),
         ask(
             "Include cyclomatic complexity (the number of independent paths) in the output.",
             "Show cyclomatic complexity?",
-            DEFAULTS.showCyclomaticComplexity(),
+            defaults.showCyclomaticComplexity(),
             Settings::parseBoolean),
         ask(
             "Include the understandability metric (Sonar-style cognitive complexity) in the output.",
             "Show understandability?",
-            DEFAULTS.showUnderstandability(),
+            defaults.showUnderstandability(),
             Settings::parseBoolean),
         ask(
             "Show the individual metric columns, not only the overall score.",
             "Show detailed cognitive metrics?",
-            DEFAULTS.showDetailedCognitiveMetrics(),
+            defaults.showDetailedCognitiveMetrics(),
             Settings::parseBoolean),
         ask(
             "Group the results into one table per class instead of a single flat table.",
             "Group results by class?",
-            DEFAULTS.groupByClass(),
+            defaults.groupByClass(),
             Settings::parseBoolean));
   }
 
