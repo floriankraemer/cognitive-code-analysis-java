@@ -85,7 +85,8 @@ public class AnalyseCommand implements Callable<Integer> {
     try {
       final CognitiveConfig config =
           new ConfigLoader(Path.of("")).load(configFile == null ? null : Path.of(configFile));
-      final MetricsCollection metrics = new CognitiveMetricsFacade(config, err).calculateCognitiveMetrics(paths());
+      final MetricsCollection metrics =
+          new CognitiveMetricsFacade(config, err, Path.of("")).calculateCognitiveMetrics(paths());
       final PrintWriter out = spec.commandLine().getOut();
 
       if (reportType != null) {

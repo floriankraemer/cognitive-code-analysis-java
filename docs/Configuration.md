@@ -25,8 +25,8 @@ java -jar cognitive-analysis.jar analyse <path-to-folder> --config <path-to-conf
 
 ## Settings
 
-`metrics`, `excludeFilePatterns` and `excludePatterns` affect the analysis today.
-The other settings (`scoreThreshold`, `show*`, `groupByClass`, `cache`, `customReporters`) are parsed and validated, and are applied from a later release.
+`metrics`, `excludeFilePatterns`, `excludePatterns` and `cache` affect the analysis today.
+The other settings (`scoreThreshold`, `show*`, `groupByClass`, `customReporters`) are parsed and validated, and are applied from a later release.
 
 ```yaml
 cognitive:
@@ -79,6 +79,22 @@ cognitive:
 ```
 
 Use single quotes in YAML, so a backslash reaches the regular expression unchanged.
+
+## Cache
+
+The analysis caches the metrics of each file, so a file that did not change is not parsed again.
+
+- `cache.directory` is resolved against the working directory and defaults to `./.jcca.cache`.
+- Each entry is one JSON file at `<directory>/<first two characters of the key>/<key>.json`.
+- The key is a SHA-256 hash of the absolute path, the modification time, the size of the file and the canonical form of the whole configuration.
+- An entry is used only while all of these stay the same, so editing the file or changing any setting analyses the file again.
+- The key does not include the version of the tool.
+  After upgrading the tool, delete the cache directory, because the metrics of an older version would otherwise be reused.
+- A corrupt, unreadable or outdated entry is treated as missing and is overwritten.
+- A file that cannot be parsed is never cached.
+- Set `cache.enabled: false` to turn the cache off; then nothing is read, written or created.
+- The directory is safe to delete at any time; the next run rebuilds it.
+- When the cache cannot be written, the analysis prints one warning and continues without it.
 
 ## Tuning the calculation
 

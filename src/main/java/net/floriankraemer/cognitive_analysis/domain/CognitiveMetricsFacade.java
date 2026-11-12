@@ -7,7 +7,9 @@ import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import net.floriankraemer.cognitive_analysis.CognitiveAnalysisException;
+import net.floriankraemer.cognitive_analysis.cache.MetricsCache;
 import net.floriankraemer.cognitive_analysis.config.CognitiveConfig;
 
 /** Finds the files, collects and scores their methods, and applies the exclusions of the config. */
@@ -18,12 +20,18 @@ public class CognitiveMetricsFacade {
   private final FileFinder fileFinder = new FileFinder();
   private final CognitiveMetricsCollector collector = new CognitiveMetricsCollector();
   private final ComplexityCalculator calculator;
+  private final MetricsCache cache;
 
-  /** @param warnings receives a line per file that cannot be parsed */
-  public CognitiveMetricsFacade(final CognitiveConfig config, final PrintWriter warnings) {
+  /**
+   * @param warnings receives a line per file that cannot be parsed, and one line when the cache cannot be written
+   * @param workingDirectory the base of a relative {@code cache.directory}
+   */
+  public CognitiveMetricsFacade(
+      final CognitiveConfig config, final PrintWriter warnings, final Path workingDirectory) {
     this.config = config;
     this.warnings = warnings;
     this.calculator = new ComplexityCalculator(config);
+    this.cache = new MetricsCache(config, workingDirectory, warnings);
   }
 
   /**
@@ -44,7 +52,7 @@ public class CognitiveMetricsFacade {
     for (final Path file : fileFinder.findJavaFiles(paths, config.excludeFilePatterns())) {
       final Map<String, CognitiveMetrics> collected;
       try {
-        collected = collector.collect(readFile(file));
+        collected = collect(file);
       } catch (SourceParseException e) {
         warnings.println("Parser failed for file " + file + ": " + e.getMessage());
         continue;
@@ -62,6 +70,19 @@ public class CognitiveMetricsFacade {
       }
     }
     return result;
+  }
+
+  /** The metrics of a file as the collector reports them, from the cache when the file state is unchanged. */
+  private Map<String, CognitiveMetrics> collect(final Path file)
+      throws CognitiveAnalysisException, SourceParseException {
+    final Optional<String> key = cache.keyOf(file);
+    final Optional<Map<String, CognitiveMetrics>> cached = key.flatMap(cache::load);
+    if (cached.isPresent()) {
+      return cached.get();
+    }
+    final Map<String, CognitiveMetrics> collected = collector.collect(readFile(file));
+    key.ifPresent(cacheKey -> cache.store(cacheKey, file, collected));
+    return collected;
   }
 
   private boolean isExcluded(final String methodKey) {

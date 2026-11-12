@@ -1,0 +1,150 @@
+package net.floriankraemer.cognitive_analysis.cache;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.MapperFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.json.JsonMapper;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import net.floriankraemer.cognitive_analysis.config.CognitiveConfig;
+import net.floriankraemer.cognitive_analysis.domain.CognitiveMetrics;
+
+/**
+ * Stores the collected metrics of each source file, so an unchanged file is not parsed again.
+ *
+ * <p>An entry is valid for one file state and one configuration: its key hashes the absolute path, the
+ * modification time, the size and the canonical form of the configuration. Entries live at
+ * {@code <directory>/<key[0:2]>/<key>.json}. A disabled cache never touches the file system.
+ */
+public final class MetricsCache {
+
+  /** Bump when the payload or the serialized metrics change, so older entries are read as misses. */
+  public static final int CACHE_FORMAT_VERSION = 1;
+
+  /** Keeps the insertion order of the methods, so a cache hit prints the same as a fresh analysis. */
+  private static final ObjectMapper PAYLOAD_MAPPER = JsonMapper.builder().build();
+
+  /** The canonical form of the configuration: properties and map entries in a fixed order. */
+  private static final ObjectMapper CANONICAL_MAPPER = JsonMapper.builder()
+      .enable(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY)
+      .enable(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS)
+      .build();
+
+  private final boolean enabled;
+  private final Path directory;
+  private final String configHash;
+  private final PrintWriter warnings;
+  private boolean writeFailureReported;
+
+  /**
+   * @param config the loaded configuration; its cache settings select the directory and whether it is used
+   * @param workingDirectory the base of a relative cache directory
+   * @param warnings receives one line when entries cannot be written
+   */
+  public MetricsCache(final CognitiveConfig config, final Path workingDirectory, final PrintWriter warnings) {
+    this.enabled = config.cache().enabled();
+    this.directory = workingDirectory.toAbsolutePath().resolve(config.cache().directory()).normalize();
+    this.configHash = sha256Hex(toJson(config));
+    this.warnings = warnings;
+  }
+
+  /**
+   * The key of the current state of a file. Computed before the file is read, so an edit made while
+   * reading cannot be stored under the new state.
+   *
+   * @return empty when the cache is disabled or the file attributes cannot be read; the read then reports the file
+   */
+  public Optional<String> keyOf(final Path file) {
+    if (!enabled) {
+      return Optional.empty();
+    }
+    try {
+      final String state = file.toAbsolutePath().normalize() + "|"
+          + Files.getLastModifiedTime(file).toMillis() + "|"
+          + Files.size(file) + "|"
+          + configHash;
+      return Optional.of(sha256Hex(state));
+    } catch (IOException e) {
+      return Optional.empty();
+    }
+  }
+
+  /** @return the stored metrics, or empty for a missing, corrupt or outdated entry */
+  public Optional<Map<String, CognitiveMetrics>> load(final String key) {
+    if (!enabled) {
+      return Optional.empty();
+    }
+    try {
+      final Payload payload = PAYLOAD_MAPPER.readValue(entryPath(key).toFile(), Payload.class);
+      return payload.version() == CACHE_FORMAT_VERSION ? Optional.ofNullable(payload.analysisResult()) : Optional.empty();
+    } catch (IOException | RuntimeException e) {
+      // Any unreadable entry is a miss: the file is analysed again and the entry is overwritten.
+      return Optional.empty();
+    }
+  }
+
+  /** Writes the entry atomically. A failure is reported once and the analysis goes on without the cache. */
+  public void store(final String key, final Path file, final Map<String, CognitiveMetrics> metrics) {
+    if (!enabled) {
+      return;
+    }
+    final Path entry = entryPath(key);
+    try {
+      Files.createDirectories(entry.getParent());
+      final Path temporary = Files.createTempFile(entry.getParent(), key, ".tmp");
+      try {
+        PAYLOAD_MAPPER.writeValue(temporary.toFile(), new Payload(CACHE_FORMAT_VERSION, file.toString(), metrics));
+        Files.move(temporary, entry, StandardCopyOption.ATOMIC_MOVE);
+      } finally {
+        Files.deleteIfExists(temporary);
+      }
+    } catch (IOException e) {
+      reportWriteFailure(e);
+    }
+  }
+
+  private void reportWriteFailure(final IOException e) {
+    if (writeFailureReported) {
+      return;
+    }
+    writeFailureReported = true;
+    warnings.println("Warning: cannot write the cache to " + directory + ": "
+        + Objects.toString(e.getMessage(), e.getClass().getSimpleName())
+        + ". The analysis continues without caching.");
+  }
+
+  private Path entryPath(final String key) {
+    return directory.resolve(key.substring(0, 2)).resolve(key + ".json");
+  }
+
+  private static String toJson(final CognitiveConfig config) {
+    try {
+      return CANONICAL_MAPPER.writeValueAsString(config);
+    } catch (JsonProcessingException e) {
+      throw new IllegalStateException("The configuration cannot be serialized", e);
+    }
+  }
+
+  private static String sha256Hex(final String text) {
+    try {
+      final byte[] digest = MessageDigest.getInstance("SHA-256").digest(text.getBytes(StandardCharsets.UTF_8));
+      return HexFormat.of().formatHex(digest);
+    } catch (NoSuchAlgorithmException e) {
+      throw new IllegalStateException("SHA-256 is not available", e);
+    }
+  }
+
+  /** The stored form of one entry. */
+  private record Payload(int version, String filePath, Map<String, CognitiveMetrics> analysisResult) {}
+}
