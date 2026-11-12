@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<checkstyle version="8.0">
+  <file name="src/Levels.java">
+    <error column="1" line="2" message="Method warning has cognitive complexity 0.8 (threshold: 0.5)" severity="warning" source="CognitiveComplexity"/>
+    <error column="1" line="3" message="Method error has cognitive complexity 1.0 (threshold: 0.5)" severity="error" source="CognitiveComplexity"/>
+    <error column="1" line="4" message="Method blocker has cognitive complexity 1.5 (threshold: 0.5)" severity="error" source="CognitiveComplexity"/>
+  </file>
+</checkstyle>

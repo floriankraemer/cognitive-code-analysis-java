@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<checkstyle version="8.0">
+  <file name="src/test/resources/fixtures/sample/ClassToAnalyze.java">
+    <error column="1" line="9" message="Method methodWithTwoArguments has cognitive complexity 2.2 (threshold: 0.5)" severity="error" source="CognitiveComplexity"/>
+  </file>
+</checkstyle>

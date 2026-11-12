@@ -1,9 +1,5 @@
 package net.floriankraemer.cognitive_analysis.application.report;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.util.DefaultIndenter;
-import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Clock;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -24,16 +20,13 @@ import net.floriankraemer.cognitive_analysis.domain.ScoredMethod;
  */
 final class JsonReport implements Report {
 
-  private static final DefaultPrettyPrinter PRINTER =
-      new DefaultPrettyPrinter().withObjectIndenter(new DefaultIndenter("  ", "\n"));
-
   JsonReport(final CognitiveConfig config, final Clock clock) {
     // The JSON report has no use for either.
   }
 
   @Override
   public String render(final List<ScoredMethod> metrics) throws CognitiveAnalysisException {
-    return toJson(body(metrics, true));
+    return ReportSupport.toJson(body(metrics, true)) + "\n";
   }
 
   /** The classes with their methods; the deltas against a baseline only when asked for. */
@@ -42,15 +35,6 @@ final class JsonReport implements Report {
     ReportSupport.byClass(ReportSupport.rows(metrics))
         .forEach((key, rows) -> classes.put(key, toClass(rows, withDeltas)));
     return classes;
-  }
-
-  /** Pretty-printed, with a final newline. */
-  static String toJson(final Object value) throws CognitiveAnalysisException {
-    try {
-      return new ObjectMapper().writer(PRINTER).writeValueAsString(value) + "\n";
-    } catch (JsonProcessingException e) {
-      throw new CognitiveAnalysisException("Failed to serialize report to JSON", e);
-    }
   }
 
   private static Map<String, Object> toClass(final List<Row> rows, final boolean withDeltas) {

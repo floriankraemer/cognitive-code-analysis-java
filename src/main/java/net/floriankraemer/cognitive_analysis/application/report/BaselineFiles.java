@@ -98,7 +98,7 @@ public final class BaselineFiles {
     file.put("createdAt", ReportSupport.timestamp(clock.withZone(ZoneOffset.UTC)));
     file.put("configHash", Baseline.configHashOf(config));
     file.put("metrics", JsonReport.body(methods, false));
-    final String content = JsonReport.toJson(file);
+    final String content = ReportSupport.toJson(file) + "\n";
 
     final String stem = "baseline-" + now.format(FILE_TIMESTAMP);
     final Path directory = workingDirectory.resolve(DIRECTORY);

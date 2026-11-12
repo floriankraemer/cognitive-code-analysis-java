@@ -8,6 +8,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.EnumMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import net.floriankraemer.cognitive_analysis.config.CognitiveConfig;
@@ -29,6 +30,10 @@ class ReportTest {
   private static final Clock CLOCK = Clock.fixed(Instant.parse("2023-10-01T12:00:00Z"), ZoneOffset.UTC);
   private static final String GROUPED = "cognitive:\n  groupByClass: true\n";
   private static final String SINGLE = "cognitive:\n  groupByClass: false\n";
+  /** A threshold no sample method reaches, so the issue reports have no violations. */
+  private static final String ABOVE_EVERY_SCORE = "cognitive:\n  scoreThreshold: 5\n";
+  private static final List<ReportType> ISSUE_TYPES = List.of(ReportType.CHECKSTYLE, ReportType.JUNIT,
+      ReportType.SARIF, ReportType.GITLAB_CODEQUALITY, ReportType.GITHUB_ACTIONS);
 
   /** Counts and weights follow the seed; the weights have more than three decimals. */
   private static CognitiveMetrics method(
@@ -89,6 +94,12 @@ class ReportTest {
   private static void verify(final ReportType type, final String yaml, final boolean deltas, final String extension)
       throws Exception {
     Approvals.verify(render(type, yaml, sample(deltas)), new Options().forFile().withExtension(extension));
+  }
+
+  private static void approve(
+      final ReportType type, final String yaml, final MetricsCollection metrics, final String extension)
+      throws Exception {
+    Approvals.verify(ReportGoldens.mask(render(type, yaml, metrics)), new Options().forFile().withExtension(extension));
   }
 
   @Test
@@ -290,8 +301,11 @@ class ReportTest {
     final Locale original = Locale.getDefault();
     Locale.setDefault(Locale.GERMANY);
     try {
-      for (final ReportType type : ReportType.values()) {
+      for (final ReportType type : List.of(ReportType.JSON, ReportType.CSV, ReportType.HTML, ReportType.MARKDOWN)) {
         assertThat(render(type, GROUPED, sample(true))).contains("0.333").doesNotContain("0,333");
+      }
+      for (final ReportType type : ISSUE_TYPES) {
+        assertThat(render(type, GROUPED, sample(true))).contains("2.2").doesNotContain("2,2");
       }
     } finally {
       Locale.setDefault(original);
@@ -389,12 +403,133 @@ class ReportTest {
     assertThat(render(ReportType.HTML, GROUPED, none)).contains("contains 0 classes and 0 methods.");
   }
 
+  /** One method on each side of every severity boundary at the default threshold of 0.5. */
+  private static MetricsCollection severities() {
+    final MetricsCollection collection = new MetricsCollection();
+    add(collection, "src/Levels.java", method("a.Levels", "atThreshold", 1, 0.5, 0));
+    add(collection, "src/Levels.java", method("a.Levels", "warning", 2, 0.75, 1));
+    add(collection, "src/Levels.java", method("a.Levels", "error", 3, 1.0, 2));
+    add(collection, "src/Levels.java", method("a.Levels", "blocker", 4, 1.5, 3));
+    return collection;
+  }
+
+  @Test
+  void checkstyleWithViolationsOfBothSeverities() throws Exception {
+    approve(ReportType.CHECKSTYLE, GROUPED, severities(), ".xml");
+  }
+
+  @Test
+  void checkstyleEscapesEverything() throws Exception {
+    approve(ReportType.CHECKSTYLE, GROUPED, awkward(), ".xml");
+  }
+
+  @Test
+  void checkstyleWithoutViolations() throws Exception {
+    approve(ReportType.CHECKSTYLE, ABOVE_EVERY_SCORE, sample(false), ".xml");
+  }
+
+  @Test
+  void junitWithFailuresAndPassingCases() throws Exception {
+    approve(ReportType.JUNIT, GROUPED, severities(), ".xml");
+  }
+
+  @Test
+  void junitEscapesEverything() throws Exception {
+    approve(ReportType.JUNIT, GROUPED, awkward(), ".xml");
+  }
+
+  @Test
+  void junitWithoutViolations() throws Exception {
+    approve(ReportType.JUNIT, ABOVE_EVERY_SCORE, sample(false), ".xml");
+  }
+
+  @Test
+  void sarifWithViolationsOfBothSeverities() throws Exception {
+    approve(ReportType.SARIF, GROUPED, severities(), ".sarif");
+  }
+
+  @Test
+  void sarifEscapesEverything() throws Exception {
+    approve(ReportType.SARIF, GROUPED, awkward(), ".sarif");
+  }
+
+  @Test
+  void sarifWithoutViolations() throws Exception {
+    approve(ReportType.SARIF, ABOVE_EVERY_SCORE, sample(false), ".sarif");
+  }
+
+  @Test
+  void gitlabCodeQualityWithViolationsOfBothSeverities() throws Exception {
+    approve(ReportType.GITLAB_CODEQUALITY, GROUPED, severities(), ".json");
+  }
+
+  @Test
+  void gitlabCodeQualityEscapesEverything() throws Exception {
+    approve(ReportType.GITLAB_CODEQUALITY, GROUPED, awkward(), ".json");
+  }
+
+  @Test
+  void gitlabCodeQualityWithoutViolations() throws Exception {
+    approve(ReportType.GITLAB_CODEQUALITY, ABOVE_EVERY_SCORE, sample(false), ".json");
+  }
+
+  @Test
+  void githubActionsWithViolationsOfBothSeverities() throws Exception {
+    approve(ReportType.GITHUB_ACTIONS, GROUPED, severities(), ".txt");
+  }
+
+  @Test
+  void githubActionsEscapesMessagesAndPropertyValues() throws Exception {
+    final MetricsCollection collection = new MetricsCollection();
+    add(collection, "dir,with:colons/100%.java", method("a.B", "m%x\ny", 7, 1.0, 0));
+
+    assertThat(render(ReportType.GITHUB_ACTIONS, GROUPED, collection))
+        .isEqualTo("::error file=dir%2Cwith%3Acolons/100%25.java,line=7::Method m%25x%0Ay has cognitive complexity"
+            + " 1.0 (threshold: 0.5)\n");
+  }
+
+  @Test
+  void githubActionsWithoutViolationsIsEmpty() throws Exception {
+    approve(ReportType.GITHUB_ACTIONS, ABOVE_EVERY_SCORE, sample(false), ".txt");
+  }
+
+  @Test
+  void issueReportsWithoutMethodsAreValid() throws Exception {
+    final MetricsCollection none = new MetricsCollection();
+
+    assertThat(render(ReportType.CHECKSTYLE, GROUPED, none)).isEqualTo("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+        + "<checkstyle version=\"8.0\"/>\n");
+    assertThat(render(ReportType.GITLAB_CODEQUALITY, GROUPED, none)).isEqualTo("[ ]\n");
+    assertThat(render(ReportType.GITHUB_ACTIONS, GROUPED, none)).isEmpty();
+    assertThat(render(ReportType.JUNIT, GROUPED, none)).contains("tests=\"0\"", "failures=\"0\"");
+    assertThat(render(ReportType.SARIF, GROUPED, none)).contains("\"results\" : [ ]");
+  }
+
+  @Test
+  void theLineOfAnIssueIsNeverBelowOne() throws Exception {
+    final MetricsCollection collection = new MetricsCollection();
+    add(collection, "A.java", method("A", "m", 0, 2.0, 0));
+
+    assertThat(render(ReportType.SARIF, GROUPED, collection)).contains("\"startLine\" : 1");
+    assertThat(render(ReportType.GITLAB_CODEQUALITY, GROUPED, collection)).contains("\"begin\" : 1");
+    assertThat(render(ReportType.CHECKSTYLE, GROUPED, collection)).contains("line=\"1\"");
+    assertThat(render(ReportType.GITHUB_ACTIONS, GROUPED, collection)).contains("A.java,line=1::");
+  }
+
   @Test
   void parsesReportTypesInAnyCaseAndRejectsOthers() {
     assertThat(ReportType.parse("MarkDown")).isEqualTo(ReportType.MARKDOWN);
     assertThat(ReportType.parse("json")).isEqualTo(ReportType.JSON);
+    assertThat(ReportType.parse("GitLab-CodeQuality")).isEqualTo(ReportType.GITLAB_CODEQUALITY);
     assertThatThrownBy(() -> ReportType.parse("xml"))
         .isInstanceOf(IllegalArgumentException.class)
-        .hasMessage("Invalid report type 'xml'. Expected one of: json, csv, html, markdown.");
+        .hasMessage("Invalid report type 'xml'. Expected one of: json, csv, html, markdown, checkstyle, junit,"
+            + " sarif, gitlab-codequality, github-actions.");
+  }
+
+  @Test
+  void rejectsTheConstantNameAndUnderscoresOfMultiWordTypes() {
+    assertThatThrownBy(() -> ReportType.parse("GITLAB_CODEQUALITY")).isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> ReportType.parse("gitlab_codequality")).isInstanceOf(IllegalArgumentException.class);
   }
 }

@@ -47,6 +47,14 @@ public class AnalyseCommand implements Callable<Integer> {
     }
   }
 
+  /** The values of {@code --report-type}, for the help text. */
+  static final class ReportTypeNames implements Iterable<String> {
+    @Override
+    public Iterator<String> iterator() {
+      return ReportType.commandNames().iterator();
+    }
+  }
+
   /** The values of {@code --sort-by}, for the help text. */
   static final class SortFields implements Iterable<String> {
     @Override
@@ -71,7 +79,8 @@ public class AnalyseCommand implements Callable<Integer> {
   @Option(
       names = {"-r", "--report-type"},
       converter = ReportTypeConverter.class,
-      description = "Report type: json, csv, html or markdown. Requires --report-file."
+      completionCandidates = ReportTypeNames.class,
+      description = "Report type: ${COMPLETION-CANDIDATES}. Requires --report-file."
   )
   ReportType reportType;
 

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites errors="0" failures="1" name="Cognitive Complexity" tests="2">
+  <testsuite errors="0" failures="1" name="Cognitive Complexity" tests="2">
+    <testcase classname="test.testcode.ClassToAnalyze" name="simpleMethod" time="0"/>
+    <testcase classname="test.testcode.ClassToAnalyze" name="methodWithTwoArguments" time="0">
+      <failure message="Cognitive complexity 2.2 exceeds threshold 0.5" type="CognitiveComplexity"/>
+    </testcase>
+  </testsuite>
+</testsuites>

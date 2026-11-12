@@ -1,0 +1,12 @@
+[ {
+  "description" : "Method m|\"q\"&'s' äöü 日本 😀 has cognitive complexity 3.0 (threshold: 0.5)",
+  "check_name" : "cognitive-complexity",
+  "fingerprint" : "acd729a1a94110f06e1716bb43c503d146363393404801b797bb81f8f7198025",
+  "severity" : "blocker",
+  "location" : {
+    "path" : "src/<dir>/F|le.java",
+    "lines" : {
+      "begin" : 1
+    }
+  }
+} ]

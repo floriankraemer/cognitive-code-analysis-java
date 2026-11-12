@@ -98,21 +98,9 @@ class GitChangeCounterTest {
 
   @Test
   @DisabledOnOs(OS.WINDOWS)
-  void failsWhenGitTakesTooLong() throws Exception {
-    final Path slow = script("slow", "#!/bin/sh\nsleep 30\n");
-    final GitChangeCounter counter = new GitChangeCounter(slow.toString(), LocalDate.parse("2000-01-01"), Duration.ofMillis(200));
-
-    assertThatThrownBy(() -> counter.count(tempDir.resolve("A.java")))
-        .isInstanceOf(CognitiveAnalysisException.class)
-        .hasMessage("git did not finish within 200 ms");
-  }
-
-  @Test
-  @DisabledOnOs(OS.WINDOWS)
-  void failsAndKeepsTheInterruptFlagWhenTheThreadIsInterrupted() throws Exception {
-    final Path slow = script("slow-interrupted", "#!/bin/sh\nsleep 30\n");
+  void stopsGitAndKeepsTheInterruptWhenTheWaitIsInterrupted() throws Exception {
+    final Path slow = script("interrupted", "#!/bin/sh\nsleep 30\n");
     final GitChangeCounter counter = new GitChangeCounter(slow.toString(), LocalDate.parse("2000-01-01"), TIMEOUT);
-
     Thread.currentThread().interrupt();
     try {
       assertThatThrownBy(() -> counter.count(tempDir.resolve("A.java")))
@@ -120,8 +108,19 @@ class GitChangeCounterTest {
           .hasMessage("Interrupted while waiting for git");
       assertThat(Thread.currentThread().isInterrupted()).isTrue();
     } finally {
-      Thread.interrupted(); // clear the flag for the following tests
+      Thread.interrupted();
     }
+  }
+
+  @Test
+  @DisabledOnOs(OS.WINDOWS)
+  void failsWhenGitTakesTooLong() throws Exception {
+    final Path slow = script("slow", "#!/bin/sh\nsleep 30\n");
+    final GitChangeCounter counter = new GitChangeCounter(slow.toString(), LocalDate.parse("2000-01-01"), Duration.ofMillis(200));
+
+    assertThatThrownBy(() -> counter.count(tempDir.resolve("A.java")))
+        .isInstanceOf(CognitiveAnalysisException.class)
+        .hasMessage("git did not finish within 200 ms");
   }
 
   @Test

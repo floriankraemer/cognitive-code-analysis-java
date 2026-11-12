@@ -1,0 +1,92 @@
+{
+  "$schema" : "https://json.schemastore.org/sarif-2.1.0.json",
+  "version" : "2.1.0",
+  "runs" : [ {
+    "tool" : {
+      "driver" : {
+        "name" : "cognitive-analysis",
+        "version" : "<version>",
+        "informationUri" : "https://github.com/floriankraemer/cognitive-code-analysis-java",
+        "rules" : [ {
+          "id" : "cognitive-complexity",
+          "name" : "Cognitive Complexity",
+          "shortDescription" : {
+            "text" : "Method exceeds cognitive complexity threshold"
+          },
+          "defaultConfiguration" : {
+            "level" : "warning"
+          },
+          "properties" : {
+            "precision" : "high"
+          }
+        } ]
+      }
+    },
+    "originalUriBaseIds" : {
+      "%SRCROOT%" : {
+        "uri" : "<working-directory-uri>"
+      }
+    },
+    "results" : [ {
+      "ruleId" : "cognitive-complexity",
+      "level" : "warning",
+      "message" : {
+        "text" : "Method warning has cognitive complexity 0.8 (threshold: 0.5)"
+      },
+      "locations" : [ {
+        "physicalLocation" : {
+          "artifactLocation" : {
+            "uri" : "src/Levels.java",
+            "uriBaseId" : "%SRCROOT%"
+          },
+          "region" : {
+            "startLine" : 2
+          }
+        }
+      } ],
+      "partialFingerprints" : {
+        "primaryLocationLineHash" : "6db70f541fcde3864a8c95619f80764a46b22a9bdca6d80b173af91028a75da8"
+      }
+    }, {
+      "ruleId" : "cognitive-complexity",
+      "level" : "error",
+      "message" : {
+        "text" : "Method error has cognitive complexity 1.0 (threshold: 0.5)"
+      },
+      "locations" : [ {
+        "physicalLocation" : {
+          "artifactLocation" : {
+            "uri" : "src/Levels.java",
+            "uriBaseId" : "%SRCROOT%"
+          },
+          "region" : {
+            "startLine" : 3
+          }
+        }
+      } ],
+      "partialFingerprints" : {
+        "primaryLocationLineHash" : "35b187be180e9512c2265784f12e8bd08a347676e20001839a9a65cfd408bd42"
+      }
+    }, {
+      "ruleId" : "cognitive-complexity",
+      "level" : "error",
+      "message" : {
+        "text" : "Method blocker has cognitive complexity 1.5 (threshold: 0.5)"
+      },
+      "locations" : [ {
+        "physicalLocation" : {
+          "artifactLocation" : {
+            "uri" : "src/Levels.java",
+            "uriBaseId" : "%SRCROOT%"
+          },
+          "region" : {
+            "startLine" : 4
+          }
+        }
+      } ],
+      "partialFingerprints" : {
+        "primaryLocationLineHash" : "b6f6f9a8fbce0d37e88ca47f5f30074a95c2231491a1c1ea36bab6fe42514303"
+      }
+    } ]
+  } ]
+}
