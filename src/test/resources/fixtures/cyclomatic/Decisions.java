@@ -112,4 +112,27 @@ class Decisions {
     }
     boolean t = a ? true : false;
   }
+
+  void guardedPattern(Object o, boolean a, boolean b) {
+    switch (o) {
+      case String s when a && b -> {}
+      default -> {}
+    }
+  }
+
+  void nullAndDefault(Object o) {
+    switch (o) {
+      case null, default -> {}
+    }
+  }
+
+  void switchInLambda(int a) {
+    Runnable r = () -> {
+      switch (a) {
+        case 1 -> {}
+        case 2 -> {}
+        default -> {}
+      }
+    };
+  }
 }

@@ -66,4 +66,13 @@ class Operations {
   void lambdasCount(List<Integer> list) {
     list.forEach(x -> System.out.println(x * 2));
   }
+
+  void unaryVersusBinary(int x) {
+    int r = -x + +x;
+  }
+
+  void methodReferences(List<String> list) {
+    list.forEach(System.out::println);
+    list.stream().map(String::length);
+  }
 }

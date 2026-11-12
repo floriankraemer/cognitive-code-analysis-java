@@ -43,6 +43,9 @@ class CyclomaticComplexityTest {
         anonymousAndLocalClassesAreSkipped total=2 if=1
         creationArgumentsCount total=2 ternary=1
         everything total=11 if=1 case=1 while=1 doWhile=1 for=1 forEach=1 catch=1 logicalAnd=1 logicalOr=1 ternary=1
+        guardedPattern total=3 case=1 logicalAnd=1
+        nullAndDefault total=1
+        switchInLambda total=3 case=2
         """);
   }
 

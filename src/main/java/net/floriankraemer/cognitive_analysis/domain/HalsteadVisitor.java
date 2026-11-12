@@ -12,6 +12,7 @@ import com.github.javaparser.ast.expr.IntegerLiteralExpr;
 import com.github.javaparser.ast.expr.LiteralExpr;
 import com.github.javaparser.ast.expr.LongLiteralExpr;
 import com.github.javaparser.ast.expr.MethodCallExpr;
+import com.github.javaparser.ast.expr.MethodReferenceExpr;
 import com.github.javaparser.ast.expr.NameExpr;
 import com.github.javaparser.ast.expr.NullLiteralExpr;
 import com.github.javaparser.ast.expr.ObjectCreationExpr;
@@ -37,6 +38,9 @@ import java.util.List;
  */
 final class HalsteadVisitor extends UnitScopeVisitor {
 
+  /** Keeps unary {@code -x} apart from binary {@code a - b}; prefix and postfix {@code ++} stay one operator. */
+  private static final String UNARY_PREFIX = "u";
+
   private final List<String> operators = new ArrayList<>();
   private final List<String> operands = new ArrayList<>();
 
@@ -59,7 +63,7 @@ final class HalsteadVisitor extends UnitScopeVisitor {
 
   @Override
   public void visit(final UnaryExpr expression, final Void arg) {
-    operators.add(expression.getOperator().asString());
+    operators.add(UNARY_PREFIX + expression.getOperator().asString());
     super.visit(expression, arg);
   }
 
@@ -67,6 +71,13 @@ final class HalsteadVisitor extends UnitScopeVisitor {
   public void visit(final MethodCallExpr call, final Void arg) {
     operators.add("call:" + call.getNameAsString());
     super.visit(call, arg);
+  }
+
+  /** {@code List::size} is a call like {@code list.size()}; its scope is an operand if it is a name. */
+  @Override
+  public void visit(final MethodReferenceExpr reference, final Void arg) {
+    operators.add("call:" + reference.getIdentifier());
+    super.visit(reference, arg);
   }
 
   @Override

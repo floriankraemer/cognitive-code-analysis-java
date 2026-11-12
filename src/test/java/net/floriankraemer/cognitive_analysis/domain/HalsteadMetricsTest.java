@@ -35,6 +35,8 @@ class HalsteadMetricsTest {
         fieldAccess n1=1 n2=2 N1=1 N2=3
         anonymousAndLocalClassesAreSkipped n1=1 n2=1 N1=1 N2=1
         lambdasCount n1=3 n2=5 N1=3 N2=5
+        unaryVersusBinary n1=3 n2=1 N1=3 N2=2
+        methodReferences n1=5 n2=1 N1=5 N2=2
         """);
     // add: operators {+}; operands a, b.
     // assignmentsAndUnary: operators +=, =, - ; operands a (the declarator "int x" is neither), x, 1, x, x.
@@ -45,6 +47,10 @@ class HalsteadMetricsTest {
     // repeated: ((a + (a * a)) + 1) + 1 has operators + + * +, operands a a a 1 1.
     // fieldAccess: operator +; operands count (this.count), count and h (h.count).
     // anonymousAndLocalClassesAreSkipped: new:Object and the operand a; both class bodies are skipped.
+    // unaryVersusBinary: -x + +x has the three operators +, u- and u+; operand x twice.
+    // methodReferences: call:forEach, call:stream, call:map and the references call:println and
+    // call:length; operand list twice. The parser reads the scopes System.out and String as types, so they
+    // are no operands.
     // lambdasCount: call:forEach, call:println, *; operands list, out, System, x, 2.
   }
 
@@ -65,6 +71,13 @@ class HalsteadMetricsTest {
     assertThat(repeated.volume()).isCloseTo(18.0, within(1e-12));
     assertThat(repeated.difficulty()).isEqualTo(2.5);
     assertThat(repeated.effort()).isCloseTo(45.0, within(1e-12));
+  }
+
+  @Test
+  void volumeUsesAnExactLog2ForPowersOfTwo() {
+    // length 9, vocabulary 8: 9 * 3 must be exactly 27.0.
+    assertThat(new HalsteadMetrics(4, 4, 4, 5).volume()).isEqualTo(27.0);
+    assertThat(new HalsteadMetrics(1, 1, 1, 1).volume()).isEqualTo(2.0);
   }
 
   @Test
