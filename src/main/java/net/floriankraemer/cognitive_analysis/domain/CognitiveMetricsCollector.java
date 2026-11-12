@@ -192,14 +192,18 @@ public class CognitiveMetricsCollector {
         unit.parameters().stream().map(Parameter::getNameAsString).collect(toSet()));
     final CyclomaticVisitor cyclomatic = new CyclomaticVisitor();
     final HalsteadVisitor halstead = new HalsteadVisitor();
+    final UnderstandabilityVisitor understandability = new UnderstandabilityVisitor(
+        unit.declaration() instanceof MethodDeclaration ? Optional.of(unit.name()) : Optional.empty());
     unit.body().ifPresent(body -> {
       body.accept(visitor, null);
       body.accept(cyclomatic, null);
       body.accept(halstead, null);
+      body.accept(understandability, null);
     });
     visitor.writeTo(metrics);
     metrics.setCyclomatic(cyclomatic.result());
     metrics.setHalstead(halstead.result());
+    metrics.setUnderstandability(understandability.result());
     return metrics;
   }
 }
