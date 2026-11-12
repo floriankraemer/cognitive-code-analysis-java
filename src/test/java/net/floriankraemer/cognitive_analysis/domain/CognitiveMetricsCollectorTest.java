@@ -62,7 +62,7 @@ class CognitiveMetricsCollectorTest {
         fixtures.cognitive.Units.Color::code @60 lines=3 args=0 returns=1 vars=0 props=0 ifs=0 nesting=0 elses=0
         fixtures.cognitive.Units.Point::Point(int,int) @66 lines=5 args=2 returns=0 vars=0 props=0 ifs=1 nesting=1 elses=0
         fixtures.cognitive.Units.Point::Point(int) @72 lines=3 args=1 returns=0 vars=0 props=0 ifs=0 nesting=0 elses=0
-        fixtures.cognitive.Units.Point::sum @76 lines=3 args=0 returns=1 vars=2 props=0 ifs=0 nesting=0 elses=0
+        fixtures.cognitive.Units.Point::sum @76 lines=3 args=0 returns=1 vars=1 props=2 ifs=0 nesting=0 elses=0
         fixtures.cognitive.Units.Shape::describe @84 lines=3 args=0 returns=1 vars=0 props=0 ifs=0 nesting=0 elses=0
         fixtures.cognitive.Units.Shape::unit @88 lines=3 args=0 returns=1 vars=0 props=0 ifs=0 nesting=0 elses=0
         fixtures.cognitive.Units.Shape::helper @92 lines=2 args=0 returns=0 vars=0 props=0 ifs=0 nesting=0 elses=0
@@ -93,7 +93,7 @@ class CognitiveMetricsCollectorTest {
     assertThat(collectFixture("Variables.java")).isEqualTo("""
         fixtures.cognitive.Variables::distinctNames @12 lines=12 args=1 returns=1 vars=3 props=0 ifs=0 nesting=0 elses=0
         fixtures.cognitive.Variables::lambdaCatchAndForEachVariables @25 lines=17 args=1 returns=0 vars=4 props=0 ifs=0 nesting=0 elses=0
-        fixtures.cognitive.Variables::fieldAccess @43 lines=6 args=1 returns=1 vars=4 props=4 ifs=0 nesting=0 elses=0
+        fixtures.cognitive.Variables::fieldAccess @43 lines=6 args=1 returns=1 vars=2 props=4 ifs=0 nesting=0 elses=0
         fixtures.cognitive.Variables::thisCountsOnce @50 lines=6 args=0 returns=0 vars=1 props=1 ifs=0 nesting=0 elses=0
         fixtures.cognitive.Variables::shadowsField @57 lines=4 args=0 returns=1 vars=2 props=1 ifs=0 nesting=0 elses=0
         fixtures.cognitive.Variables::helper @62 lines=2 args=1 returns=0 vars=0 props=0 ifs=0 nesting=0 elses=0
@@ -115,9 +115,64 @@ class CognitiveMetricsCollectorTest {
         }
         """).get("A::a");
 
+    // size and this (for the implicit this.holder); the field holder
+    assertThat(metrics.value(MetricName.VARIABLE_COUNT)).isEqualTo(2);
+    assertThat(metrics.value(MetricName.PROPERTY_CALL_COUNT)).isEqualTo(1);
+    assertThat(metrics.value(MetricName.RETURN_COUNT)).isEqualTo(1);
+  }
+
+  @Test
+  void readsABareNameThatIsNeitherParameterNorLocalAsAnImplicitThisField() throws Exception {
+    CognitiveMetrics metrics = collector.collect("""
+        class A {
+          int count;
+          int total;
+          int a(int factor) {
+            int local = count * factor;
+            return local + this.total + total + count;
+          }
+        }
+        """).get("A::a");
+
+    // local and this; count and total, the latter both explicit and implicit
+    assertThat(metrics.value(MetricName.VARIABLE_COUNT)).isEqualTo(2);
+    assertThat(metrics.value(MetricName.PROPERTY_CALL_COUNT)).isEqualTo(2);
+  }
+
+  @Test
+  void countsNoThisForAMethodThatReadsOnlyParametersLocalsAndStaticMembers() throws Exception {
+    CognitiveMetrics metrics = collector.collect("""
+        class A {
+          static final int LIMIT = 3;
+          int a(int value) {
+            int doubled = value * 2;
+            helper();
+            return Math.min(doubled, LIMIT);
+          }
+          void helper() {}
+        }
+        """).get("A::a");
+
+    assertThat(metrics.value(MetricName.VARIABLE_COUNT)).isEqualTo(1);
+    assertThat(metrics.value(MetricName.PROPERTY_CALL_COUNT)).isZero();
+  }
+
+  @Test
+  void treatsANameDeclaredAnywhereInTheMethodAsALocalEverywhereInIt() throws Exception {
+    CognitiveMetrics metrics = collector.collect("""
+        class A {
+          int count;
+          int a() {
+            int before = count;
+            int count = 2;
+            return before + count;
+          }
+        }
+        """).get("A::a");
+
+    // the field read in the first line is taken for the later local: no this, no property
     assertThat(metrics.value(MetricName.VARIABLE_COUNT)).isEqualTo(2);
     assertThat(metrics.value(MetricName.PROPERTY_CALL_COUNT)).isZero();
-    assertThat(metrics.value(MetricName.RETURN_COUNT)).isEqualTo(1);
   }
 
   @Test

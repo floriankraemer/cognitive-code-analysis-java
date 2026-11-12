@@ -79,7 +79,7 @@ File: src/main/java/net/floriankraemer/cognitive_analysis/domain/ComplexityCalcu
 ├─────────────────────────────────────────────────────────────────┼────────────────────┼─────┼─────────┼───────┼─────────┼────────┼──┼──────────┼────┼──────────┤
 │net.floriankraemer.cognitive_analysis.domain.ComplexityCalculator│ComplexityCalculator│  3  │    1    │   0   │    1    │   1    │0 │    0     │ 0  │  0.000   │
 ├─────────────────────────────────────────────────────────────────┼────────────────────┼─────┼─────────┼───────┼─────────┼────────┼──┼──────────┼────┼──────────┤
-│net.floriankraemer.cognitive_analysis.domain.ComplexityCalculator│calculate           │ 11  │    1    │   0   │    5    │   0    │0 │    0     │ 0  │  0.182   │
+│net.floriankraemer.cognitive_analysis.domain.ComplexityCalculator│calculate           │ 11  │    1    │   0   │    5    │   1    │0 │    0     │ 0  │  0.182   │
 │                                                                 │                    │     │         │       │  0.182  │        │  │          │    │          │
 ├─────────────────────────────────────────────────────────────────┼────────────────────┼─────┼─────────┼───────┼─────────┼────────┼──┼──────────┼────┼──────────┤
 │net.floriankraemer.cognitive_analysis.domain.ComplexityCalculator│weight              │  6  │    2    │   2   │    0    │   0    │1 │    1     │ 0  │  0.000   │

@@ -43,16 +43,20 @@ Anonymous and local classes are left out, both as units of their own and from th
   - **Purpose**: Multiple return points can make a method harder to follow and maintain. This metric helps identify methods that may benefit from being refactored for clarity.
 
 - **Variable Count**:
-  - **Description**: The number of distinct variable names used in the method body, without the method parameters.
-    Local variables, lambda and catch parameters, for-each and pattern variables count, and `this` counts once when it is used.
+  - **Description**: The number of distinct variable names declared in the method body, without the method parameters, plus `this`.
+    Local variables, `for` and for-each variables, lambda and catch parameters, pattern variables and `try` resources count.
     A name that is reused, for example in two loops, counts once; the unnamed variable `_` does not count.
-    Names are not resolved against the classpath: a name starting with an upper-case letter is taken for a type or a constant and does not count, and a field read without `this.` counts like a variable.
+    `this` counts once when the method reads an instance member, either as `this.x` or as a bare field name (see Property Call Count).
   - **Purpose**: A high variable count can indicate a method that is doing too much or is overly complex. Monitoring this metric helps to ensure methods remain simple and focused.
 
 - **Property Call Count**:
-  - **Description**: The number of distinct field names accessed with a dot, such as `this.x`, `other.x` or `a.b.x`.
+  - **Description**: The number of distinct field names accessed with a dot, such as `this.x`, `other.x` or `a.b.x`, or read as a bare name.
+    A bare name that is neither a parameter nor declared anywhere in the method is read as `this.x`, as PHP writes it with `$this->x`.
     Static accesses on a type, such as `System.out` or `Integer.MAX_VALUE`, do not count.
-    As there is no type information, `array.length` counts as a field access.
+  - **Limits**: Names are not resolved against the classpath.
+    A name starting with an upper-case letter is taken for a type or a constant and counts neither as a variable nor as a field.
+    A name declared anywhere in the method is a local everywhere in it, so a field read before a local of the same name is declared counts as that local.
+    `array.length` counts as a field access.
   - **Purpose**: Frequent property accesses may indicate a method that is highly coupled to the internal state of the object, which can make the code harder to test and maintain.
 
 - **If Count**:

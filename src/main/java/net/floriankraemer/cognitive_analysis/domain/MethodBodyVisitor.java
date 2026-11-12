@@ -27,17 +27,21 @@ import net.floriankraemer.cognitive_analysis.config.MetricName;
  *   <li>ifCount: if statements; an else-if continues its chain and does not count.
  *   <li>ifNestingLevel: the deepest if inside another if's branches; an else-if keeps the depth.
  *   <li>elseCount: else and else-if branches.
- *   <li>variableCount: distinct names of locals, lambda and catch parameters, pattern variables,
- *       {@code this}, and other simple names that are referenced, but not the unnamed {@code _}. The
- *       caller removes the method parameters.
- *   <li>propertyCallCount: distinct field names accessed with a dot, except static accesses.
+ *   <li>variableCount: distinct names declared in the body (locals, for and for-each variables,
+ *       lambda and catch parameters, pattern variables, try resources) except the parameters and the
+ *       unnamed {@code _}, plus {@code this} once when the method reads an instance member.
+ *   <li>propertyCallCount: distinct field names accessed with a dot, except static accesses, and
+ *       bare names that are neither parameters nor declared in the body. Such a name is read as an
+ *       implicit {@code this.name}, like {@code $this->name} in PHP, so it also counts {@code this}.
  * </ul>
  *
- * <p>ponytail: there is no symbol resolution, so a name that starts with an upper-case letter is
- * taken for a type or a constant. It is no variable, and a field accessed on it is static and not
- * counted. Names that only qualify such a name ({@code java.util} in {@code java.util.List}) are
- * package names. A field read without {@code this.} counts as a variable, and {@code array.length}
- * counts as a property. A symbol solver would remove these guesses at the cost of a classpath.
+ * <p>ponytail: there is no symbol resolution. A name declared anywhere in the method is a local
+ * everywhere in it, so a field read before a local of the same name is declared counts as that
+ * local. A name that starts with an upper-case letter is taken for a type or a constant: it is no
+ * variable or field, and a field accessed on it is static and not counted. Names that only qualify
+ * such a name ({@code java.util} in {@code java.util.List}) are package names, and
+ * {@code array.length} counts as a property. A symbol solver would remove these guesses at the cost
+ * of a classpath.
  */
 final class MethodBodyVisitor extends VoidVisitorAdapter<Void> {
 
@@ -49,18 +53,33 @@ final class MethodBodyVisitor extends VoidVisitorAdapter<Void> {
   private int elseCount;
   private int ifDepth;
   private int maxIfDepth;
-  private final Set<String> variables = new HashSet<>();
+  private boolean readsThis;
+  private final Set<String> parameters;
+  private final Set<String> declaredNames = new HashSet<>();
+  private final Set<String> bareNames = new HashSet<>();
   private final Set<String> properties = new HashSet<>();
 
-  /** The variable names found so far; mutable so the caller can remove the method parameters. */
-  Set<String> variables() {
-    return variables;
+  /** @param parameters the names of the method parameters, which are no variables */
+  MethodBodyVisitor(final Set<String> parameters) {
+    this.parameters = parameters;
   }
 
+  /** Call after the body was visited: whether a bare name is a local is known only then. */
   void writeTo(final CognitiveMetrics metrics) {
+    final Set<String> variables = new HashSet<>(declaredNames);
+    variables.removeAll(parameters);
+    final Set<String> implicitFields = new HashSet<>(bareNames);
+    implicitFields.removeAll(declaredNames);
+    implicitFields.removeAll(parameters);
+    final Set<String> allProperties = new HashSet<>(properties);
+    allProperties.addAll(implicitFields);
+    if (readsThis || !implicitFields.isEmpty()) {
+      variables.add(THIS);
+    }
+
     metrics.setValue(MetricName.RETURN_COUNT, returnCount);
     metrics.setValue(MetricName.VARIABLE_COUNT, variables.size());
-    metrics.setValue(MetricName.PROPERTY_CALL_COUNT, properties.size());
+    metrics.setValue(MetricName.PROPERTY_CALL_COUNT, allProperties.size());
     metrics.setValue(MetricName.IF_COUNT, ifCount);
     metrics.setValue(MetricName.IF_NESTING_LEVEL, maxIfDepth);
     metrics.setValue(MetricName.ELSE_COUNT, elseCount);
@@ -96,34 +115,34 @@ final class MethodBodyVisitor extends VoidVisitorAdapter<Void> {
 
   @Override
   public void visit(final VariableDeclarator declarator, final Void arg) {
-    addVariable(declarator.getNameAsString());
+    declare(declarator.getNameAsString());
     super.visit(declarator, arg);
   }
 
   /** Only lambda and catch parameters are visited, the body does not contain the method's own. */
   @Override
   public void visit(final Parameter parameter, final Void arg) {
-    addVariable(parameter.getNameAsString());
+    declare(parameter.getNameAsString());
     super.visit(parameter, arg);
   }
 
   @Override
   public void visit(final TypePatternExpr pattern, final Void arg) {
-    addVariable(pattern.getNameAsString());
+    declare(pattern.getNameAsString());
     super.visit(pattern, arg);
   }
 
   @Override
   public void visit(final NameExpr name, final Void arg) {
     if (!isTypeName(name.getNameAsString()) && !isPackageQualifier(name)) {
-      variables.add(name.getNameAsString());
+      bareNames.add(name.getNameAsString());
     }
     super.visit(name, arg);
   }
 
   @Override
   public void visit(final ThisExpr expression, final Void arg) {
-    variables.add(THIS);
+    readsThis = true;
     super.visit(expression, arg);
   }
 
@@ -154,9 +173,9 @@ final class MethodBodyVisitor extends VoidVisitorAdapter<Void> {
   }
 
   /** The unnamed variable {@code _} names nothing to keep in mind. */
-  private void addVariable(final String name) {
+  private void declare(final String name) {
     if (!UNNAMED.equals(name)) {
-      variables.add(name);
+      declaredNames.add(name);
     }
   }
 

@@ -3,6 +3,7 @@ package net.floriankraemer.cognitive_analysis.domain;
 import static java.util.stream.Collectors.counting;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.toSet;
 
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ParseResult;
@@ -187,9 +188,9 @@ public class CognitiveMetricsCollector {
     metrics.setValue(MetricName.LINE_COUNT, range.end.line - range.begin.line + 1);
     metrics.setValue(MetricName.ARG_COUNT, unit.parameters().size());
 
-    final MethodBodyVisitor visitor = new MethodBodyVisitor();
+    final MethodBodyVisitor visitor = new MethodBodyVisitor(
+        unit.parameters().stream().map(Parameter::getNameAsString).collect(toSet()));
     unit.body().ifPresent(body -> body.accept(visitor, null));
-    unit.parameters().forEach(parameter -> visitor.variables().remove(parameter.getNameAsString()));
     visitor.writeTo(metrics);
     return metrics;
   }

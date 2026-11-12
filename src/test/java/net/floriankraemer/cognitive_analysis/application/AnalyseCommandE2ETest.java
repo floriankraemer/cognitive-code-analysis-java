@@ -168,7 +168,8 @@ class AnalyseCommandE2ETest {
     int exitCode = run("analyse", " , ");
 
     assertThat(exitCode).isEqualTo(1);
-    assertThat(err.toString()).isEqualTo("Path does not exist:  , " + System.lineSeparator());
+    assertThat(out.toString()).isEmpty();
+    assertThat(err.toString()).isEqualTo("No path given." + System.lineSeparator());
   }
 
   @Test

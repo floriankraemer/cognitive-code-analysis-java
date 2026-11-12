@@ -105,7 +105,7 @@ public class AnalyseCommand implements Callable<Integer> {
   private List<String> paths() throws CognitiveAnalysisException {
     final List<String> paths = Arrays.stream(path.split(",")).map(String::trim).filter(entry -> !entry.isEmpty()).toList();
     if (paths.isEmpty()) {
-      throw new CognitiveAnalysisException("Path does not exist: " + path);
+      throw new CognitiveAnalysisException("No path given.");
     }
     return paths;
   }
