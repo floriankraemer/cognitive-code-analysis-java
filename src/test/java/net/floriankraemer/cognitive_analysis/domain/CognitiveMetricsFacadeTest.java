@@ -1,24 +1,23 @@
 package net.floriankraemer.cognitive_analysis.domain;
 
-import net.floriankraemer.cognitive_analysis.application.ResultTableBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.boot.test.context.SpringBootTest;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@SpringBootTest
 public class CognitiveMetricsFacadeTest {
 
   private CognitiveMetricsFacade cognitiveMetricsFacade;
@@ -31,8 +30,7 @@ public class CognitiveMetricsFacadeTest {
 
     // Instantiate the actual components used in the facade
     FileFinder fileFinder = new FileFinder();
-    Logger logger = LoggerFactory.getLogger("CognitiveMetricsCollectorTest");
-    CognitiveMetricsCollector cognitiveMetricsCollector = new CognitiveMetricsCollector(logger);
+    CognitiveMetricsCollector cognitiveMetricsCollector = new CognitiveMetricsCollector();
     ComplexityCalculator complexityCalculator = new ComplexityCalculator();
 
     cognitiveMetricsFacade = new CognitiveMetricsFacade(
@@ -98,6 +96,25 @@ public class CognitiveMetricsFacadeTest {
     assertNotNull(metrics2);
     assertEquals(1, metrics2.getIfCount());
     assertEquals(1, metrics2.getElseCount());
+  }
+
+  @Test
+  public void testUnreadableFilesAreReportedAndSkipped() throws IOException {
+    Files.write(Path.of(tempDir.getAbsolutePath(), "Broken.java"), new byte[] {(byte) 0xC3, (byte) 0x28});
+
+    PrintStream originalErr = System.err;
+    ByteArrayOutputStream err = new ByteArrayOutputStream();
+    System.setErr(new PrintStream(err, true, StandardCharsets.UTF_8));
+    MetricsCollection result;
+    try {
+      result = cognitiveMetricsFacade.calculateCognitiveMetrics(tempDir.getAbsolutePath());
+    } finally {
+      System.setErr(originalErr);
+    }
+
+    assertEquals(2, result.size());
+    assertTrue(err.toString(StandardCharsets.UTF_8)
+        .contains("Error reading file: " + Path.of(tempDir.getAbsolutePath(), "Broken.java")));
   }
 
   private void createTestFile(String fileName, String content) throws IOException {

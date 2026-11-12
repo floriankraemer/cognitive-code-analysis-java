@@ -3,9 +3,7 @@ package net.floriankraemer.cognitive_analysis.application.report;
 import java.util.Map;
 import net.floriankraemer.cognitive_analysis.domain.CognitiveMetrics;
 import net.floriankraemer.cognitive_analysis.domain.MetricsCollection;
-import org.springframework.stereotype.Component;
 
-@Component
 public class HtmlReportBuilder extends AbstractReportBuilder {
 
   public void build(MetricsCollection metricsCollection, String outputPath)

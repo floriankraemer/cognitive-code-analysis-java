@@ -8,11 +8,25 @@ Cognitive Code Analysis is an approach to understanding and improving code by fo
 
 ## Running it
 
-Cognitive Complexity Analysis
+Build the executable jar (requires Java 21):
 
 ```bash
-java -jar cognitive-analysis.jar analyse ".\\src\\main\\java\\"
+./mvnw -B verify
 ```
+
+Analyse a directory and print the result tables to the console:
+
+```bash
+java -jar target/cognitive-analysis.jar analyse src/main/java
+```
+
+Write an HTML, CSV or JSON report instead:
+
+```bash
+java -jar target/cognitive-analysis.jar analyse src/main/java --report-type html --report-file report.html
+```
+
+Run `java -jar target/cognitive-analysis.jar --help` for all options.
 
 ## Documentation
 

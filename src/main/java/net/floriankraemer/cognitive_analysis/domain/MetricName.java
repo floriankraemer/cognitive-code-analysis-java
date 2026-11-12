@@ -1,6 +1,9 @@
 package net.floriankraemer.cognitive_analysis.domain;
 
-public class MetricName {
+public final class MetricName {
+
+  private MetricName() {
+  }
 
   public static final String ELSE_COUNT = "elseCount";
   public static final String IF_NESTING_LEVEL = "ifNestingLevel";

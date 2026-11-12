@@ -4,13 +4,8 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.springframework.stereotype.Component;
 
-@Component
 public class FileFinder {
-
-  public FileFinder() {
-  }
 
   private void assertDirectoryExists(final File directory) {
     if (!directory.exists() || !directory.isDirectory()) {

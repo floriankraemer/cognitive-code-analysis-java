@@ -6,9 +6,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.HashMap;
 import java.util.Map;
-import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
 public class ComplexityCalculatorTest {
 
   private ComplexityCalculator scoreCalculator;

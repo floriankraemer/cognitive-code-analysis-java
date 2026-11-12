@@ -1,8 +1,6 @@
 package net.floriankraemer.cognitive_analysis.domain;
 
-import org.springframework.stereotype.Component;
 
-@Component
 public class CognitiveMetrics {
 
   private String file;
@@ -10,59 +8,59 @@ public class CognitiveMetrics {
   private String methodName;
   private String packageName;
 
-  private int ifCount = 0;
-  private double ifCountWeight = 0.0;
-  private Delta ifCountDelta = null;
+  private int ifCount;
+  private double ifCountWeight;
+  private Delta ifCountDelta;
 
-  private int elseCount = 0;
-  private double elseCountWeight = 0.0;
-  private Delta elseCountDelta = null;
+  private int elseCount;
+  private double elseCountWeight;
+  private Delta elseCountDelta;
 
-  private int loopCount = 0;
-  private double loopCountWeight = 0.0;
-  private Delta loopCountDelta = null;
+  private int loopCount;
+  private double loopCountWeight;
+  private Delta loopCountDelta;
 
-  private int switchCount = 0;
-  private double switchCountWeight = 0.0;
-  private Delta switchCountDelta = null;
+  private int switchCount;
+  private double switchCountWeight;
+  private Delta switchCountDelta;
 
-  private int methodCallCount = 0;
-  private double methodCallCountWeight = 0.0;
-  private Delta methodCallCountDelta = null;
+  private int methodCallCount;
+  private double methodCallCountWeight;
+  private Delta methodCallCountDelta;
 
-  private int returnCount = 0;
-  private double returnCountWeight = 0.0;
-  private Delta returnCountDelta = null;
+  private int returnCount;
+  private double returnCountWeight;
+  private Delta returnCountDelta;
 
-  private int argumentCount = 0;
-  private double argumentCountWeight = 0.0;
-  private Delta argumentCountDelta = null;
+  private int argumentCount;
+  private double argumentCountWeight;
+  private Delta argumentCountDelta;
 
-  private int lineNumber = 0;
-  private double lineNumberWeight = 0.0;
-  private Delta lineNumberDelta = null;
+  private int lineNumber;
+  private double lineNumberWeight;
+  private Delta lineNumberDelta;
 
-  private int ifNestingLevel = 0;
-  private double ifNestingLevelWeight = 0.0;
-  private Delta ifNestingLevelDelta = null;
+  private int ifNestingLevel;
+  private double ifNestingLevelWeight;
+  private Delta ifNestingLevelDelta;
 
-  private int tryCatchNestingLevel = 0;
-  private double tryCatchNestingLevelWeight = 0.0;
-  private Delta tryCatchNestingLevelDelta = null;
+  private int tryCatchNestingLevel;
+  private double tryCatchNestingLevelWeight;
+  private Delta tryCatchNestingLevelDelta;
 
-  private int lineCount = 0;
-  private double lineCountWeight = 0.0;
-  private Delta lineCountDelta = null;
+  private int lineCount;
+  private double lineCountWeight;
+  private Delta lineCountDelta;
 
-  private int variableCount = 0;
-  private double variableCountWeight = 0.0;
-  private Delta variableCountDelta = null;
+  private int variableCount;
+  private double variableCountWeight;
+  private Delta variableCountDelta;
 
-  private int fieldAccessCount = 0;
-  private double propertyCallCountWeight = 0.0;
-  private Delta propertyCallCountDelta = null;
+  private int fieldAccessCount;
+  private double propertyCallCountWeight;
+  private Delta propertyCallCountDelta;
 
-  private double cognitiveComplexity = 0;
+  private double cognitiveComplexity;
 
   public CognitiveMetrics() {
   }
@@ -437,56 +435,5 @@ public class CognitiveMetrics {
     lineCountDelta = new Delta(previousMetrics.getLineCountWeight(), lineCountWeight);
     variableCountDelta = new Delta(previousMetrics.getVariableCountWeight(), variableCountWeight);
     propertyCallCountDelta = new Delta(previousMetrics.getPropertyCallCountWeight(), propertyCallCountWeight);
-  }
-
-  // Override toString
-  @Override
-  public String toString() {
-    return "CognitiveMetrics{"
-        + "file='" + file + '\''
-        + ", className='" + className + '\''
-        + ", methodName='" + methodName + '\''
-        + ", packageName='" + packageName + '\''
-        + ", ifCount=" + ifCount
-        + ", ifCountWeight=" + ifCountWeight
-        + ", ifCountDelta=" + ifCountDelta
-        + ", elseCount=" + elseCount
-        + ", elseCountWeight=" + elseCountWeight
-        + ", elseCountDelta=" + elseCountDelta
-        + ", loopCount=" + loopCount
-        + ", loopCountWeight=" + loopCountWeight
-        + ", loopCountDelta=" + loopCountDelta
-        + ", switchCount=" + switchCount
-        + ", switchCountWeight=" + switchCountWeight
-        + ", switchCountDelta=" + switchCountDelta
-        + ", methodCallCount=" + methodCallCount
-        + ", methodCallCountWeight=" + methodCallCountWeight
-        + ", methodCallCountDelta=" + methodCallCountDelta
-        + ", returnCount=" + returnCount
-        + ", returnCountWeight=" + returnCountWeight
-        + ", returnCountDelta=" + returnCountDelta
-        + ", argumentCount=" + argumentCount
-        + ", argumentCountWeight=" + argumentCountWeight
-        + ", argumentCountDelta=" + argumentCountDelta
-        + ", lineNumber=" + lineNumber
-        + ", lineNumberWeight=" + lineNumberWeight
-        + ", lineNumberDelta=" + lineNumberDelta
-        + ", ifNestingLevel=" + ifNestingLevel
-        + ", ifNestingLevelWeight=" + ifNestingLevelWeight
-        + ", ifNestingLevelDelta=" + ifNestingLevelDelta
-        + ", tryCatchNestingLevel=" + tryCatchNestingLevel
-        + ", tryCatchNestingLevelWeight=" + tryCatchNestingLevelWeight
-        + ", tryCatchNestingLevelDelta=" + tryCatchNestingLevelDelta
-        + ", lineCount=" + lineCount
-        + ", lineCountWeight=" + lineCountWeight
-        + ", lineCountDelta=" + lineCountDelta
-        + ", variableCount=" + variableCount
-        + ", variableCountWeight=" + variableCountWeight
-        + ", variableCountDelta=" + variableCountDelta
-        + ", fieldAccessCount=" + fieldAccessCount
-        + ", propertyCallCountWeight=" + propertyCallCountWeight
-        + ", propertyCallCountDelta=" + propertyCallCountDelta
-        + ", cognitiveComplexity=" + cognitiveComplexity
-        + '}';
   }
 }

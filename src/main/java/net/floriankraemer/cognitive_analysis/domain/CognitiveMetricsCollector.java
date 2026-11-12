@@ -22,24 +22,13 @@ import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.slf4j.Logger;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
 
-@Component
 public class CognitiveMetricsCollector {
 
   private Map<String, CognitiveMetrics> methodMetrics = new HashMap<>();
   private String packageName;
 
-  Logger logger;
-
-  @Autowired
-  public CognitiveMetricsCollector(
-      Logger logger
-  ) {
-    this.logger = logger;
-
+  public CognitiveMetricsCollector() {
     StaticJavaParser
         .getParserConfiguration()
         .setLanguageLevel(ParserConfiguration.LanguageLevel.CURRENT);
@@ -63,7 +52,7 @@ public class CognitiveMetricsCollector {
 
       compilationUnit.accept(new ClassVisitor(), null);
     } catch (ParseProblemException e) {
-      logger.warn(String.format("Error parsing code: %s", e.getMessage()));
+      System.err.println("Error parsing code: " + e.getMessage());
     }
   }
 

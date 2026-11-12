@@ -2,13 +2,10 @@ package net.floriankraemer.cognitive_analysis.application.report;
 
 import net.floriankraemer.cognitive_analysis.CognitiveAnalysisException;
 import net.floriankraemer.cognitive_analysis.domain.MetricsCollection;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
 
 import java.util.EnumMap;
 import java.util.Map;
 
-@Component
 public class ReportBuilder {
 
   private final Map<ReportType, ReportBuilderInterface> reportBuilders = new EnumMap<>(ReportType.class);
@@ -19,7 +16,6 @@ public class ReportBuilder {
     JSON
   }
 
-  @Autowired
   public ReportBuilder(
       HtmlReportBuilder htmlReportBuilder,
       CsvReportBuilder csvReportBuilder,
@@ -32,11 +28,6 @@ public class ReportBuilder {
 
   public void build(ReportType type, String filePath, MetricsCollection metricsCollection)
       throws CognitiveAnalysisException {
-    ReportBuilderInterface builder = reportBuilders.get(type);
-    if (builder == null) {
-      throw new ReportBuilderException("Unsupported report type: " + type);
-    }
-
-    builder.build(metricsCollection, filePath);
+    reportBuilders.get(type).build(metricsCollection, filePath);
   }
 }

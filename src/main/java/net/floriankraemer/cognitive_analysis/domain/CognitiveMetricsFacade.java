@@ -7,24 +7,13 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
 
-@Service
 public class CognitiveMetricsFacade {
 
   private final CognitiveMetricsCollector cognitiveMetricsCollector;
   private final FileFinder fileFinder;
   private final ComplexityCalculator scoreCalculator;
 
-  /**
-   * Constructor for the CognitiveMetricsFacade class.
-   *
-   * @param fileFinder The file finder to use for finding Java files in a directory.
-   * @param cognitiveMetricsCollector The calculator to use for calculating cognitive metrics.
-   * @param complexityCalculator The calculator to use for calculating scores.
-   */
-  @Autowired
   public CognitiveMetricsFacade(
       FileFinder fileFinder,
       CognitiveMetricsCollector cognitiveMetricsCollector,

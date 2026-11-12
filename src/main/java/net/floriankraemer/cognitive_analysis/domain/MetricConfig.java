@@ -66,9 +66,4 @@ public class MetricConfig {
 
     this.scale = scale;
   }
-
-  @Override
-  public String toString() {
-    return super.toString();
-  }
 }

@@ -12,7 +12,7 @@ goto :eof
 
 :install
 echo INSTALL
-.\mvnw install
+.\mvnw verify
 goto :eof
 
 :clean
@@ -22,5 +22,5 @@ goto :eof
 
 :run
 echo RUN
-java -jar .\target\cognitive-analysis-0.0.1-SNAPSHOT.jar analyse '.\\src'
+java -jar .\target\cognitive-analysis.jar analyse src\main\java
 goto :eof
