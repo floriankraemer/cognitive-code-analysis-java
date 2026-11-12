@@ -1,5 +1,6 @@
 package net.floriankraemer.cognitive_analysis.domain;
 
+import net.floriankraemer.cognitive_analysis.config.MetricName;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import net.floriankraemer.cognitive_analysis.config.CognitiveConfig;

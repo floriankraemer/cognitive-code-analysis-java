@@ -1,5 +1,7 @@
 package net.floriankraemer.cognitive_analysis.domain;
 
+import net.floriankraemer.cognitive_analysis.config.MetricName;
+
 
 public class CognitiveMetrics {
 

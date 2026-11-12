@@ -10,12 +10,12 @@ import java.util.Optional;
 import java.util.stream.Stream;
 import net.floriankraemer.cognitive_analysis.CognitiveAnalysisException;
 import net.floriankraemer.cognitive_analysis.config.CognitiveConfig.MetricSettings;
-import net.floriankraemer.cognitive_analysis.domain.MetricName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class ConfigLoaderTest {
 
@@ -189,6 +189,44 @@ class ConfigLoaderTest {
         .isInstanceOf(CognitiveAnalysisException.class)
         .hasMessageStartingWith("Invalid YAML in " + file + ": ")
         .hasMessageContaining("(line ");
+  }
+
+  @Test
+  void rejectsMultipleYamlDocuments() throws Exception {
+    Path file = write("multi.yaml", "cognitive:\n  scoreThreshold: 1\n---\ncognitive:\n  scoreThreshold: 2\n");
+
+    assertThatThrownBy(() -> load(file))
+        .isInstanceOf(CognitiveAnalysisException.class)
+        .hasMessage("Config file " + file + " must contain a single YAML document.");
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {".nan", ".inf", "-.inf"})
+  void rejectsNanAndInfinityAsMalformedYaml(final String value) throws Exception {
+    write("jcca.yaml", "cognitive:\n  scoreThreshold: " + value + "\n");
+
+    // The YAML parser rejects these itself and gives no key path.
+    assertThatThrownBy(() -> load(null))
+        .isInstanceOf(CognitiveAnalysisException.class)
+        .hasMessageContaining("Malformed numeric value '" + value + "'");
+  }
+
+  @Test
+  void rejectsANumberThatOverflowsToInfinity() throws Exception {
+    write("jcca.yaml", "cognitive:\n  scoreThreshold: 1e400\n");
+
+    assertThatThrownBy(() -> load(null))
+        .isInstanceOf(CognitiveAnalysisException.class)
+        .hasMessage("Invalid configuration value \"cognitive.scoreThreshold\": must be a finite number.");
+  }
+
+  @Test
+  void rejectsAnOverflowingMetricValue() throws Exception {
+    write("jcca.yaml", "cognitive:\n  metrics:\n    ifCount: {scale: 1e400}\n");
+
+    assertThatThrownBy(() -> load(null))
+        .isInstanceOf(CognitiveAnalysisException.class)
+        .hasMessage("Invalid configuration value \"cognitive.metrics.ifCount.scale\": must be a finite number.");
   }
 
   @Test

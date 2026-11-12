@@ -1,8 +1,9 @@
 package net.floriankraemer.cognitive_analysis.config;
 
-import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.StreamReadFeature;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
@@ -27,7 +28,9 @@ public class ConfigLoader {
   private static final String ROOT = "cognitive";
 
   private final ObjectMapper yaml =
-      new ObjectMapper(new YAMLFactory().enable(JsonParser.Feature.STRICT_DUPLICATE_DETECTION));
+      new ObjectMapper(YAMLFactory.builder()
+          .enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION)
+          .build());
   private final Path workingDirectory;
 
   /** @param workingDirectory where relative paths and the auto-discovered {@value #USER_FILE_NAME} resolve */
@@ -71,10 +74,20 @@ public class ConfigLoader {
   private JsonNode readUserFile(final Path file) throws CognitiveAnalysisException {
     final JsonNode user;
     try {
-      user = yaml.readTree(Files.readString(workingDirectory.resolve(file)));
+      final MappingIterator<JsonNode> documents =
+          yaml.readerFor(JsonNode.class).readValues(Files.readString(workingDirectory.resolve(file)));
+      user = documents.hasNext() ? documents.next() : null;
+      if (documents.hasNext()) {
+        throw new CognitiveAnalysisException("Config file " + file + " must contain a single YAML document.");
+      }
     } catch (JsonProcessingException e) {
-      throw new CognitiveAnalysisException(
-          "Invalid YAML in " + file + ": " + e.getOriginalMessage() + location(e), e);
+      throw invalidYaml(file, e);
+    } catch (RuntimeException e) {
+      // MappingIterator wraps parse errors found while advancing to the next document
+      if (e.getCause() instanceof JsonProcessingException cause) {
+        throw invalidYaml(file, cause);
+      }
+      throw e;
     } catch (IOException e) {
       throw new CognitiveAnalysisException("Cannot read config file " + file + ": " + e.getMessage(), e);
     }
@@ -88,6 +101,11 @@ public class ConfigLoader {
       }
     }
     return user;
+  }
+
+  private static CognitiveAnalysisException invalidYaml(final Path file, final JsonProcessingException e) {
+    return new CognitiveAnalysisException(
+        "Invalid YAML in " + file + ": " + e.getOriginalMessage() + location(e), e);
   }
 
   private static String location(final JsonProcessingException e) {

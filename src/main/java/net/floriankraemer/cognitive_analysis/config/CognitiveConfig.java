@@ -4,7 +4,6 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import net.floriankraemer.cognitive_analysis.domain.MetricName;
 
 /**
  * The validated "cognitive" configuration section.

@@ -25,6 +25,9 @@ java -jar cognitive-analysis.jar analyse <path-to-folder> --config <path-to-conf
 
 ## Settings
 
+Only `metrics` affects the calculation today.
+The other settings (`scoreThreshold`, `exclude*`, `show*`, `groupByClass`, `cache`, `customReporters`) are parsed and validated, and are applied from a later release.
+
 ```yaml
 cognitive:
   excludeFilePatterns: []

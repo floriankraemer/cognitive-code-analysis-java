@@ -16,7 +16,6 @@ import net.floriankraemer.cognitive_analysis.config.CognitiveConfig.CacheSetting
 import net.floriankraemer.cognitive_analysis.config.CognitiveConfig.CustomReporters;
 import net.floriankraemer.cognitive_analysis.config.CognitiveConfig.MetricSettings;
 import net.floriankraemer.cognitive_analysis.config.CognitiveConfig.ReporterSettings;
-import net.floriankraemer.cognitive_analysis.domain.MetricName;
 
 /** Strictly validates the merged "cognitive" tree and turns it into a {@link CognitiveConfig}. */
 final class ConfigParser {
@@ -158,6 +157,9 @@ final class ConfigParser {
     final JsonNode node = child(parent, path, key);
     if (!node.isNumber()) {
       throw invalid(path + "." + key, "must be a number");
+    }
+    if (!Double.isFinite(node.asDouble())) {
+      throw invalid(path + "." + key, "must be a finite number");
     }
     return node.asDouble();
   }

@@ -1,4 +1,4 @@
-package net.floriankraemer.cognitive_analysis.domain;
+package net.floriankraemer.cognitive_analysis.config;
 
 import java.util.Arrays;
 import java.util.Optional;
