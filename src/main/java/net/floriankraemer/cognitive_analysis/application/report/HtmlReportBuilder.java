@@ -62,7 +62,7 @@ public class HtmlReportBuilder extends AbstractReportBuilder {
             .append("<td>").append(formatValueWithWeight(metrics.getSwitchCount(), metrics.getSwitchCountWeight())).append("</td>\n")
             .append("<td>").append(formatValueWithWeight(metrics.getMethodCallCount(), metrics.getMethodCallCountWeight())).append("</td>\n")
             .append("<td>").append(formatValueWithWeight(metrics.getReturnCount(), metrics.getReturnCountWeight())).append("</td>\n")
-            .append("<td>").append(formatValueWithWeight(metrics.getArgumentCount(), metrics.getArgumentCountWeight())).append("</td>\n")
+            .append("<td>").append(formatValueWithWeight(metrics.getArgCount(), metrics.getArgCountWeight())).append("</td>\n")
             .append("<td>").append(formatValueWithWeight(metrics.getTryCatchNestingLevel(), metrics.getTryCatchNestingLevelWeight())).append("</td>\n")
             .append("<td>").append(String.format(Locale.ROOT, "%.3f", metrics.getCognitiveComplexity())).append("</td>\n")
             .append("</tr>\n");

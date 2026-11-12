@@ -35,7 +35,7 @@ public class ResultTableBuilder {
         formatValue(metrics.getSwitchCount(), metrics.getSwitchCountWeight()),
         formatValue(metrics.getMethodCallCount(), metrics.getMethodCallCountWeight()),
         formatValue(metrics.getReturnCount(), metrics.getReturnCountWeight()),
-        formatValue(metrics.getArgumentCount(), metrics.getArgumentCountWeight()),
+        formatValue(metrics.getArgCount(), metrics.getArgCountWeight()),
         formatValue(metrics.getTryCatchNestingLevel(), metrics.getTryCatchNestingLevelWeight()),
         String.format(Locale.ROOT, "%.3f", metrics.getCognitiveComplexity())
     );

@@ -1,2 +1,3 @@
-complexityThreshold: 0.9
-unknownKey: true
+cognitive:
+  scoreThreshold: 0.9
+  unknownKey: true

@@ -1,6 +1,6 @@
-complexityThreshold: 0.9
-metricConfigs:
-  - name: lineCount
-    enabled: false
-    threshold: 10
-    scale: 3.0
+cognitive:
+  scoreThreshold: 0.9
+  metrics:
+    argCount:
+      threshold: 0
+      scale: 1.0

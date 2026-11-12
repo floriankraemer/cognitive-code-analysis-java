@@ -155,7 +155,7 @@ public class CognitiveMetricsCollectorTest {
 
     CognitiveMetrics metrics = collector.getMethodMetrics().get("TestClass.loopMethod");
     assertEquals(1, metrics.getLoopCount());
-    assertEquals(1, metrics.getFieldAccessCount());
+    assertEquals(1, metrics.getPropertyCallCount());
     assertEquals("", metrics.getPackageName());
   }
 
