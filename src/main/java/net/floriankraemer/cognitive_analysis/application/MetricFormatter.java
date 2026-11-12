@@ -1,5 +1,6 @@
 package net.floriankraemer.cognitive_analysis.application;
 
+import java.math.BigDecimal;
 import java.util.Locale;
 import picocli.CommandLine.Help.Ansi;
 
@@ -27,7 +28,7 @@ final class MetricFormatter {
   }
 
   String weighted(final int count, final double weight) {
-    return String.format(Locale.ROOT, "%d (%.3f)", count, weight);
+    return count + " (" + new BigDecimal(String.format(Locale.ROOT, "%.3f", weight)).stripTrailingZeros().toPlainString() + ")";
   }
 
   String score(final double score) {

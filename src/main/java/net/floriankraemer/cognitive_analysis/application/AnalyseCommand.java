@@ -103,9 +103,7 @@ public class AnalyseCommand implements Callable<Integer> {
   /** Replaceable by tests: the clock of the stage timings, the colors and the terminal check. */
   LongSupplier ticker = System::nanoTime;
   Ansi ansi = Ansi.AUTO;
-  // Approximation: System.console() is null when stdin or stdout is redirected, so progress may stay off with
-  // only stderr on a terminal; Java 22 has Console.isTerminal() to check stderr alone.
-  BooleanSupplier stderrIsTerminal = () -> System.console() != null;
+  BooleanSupplier stderrIsTerminal = Terminal::isAttached;
 
   private final ReportBuilder reportBuilder = new ReportBuilder(
       new HtmlReportBuilder(), new CsvReportBuilder(), new JsonReportBuilder());

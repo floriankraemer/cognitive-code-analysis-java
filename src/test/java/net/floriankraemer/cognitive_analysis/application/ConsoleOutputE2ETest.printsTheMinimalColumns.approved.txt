@@ -10,7 +10,6 @@ File: src/test/resources/fixtures/multi/Alpha.java
 │             │ Complexity │
 ├─────────────┼────────────┤
 │ second      │   0.000    │
-├─────────────┼────────────┤
 │ first       │   0.000    │
 └─────────────┴────────────┘
 
@@ -21,7 +20,6 @@ File: src/test/resources/fixtures/multi/Beta.java
 │             │ Complexity │
 ├─────────────┼────────────┤
 │ zulu        │   0.000    │
-├─────────────┼────────────┤
 │ alpha       │   0.000    │
 └─────────────┴────────────┘
 
@@ -41,7 +39,6 @@ File: src/test/resources/fixtures/sample/ClassToAnalyze.java
 │                        │ Complexity │
 ├────────────────────────┼────────────┤
 │ simpleMethod           │   0.000    │
-├────────────────────────┼────────────┤
 │ methodWithTwoArguments │   2.197    │
 └────────────────────────┴────────────┘
 

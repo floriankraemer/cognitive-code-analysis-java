@@ -16,12 +16,15 @@ class MetricFormatterTest {
   private final MetricFormatter plain = new MetricFormatter(0.5, Ansi.OFF);
 
   @Test
-  void showsTheWeightWithThreeDecimalsRegardlessOfTheLocale() {
+  void showsTheWeightWithUpToThreeDecimalsRegardlessOfTheLocale() {
     Locale original = Locale.getDefault();
     Locale.setDefault(Locale.GERMANY);
     try {
       assertThat(plain.weighted(4, 1.0986)).isEqualTo("4 (1.099)");
-      assertThat(plain.weighted(0, 0)).isEqualTo("0 (0.000)");
+      assertThat(plain.weighted(0, 0)).isEqualTo("0 (0)");
+      assertThat(plain.weighted(7, 1.5)).isEqualTo("7 (1.5)");
+      assertThat(plain.weighted(5, 0.6931)).isEqualTo("5 (0.693)");
+      assertThat(plain.weighted(5, 2.0004)).isEqualTo("5 (2)");
     } finally {
       Locale.setDefault(original);
     }

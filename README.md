@@ -39,17 +39,16 @@ Found 1 files. Starting analysis.
 
 Class: test.testcode.ClassToAnalyze
 File: src/test/resources/fixtures/sample/ClassToAnalyze.java
-┌────────────────────────┬────────────┬───────────┬───────────┬───────────┬───────────┬───────────┬────────────┬───────────┬────────────┐
-│ Method Name            │   Lines    │ Arguments │  Returns  │ Variables │ Property  │    If     │ If Nesting │   Else    │ Cognitive  │
-│                        │            │           │           │           │ Accesses  │           │   Level    │           │ Complexity │
-├────────────────────────┼────────────┼───────────┼───────────┼───────────┼───────────┼───────────┼────────────┼───────────┼────────────┤
-│ simpleMethod           │ 3 (0.000)  │ 0 (0.000) │ 0 (0.000) │ 0 (0.000) │ 0 (0.000) │ 0 (0.000) │ 0 (0.000)  │ 0 (0.000) │   0.000    │
-├────────────────────────┼────────────┼───────────┼───────────┼───────────┼───────────┼───────────┼────────────┼───────────┼────────────┤
-│ methodWithTwoArguments │ 16 (0.000) │ 2 (0.000) │ 0 (0.000) │ 0 (0.000) │ 0 (0.000) │ 3 (0.000) │ 3 (1.099)  │ 3 (1.099) │   2.197    │
-└────────────────────────┴────────────┴───────────┴───────────┴───────────┴───────────┴───────────┴────────────┴───────────┴────────────┘
+┌────────────────────────┬────────┬───────────┬─────────┬───────────┬──────────┬───────┬────────────┬───────────┬────────────┐
+│ Method Name            │ Lines  │ Arguments │ Returns │ Variables │ Property │  If   │ If Nesting │   Else    │ Cognitive  │
+│                        │        │           │         │           │ Accesses │       │   Level    │           │ Complexity │
+├────────────────────────┼────────┼───────────┼─────────┼───────────┼──────────┼───────┼────────────┼───────────┼────────────┤
+│ simpleMethod           │ 3 (0)  │   0 (0)   │  0 (0)  │   0 (0)   │  0 (0)   │ 0 (0) │   0 (0)    │   0 (0)   │   0.000    │
+│ methodWithTwoArguments │ 16 (0) │   2 (0)   │  0 (0)  │   0 (0)   │  0 (0)   │ 3 (0) │ 3 (1.099)  │ 3 (1.099) │   2.197    │
+└────────────────────────┴────────┴───────────┴─────────┴───────────┴──────────┴───────┴────────────┴───────────┴────────────┘
 ```
 
-A cell of the detail columns reads `count (weight)`.
+A cell of the detail columns reads `count (weight)`, with the weight shown with up to three decimals.
 The score is red above `scoreThreshold` and green otherwise, Halstead values and risk levels are yellow or red from their thresholds.
 Colors are used only on a terminal, and `NO_COLOR` switches them off.
 The settings that choose the columns and the grouping are described in [Configuration](./docs/Configuration.md#console-output).

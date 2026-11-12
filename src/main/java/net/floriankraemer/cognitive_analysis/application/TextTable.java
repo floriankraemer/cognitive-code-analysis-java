@@ -6,7 +6,8 @@ import java.util.regex.Pattern;
 
 /**
  * Renders rows of (possibly multi-line) cells as a box-drawing table.
- * Column widths follow the widest line of each column, ANSI color codes not counted.
+ * Rows sit directly under each other unless a body cell spans several lines, which draws a line between
+ * the rows. Column widths follow the widest line of each column, ANSI color codes not counted.
  */
 public final class TextTable {
 
@@ -29,10 +30,11 @@ public final class TextTable {
 
     final int[] widths = columnWidths(all, header.size());
     final StringBuilder out = new StringBuilder();
+    final boolean separateRows = rows.stream().anyMatch(row -> row.stream().anyMatch(cell -> cell.contains("\n")));
 
     out.append(border('┌', '┬', '┐', widths)).append('\n');
     for (int i = 0; i < all.size(); i++) {
-      if (i > 0) {
+      if (i == 1 || (i > 1 && separateRows)) {
         out.append(border('├', '┼', '┤', widths)).append('\n');
       }
       appendRow(out, all.get(i), widths);

@@ -171,9 +171,9 @@ class AnalyseCommandE2ETest {
     assertThat(out.toString().lines().filter(line -> line.startsWith("File: ") || line.startsWith("│ main")))
         .containsExactly(
             "File: " + dir + "/m1/Main.java",
-            "│ main        │ 3 (0.000) │ 1 (0.000) │ 0 (0.000) │ 0 (0.000) │ 0 (0.000) │ 0 (0.000) │ 0 (0.000)  │ 0 (0.000) │   0.000    │",
+            "│ main        │ 3 (0) │   1 (0)   │  0 (0)  │   0 (0)   │  0 (0)   │ 0 (0) │   0 (0)    │ 0 (0) │   0.000    │",
             "File: " + dir + "/m2/Main.java",
-            "│ main        │ 5 (0.000) │ 1 (0.000) │ 0 (0.000) │ 0 (0.000) │ 1 (0.000) │ 1 (0.000) │ 1 (0.000)  │ 0 (0.000) │   0.000    │");
+            "│ main        │ 5 (0) │   1 (0)   │  0 (0)  │   0 (0)   │  1 (0)   │ 1 (0) │   1 (0)    │ 0 (0) │   0.000    │");
   }
 
   @Test
