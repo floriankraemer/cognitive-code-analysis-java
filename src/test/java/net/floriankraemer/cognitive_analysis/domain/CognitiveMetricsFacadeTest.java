@@ -116,6 +116,77 @@ class CognitiveMetricsFacadeTest {
   }
 
   @Test
+  void analysesJavaAndKotlinFilesEachWithTheParserOfItsLanguage() throws Exception {
+    Path java = write("A.java", "package p; class A { void a() {} }");
+    Path kotlin = write("tools.kt", "package p\nclass K { fun k() {} }\nfun top() {}\n");
+    write("build.gradle.kts", "plugins { java }");
+
+    MetricsCollection result = facade(TestConfigs.defaults()).calculateCognitiveMetrics(List.of(tempDir.toString()));
+
+    assertThat(result).containsOnlyKeys(java.toString(), kotlin.toString());
+    assertThat(result.get(java.toString())).containsOnlyKeys("p.A::a");
+    assertThat(result.get(kotlin.toString())).containsOnlyKeys("p.K::k", "p.ToolsKt::top");
+  }
+
+  @Test
+  void readsJavaAndKotlinFilesWithAByteOrderMarkAndWindowsLineEndings() throws Exception {
+    Path java = write("A.java", "\uFEFFpackage p;\r\nclass A {\r\n  void a() {\r\n  }\r\n}\r\n");
+    Path kotlin = write("K.kt", "\uFEFFpackage p\r\nclass K {\r\n    fun k() {\r\n    }\r\n}\r\n");
+
+    MetricsCollection result = facade(TestConfigs.defaults()).calculateCognitiveMetrics(List.of(tempDir.toString()));
+
+    assertThat(warnings.toString()).isEmpty();
+    assertThat(result.get(java.toString()).get("p.A::a").getLine()).isEqualTo(3);
+    assertThat(result.get(kotlin.toString()).get("p.K::k").getLine()).isEqualTo(3);
+    assertThat(result.get(kotlin.toString()).get("p.K::k").value(MetricName.LINE_COUNT)).isEqualTo(2);
+  }
+
+  @Test
+  void reportsAKotlinFileThatCannotBeParsedAndContinues() throws Exception {
+    Path broken = write("Broken.kt", "class Broken {\n    fun oops( {\n    }\n}\n");
+    Path valid = write("Valid.kt", "class Valid { fun valid() {} }");
+
+    MetricsCollection result = facade(TestConfigs.defaults()).calculateCognitiveMetrics(List.of(tempDir.toString()));
+
+    assertThat(result).containsOnlyKeys(valid.toString());
+    assertThat(warnings.toString())
+        .isEqualTo("Parser failed for file " + broken + ": (line 2,col 14) Expecting ')'" + System.lineSeparator());
+  }
+
+  @Test
+  void excludesKotlinFilesWhosePathMatchesAPattern() throws Exception {
+    write("generated/Gen.kt", "class Gen { fun gen() {} }");
+    Path kept = write("Kept.kt", "class Kept { fun kept() {} }");
+    CognitiveConfig config = TestConfigs.load("""
+        cognitive:
+          excludeFilePatterns: ["/generated/.*\\\\.kt$"]
+        """);
+
+    MetricsCollection result = facade(config).calculateCognitiveMetrics(List.of(tempDir.toString()));
+
+    assertThat(result).containsOnlyKeys(kept.toString());
+  }
+
+  @Test
+  void aCacheHitRestoresEveryMetricOfAFreshKotlinAnalysis() throws Exception {
+    Path source = write("src/A.kt", "class A { fun a(x: Int): Int = if (x > 0 && x < 9) 1 else x ?: 0 }");
+    CognitiveConfig config = cachedIn(tempDir.resolve("cache"));
+    CognitiveMetricsFacade first = facade(config);
+    MetricsCollection fresh = first.calculateCognitiveMetrics(List.of(srcDir()));
+
+    CognitiveMetricsFacade second = facade(config);
+    MetricsCollection cached = second.calculateCognitiveMetrics(List.of(srcDir()));
+
+    assertThat(first.statistics().asMap()).containsEntry("cacheMisses", 1);
+    assertThat(second.statistics().asMap()).containsEntry("cacheHits", 1).containsEntry("cacheMisses", 0);
+    CognitiveMetrics method = cached.get(source.toString()).get("A::a");
+    assertThat(method.getCyclomatic().complexity()).isEqualTo(4);
+    assertThat(entries()).hasSize(1);
+    ObjectMapper json = JsonMapper.builder().build();
+    assertThat(json.writeValueAsString(cached)).isEqualTo(json.writeValueAsString(fresh));
+  }
+
+  @Test
   void failsWithTheFilePathWhenAFileIsNotUtf8() throws Exception {
     Path broken = tempDir.resolve("Broken.java");
     Files.write(broken, new byte[] {(byte) 0xC3, (byte) 0x28});

@@ -93,14 +93,14 @@ Both lists hold Java regular expressions.
 A pattern excludes an item when it is found anywhere in the item's text, so anchor it with `^` and `$` to match the whole text.
 An invalid regular expression is a configuration error that names the pattern.
 
-- `excludeFilePatterns` is matched against the absolute, normalized path of each Java file, written with `/` as the separator on every platform.
-- `excludePatterns` is matched against the method name `com.example.Outer.Inner::method`, as described in [Analysed Methods](./Cognitive-Complexity-Analysis.md#analysed-methods).
+- `excludeFilePatterns` is matched against the absolute, normalized path of each Java and Kotlin file, written with `/` as the separator on every platform.
+- `excludePatterns` is matched against the method name `com.example.Outer.Inner::method`, as described in [Analysed Methods](./Cognitive-Complexity-Analysis.md#analysed-methods) and, for Kotlin, in [Analysed Kotlin functions](./Cognitive-Complexity-Analysis.md#analysed-kotlin-functions).
 
 ```yaml
 cognitive:
   excludeFilePatterns:
     - '/generated/'
-    - 'Test\.java$'
+    - 'Test\.(java|kt)$'
   excludePatterns:
     - '::(get|set|is)[A-Z]'
     - '^com\.example\.legacy\.'

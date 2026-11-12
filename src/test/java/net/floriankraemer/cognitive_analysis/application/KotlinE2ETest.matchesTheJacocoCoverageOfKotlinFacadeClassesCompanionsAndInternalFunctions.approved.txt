@@ -1,0 +1,38 @@
+Config: src/test/resources/fixtures/no-cache.yaml
+Cache: disabled
+
+Found 1 files. Starting analysis.
+
+Class: ledger.Ledger
+File: src/test/resources/fixtures/kotlin/coverage/Ledger.kt
+┌─────────────┬───────┬───────────┬─────────┬───────────┬──────────┬───────┬────────────┬───────┬────────────┬──────────┐
+│ Method Name │ Lines │ Arguments │ Returns │ Variables │ Property │  If   │ If Nesting │ Else  │ Cognitive  │   Line   │
+│             │       │           │         │           │ Accesses │       │   Level    │       │ Complexity │ Coverage │
+├─────────────┼───────┼───────────┼─────────┼───────────┼──────────┼───────┼────────────┼───────┼────────────┼──────────┤
+│ Ledger      │ 5 (0) │   1 (0)   │  0 (0)  │   0 (0)   │  0 (0)   │ 1 (0) │   1 (0)    │ 0 (0) │   0.000    │  75.00%  │
+│ balance     │ 7 (0) │   0 (0)   │  1 (0)  │   3 (0)   │  1 (0)   │ 0 (0) │   0 (0)    │ 0 (0) │   0.000    │ 100.00%  │
+│ unused      │ 6 (0) │   1 (0)   │  2 (0)  │   0 (0)   │  0 (0)   │ 1 (0) │   1 (0)    │ 0 (0) │   0.000    │  0.00%   │
+│ audit       │ 1 (0) │   0 (0)   │  0 (0)  │   1 (0)   │  1 (0)   │ 0 (0) │   0 (0)    │ 0 (0) │   0.000    │ 100.00%  │
+└─────────────┴───────┴───────────┴─────────┴───────────┴──────────┴───────┴────────────┴───────┴────────────┴──────────┘
+
+Class: ledger.Ledger.Companion
+File: src/test/resources/fixtures/kotlin/coverage/Ledger.kt
+┌─────────────┬───────┬───────────┬─────────┬───────────┬──────────┬───────┬────────────┬───────┬────────────┬──────────┐
+│ Method Name │ Lines │ Arguments │ Returns │ Variables │ Property │  If   │ If Nesting │ Else  │ Cognitive  │   Line   │
+│             │       │           │         │           │ Accesses │       │   Level    │       │ Complexity │ Coverage │
+├─────────────┼───────┼───────────┼─────────┼───────────┼──────────┼───────┼────────────┼───────┼────────────┼──────────┤
+│ empty       │ 1 (0) │   0 (0)   │  0 (0)  │   0 (0)   │  0 (0)   │ 0 (0) │   0 (0)    │ 0 (0) │   0.000    │ 100.00%  │
+│ neverCalled │ 1 (0) │   0 (0)   │  0 (0)  │   0 (0)   │  0 (0)   │ 0 (0) │   0 (0)    │ 0 (0) │   0.000    │  0.00%   │
+└─────────────┴───────┴───────────┴─────────┴───────────┴──────────┴───────┴────────────┴───────┴────────────┴──────────┘
+
+Class: ledger.LedgerKt
+File: src/test/resources/fixtures/kotlin/coverage/Ledger.kt
+┌─────────────┬───────┬───────────┬─────────┬───────────┬──────────┬───────┬────────────┬───────┬────────────┬──────────┐
+│ Method Name │ Lines │ Arguments │ Returns │ Variables │ Property │  If   │ If Nesting │ Else  │ Cognitive  │   Line   │
+│             │       │           │         │           │ Accesses │       │   Level    │       │ Complexity │ Coverage │
+├─────────────┼───────┼───────────┼─────────┼───────────┼──────────┼───────┼────────────┼───────┼────────────┼──────────┤
+│ describe    │ 1 (0) │   0 (0)   │  0 (0)  │   0 (0)   │  0 (0)   │ 1 (0) │   1 (0)    │ 1 (0) │   0.000    │ 100.00%  │
+│ main        │ 6 (0) │   0 (0)   │  0 (0)  │   1 (0)   │  0 (0)   │ 0 (0) │   0 (0)    │ 0 (0) │   0.000    │ 100.00%  │
+└─────────────┴───────┴───────────┴─────────┴───────────┴──────────┴───────┴────────────┴───────┴────────────┴──────────┘
+
+Cognitive metrics calculated for src/test/resources/fixtures/kotlin/coverage

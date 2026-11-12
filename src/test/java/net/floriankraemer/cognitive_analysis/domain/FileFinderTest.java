@@ -34,6 +34,16 @@ class FileFinderTest {
   }
 
   @Test
+  void findsKotlinFilesNextToJavaFilesButNoKotlinScripts() throws Exception {
+    Path java = Files.createFile(tempDir.resolve("B.java"));
+    Path kotlin = Files.createFile(tempDir.resolve("A.kt"));
+    Files.createFile(tempDir.resolve("build.gradle.kts"));
+    Files.createFile(tempDir.resolve("C.ktx"));
+
+    assertThat(find(tempDir.toString())).containsExactly(kotlin, java);
+  }
+
+  @Test
   void skipsHiddenDirectoriesButNotAHiddenRoot() throws Exception {
     Path hidden = Files.createDirectory(tempDir.resolve(".hidden"));
     Files.createFile(hidden.resolve("Skipped.java"));
@@ -62,7 +72,7 @@ class FileFinderTest {
     Files.createFile(tempDir.resolve("FooTest.java"));
     Path kept = Files.createFile(tempDir.resolve("Foo.java"));
 
-    List<Path> files = fileFinder.findJavaFiles(
+    List<Path> files = fileFinder.findSourceFiles(
         List.of(tempDir.toString()), List.of(Pattern.compile("/generated/"), Pattern.compile("Test\\.java$")));
 
     assertThat(files).containsExactly(kept);
@@ -70,7 +80,7 @@ class FileFinderTest {
 
   @Test
   void matchesExcludePatternsAgainstTheAbsolutePathOfARelativeArgument() throws Exception {
-    List<Path> files = fileFinder.findJavaFiles(
+    List<Path> files = fileFinder.findSourceFiles(
         List.of("src/test/resources/fixtures/multi"), List.of(Pattern.compile("^/.*/fixtures/multi/Alpha\\.java$")));
 
     assertThat(files).containsExactly(Path.of("src/test/resources/fixtures/multi/Beta.java"));
@@ -116,6 +126,6 @@ class FileFinderTest {
   }
 
   private List<Path> find(String... paths) throws CognitiveAnalysisException {
-    return fileFinder.findJavaFiles(List.of(paths), List.of());
+    return fileFinder.findSourceFiles(List.of(paths), List.of());
   }
 }

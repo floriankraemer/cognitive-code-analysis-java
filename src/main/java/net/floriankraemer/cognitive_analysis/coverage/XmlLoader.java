@@ -14,6 +14,7 @@ import java.util.List;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
+import org.xml.sax.EntityResolver;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
@@ -31,6 +32,9 @@ final class XmlLoader {
     "http://xml.org/sax/features/external-parameter-entities",
     "http://apache.org/xml/features/nonvalidating/load-external-dtd",
   };
+
+  /** Answers every external entity with empty content, should a parser ignore the disabled features. */
+  static final EntityResolver NO_EXTERNAL_ENTITIES = (publicId, systemId) -> new InputSource(new StringReader(""));
 
   private XmlLoader() {}
 
@@ -53,7 +57,7 @@ final class XmlLoader {
       factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
       factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
       final DocumentBuilder builder = factory.newDocumentBuilder();
-      builder.setEntityResolver((publicId, systemId) -> new InputSource(new StringReader("")));
+      builder.setEntityResolver(NO_EXTERNAL_ENTITIES);
       return builder;
     } catch (ParserConfigurationException | IllegalArgumentException e) {
       // Fail closed: without every protection the file is not parsed at all.

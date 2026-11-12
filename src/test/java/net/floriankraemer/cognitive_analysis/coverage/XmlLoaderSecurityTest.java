@@ -8,6 +8,7 @@ import java.nio.file.Path;
 import net.floriankraemer.cognitive_analysis.CognitiveAnalysisException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.xml.sax.InputSource;
 
 class XmlLoaderSecurityTest {
 
@@ -62,6 +63,13 @@ class XmlLoaderSecurityTest {
     assertThatThrownBy(() -> CoverageFormat.JACOCO.read(report))
         .isInstanceOf(CognitiveAnalysisException.class)
         .hasMessageStartingWith("Invalid coverage file " + report + ": ");
+  }
+
+  @Test
+  void resolvesEveryExternalEntityToEmptyContent() throws Exception {
+    final InputSource source = XmlLoader.NO_EXTERNAL_ENTITIES.resolveEntity(null, "file:///etc/passwd");
+
+    assertThat(source.getCharacterStream().read()).isEqualTo(-1);
   }
 
   @Test

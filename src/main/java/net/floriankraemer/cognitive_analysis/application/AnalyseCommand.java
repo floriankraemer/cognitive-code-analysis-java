@@ -38,7 +38,7 @@ import picocli.CommandLine.Spec;
 @Command(
     name = "analyse",
     mixinStandardHelpOptions = true,
-    description = "Calculates cognitive complexity metrics for Java files.",
+    description = "Calculates cognitive complexity metrics for Java and Kotlin files.",
     exitCodeOnInvalidInput = 1
 )
 public class AnalyseCommand implements Callable<Integer> {
@@ -65,7 +65,7 @@ public class AnalyseCommand implements Callable<Integer> {
   @Parameters(
       index = "0",
       paramLabel = "<path>",
-      description = "Comma-separated Java files and directories; directories are searched recursively."
+      description = "Comma-separated Java and Kotlin files and directories; directories are searched recursively."
   )
   String path;
 

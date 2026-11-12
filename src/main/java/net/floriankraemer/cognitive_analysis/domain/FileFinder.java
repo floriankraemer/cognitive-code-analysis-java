@@ -16,16 +16,17 @@ import net.floriankraemer.cognitive_analysis.CognitiveAnalysisException;
 /** Finds the source files to analyse. */
 public class FileFinder {
 
-  private static final String JAVA_EXTENSION = ".java";
+  /** Kotlin scripts ({@code .kts}) are no classes and are left out. */
+  private static final List<String> SOURCE_EXTENSIONS = List.of(".java", ".kt");
 
   /**
    * @param paths files and directories; directories are searched recursively, skipping hidden ones
    * @param excludeFilePatterns a file is skipped when one of them is found in its absolute path,
    *     written with {@code /} separators
-   * @return the Java files, each once, sorted by path
+   * @return the Java and Kotlin files, each once, sorted by path
    * @throws CognitiveAnalysisException when a path does not exist or cannot be read
    */
-  public List<Path> findJavaFiles(final List<String> paths, final List<Pattern> excludeFilePatterns)
+  public List<Path> findSourceFiles(final List<String> paths, final List<Pattern> excludeFilePatterns)
       throws CognitiveAnalysisException {
     final Map<Path, Path> filesByAbsolutePath = new LinkedHashMap<>();
     for (final String path : paths) {
@@ -33,7 +34,7 @@ public class FileFinder {
       if (!Files.exists(root)) {
         throw new CognitiveAnalysisException("Path does not exist: " + path);
       }
-      for (final Path file : javaFiles(root)) {
+      for (final Path file : sourceFiles(root)) {
         if (!isExcluded(file, excludeFilePatterns)) {
           filesByAbsolutePath.putIfAbsent(file.toAbsolutePath(), file);
         }
@@ -42,7 +43,7 @@ public class FileFinder {
     return filesByAbsolutePath.values().stream().sorted().toList();
   }
 
-  private static List<Path> javaFiles(final Path root) throws CognitiveAnalysisException {
+  private static List<Path> sourceFiles(final Path root) throws CognitiveAnalysisException {
     final List<Path> files = new ArrayList<>();
     try {
       Files.walkFileTree(root, new SimpleFileVisitor<>() {
@@ -56,7 +57,7 @@ public class FileFinder {
         @Override
         public FileVisitResult visitFile(final Path file, final BasicFileAttributes attributes) {
           // follows a symbolic link, which the walk itself does not
-          if (file.getFileName().toString().endsWith(JAVA_EXTENSION) && Files.isRegularFile(file)) {
+          if (isSourceFile(file) && Files.isRegularFile(file)) {
             files.add(file);
           }
           return FileVisitResult.CONTINUE;
@@ -66,6 +67,15 @@ public class FileFinder {
       throw new CognitiveAnalysisException("Cannot read " + root + ": " + e.getMessage(), e);
     }
     return files;
+  }
+
+  private static boolean isSourceFile(final Path file) {
+    final String name = file.getFileName().toString();
+    return SOURCE_EXTENSIONS.stream().anyMatch(name::endsWith);
+  }
+
+  static boolean isKotlinFile(final Path file) {
+    return file.getFileName().toString().endsWith(".kt");
   }
 
   private static boolean isExcluded(final Path file, final List<Pattern> excludeFilePatterns) {

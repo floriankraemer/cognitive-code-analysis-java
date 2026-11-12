@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.within;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
 import net.floriankraemer.cognitive_analysis.CognitiveAnalysisException;
 import net.floriankraemer.cognitive_analysis.config.MetricName;
@@ -165,6 +166,49 @@ class CoverageReadersTest {
 
     assertThat(data.methodCoverage(unit("p.A", "one", 3))).hasValue(0.25);
     assertThat(data.methodCoverage(unit("p.A", "twice", 3))).hasValue(0.5);
+  }
+
+  @Test
+  void prefersTheExactNameOverACompilerGeneratedMethodInEitherOrder() throws Exception {
+    for (final String methods : List.of(
+        "<method name=\"run\" line-rate=\"0.25\"/><method name=\"run$lambda$0\" line-rate=\"1.0\"/>",
+        "<method name=\"run$lambda$0\" line-rate=\"1.0\"/><method name=\"run\" line-rate=\"0.25\"/>")) {
+      final CoverageData data = CoverageFormat.COBERTURA.read(write("generated.xml", """
+          <coverage><packages><package name="p"><classes>
+            <class name="p.A" line-rate="0.5"><methods>%s</methods></class>
+          </classes></package></packages></coverage>""".formatted(methods)));
+
+      assertThat(data.methodCoverage(unit("p.A", "run", 3))).as(methods).hasValue(0.25);
+    }
+  }
+
+  @Test
+  void matchesAMangledKotlinInternalFunctionButNoSyntheticMethod() throws Exception {
+    final CoverageData data = CoverageFormat.COBERTURA.read(write("mangled.xml", """
+        <coverage><packages><package name="p"><classes>
+          <class name="p.A" line-rate="0.5"><methods>
+            <method name="audit$module" line-rate="1.0"/>
+            <method name="lambda$run$0" line-rate="1.0"/>
+            <method name="run$default" line-rate="1.0"/>
+          </methods></class>
+        </classes></package></packages></coverage>"""));
+
+    assertThat(data.methodCoverage(unit("p.A", "audit", 3))).hasValue(1.0);
+    assertThat(data.methodCoverage(unit("p.A", "lambda", 3))).hasValue(0.5);
+    assertThat(data.methodCoverage(unit("p.A", "run", 3))).hasValue(0.5);
+  }
+
+  @Test
+  void readsOnlyASingleSegmentThatIsNoSyntheticSuffixAsAModuleName() {
+    assertThat(CoverageData.isInternalFunction("audit$app", "audit")).isTrue();
+    assertThat(CoverageData.isInternalFunction("audit", "audit")).isFalse();
+    assertThat(CoverageData.isInternalFunction("audit$", "audit")).isFalse();
+    assertThat(CoverageData.isInternalFunction("auditor$app", "audit")).isFalse();
+    assertThat(CoverageData.isInternalFunction("audit$app$x", "audit")).isFalse();
+    assertThat(CoverageData.isInternalFunction("audit$1", "audit")).isFalse();
+    assertThat(CoverageData.isInternalFunction("audit$lambda", "audit")).isFalse();
+    assertThat(CoverageData.isInternalFunction("audit$defaultImpl", "audit")).isFalse();
+    assertThat(CoverageData.isInternalFunction("audit$accessor", "audit")).isFalse();
   }
 
   @Test

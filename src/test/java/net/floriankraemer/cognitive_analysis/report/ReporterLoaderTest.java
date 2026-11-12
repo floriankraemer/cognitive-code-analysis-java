@@ -214,6 +214,23 @@ class ReporterLoaderTest {
   }
 
   @Test
+  void createsTheReporterWithItsOwnClassLoaderAsTheContextClassLoader() throws Exception {
+    final Path jar = ReporterJars.build(tempDir, "context.jar", "acme.Context", """
+        package acme;
+        import net.floriankraemer.cognitive_analysis.report.spi.*;
+        public class Context implements CognitiveReporter {
+          private final boolean ownContext = Thread.currentThread().getContextClassLoader() == Context.class.getClassLoader();
+          public String render(CognitiveReportInput input) { return "own context: " + ownContext; }
+        }
+        """);
+
+    final CognitiveReporter reporter = ReporterLoader.load(
+        new ReporterSettings("acme.Context", jar.toString()), configFile(), CognitiveReporter.class);
+
+    assertThat(reporter.render(emptyInput())).isEqualTo("own context: true");
+  }
+
+  @Test
   void keepsTheContextClassLoaderOfTheCaller() throws Exception {
     final ClassLoader before = Thread.currentThread().getContextClassLoader();
     final Path jar = ReporterJars.build(tempDir, "lines.jar", "acme.Lines", ReporterJars.COGNITIVE_SOURCE);

@@ -44,7 +44,7 @@ public class ChurnCommand implements Callable<Integer> {
   @Parameters(
       index = "0",
       paramLabel = "<path>",
-      description = "Comma-separated Java files and directories; directories are searched recursively."
+      description = "Comma-separated Java and Kotlin files and directories; directories are searched recursively."
   )
   String path;
 

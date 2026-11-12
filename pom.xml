@@ -6,7 +6,7 @@
 	<artifactId>cognitive-analysis</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>cognitive-analysis</name>
-	<description>Cognitive Code Analysis for Java Applications</description>
+	<description>Cognitive Code Analysis for Java and Kotlin Applications</description>
 	<url/>
 	<licenses>
 		<license>
@@ -39,6 +39,7 @@
 		<jackson.version>2.18.12</jackson.version>
 		<picocli.version>4.7.7</picocli.version>
 		<javaparser.version>3.28.2</javaparser.version>
+		<kotlin.version>2.4.21</kotlin.version>
 		<commons-csv.version>1.14.1</commons-csv.version>
 		<approvaltests.version>24.8.0</approvaltests.version>
 		<json-schema-validator.version>1.5.6</json-schema-validator.version>
@@ -73,6 +74,17 @@
 			<groupId>com.github.javaparser</groupId>
 			<artifactId>javaparser-core</artifactId>
 			<version>${javaparser.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.jetbrains.kotlin</groupId>
+			<artifactId>kotlin-compiler-embeddable</artifactId>
+			<version>${kotlin.version}</version>
+		</dependency>
+		<!-- Compile scope, as the compiler API annotations refer to its enums; runtime scope makes javac warn. -->
+		<dependency>
+			<groupId>org.jetbrains.kotlin</groupId>
+			<artifactId>kotlin-stdlib</artifactId>
+			<version>${kotlin.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.commons</groupId>
@@ -182,6 +194,15 @@
 							</filters>
 							<transformers>
 								<transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+								<!-- The libraries' copies of the Apache License 2.0 are one text, shipped once in META-INF/THIRD-PARTY-LICENSES.txt. -->
+								<transformer implementation="org.apache.maven.plugins.shade.resource.ApacheLicenseResourceTransformer"/>
+								<transformer implementation="org.apache.maven.plugins.shade.resource.ApacheNoticeResourceTransformer">
+									<projectName>cognitive-analysis</projectName>
+									<organizationName>Florian Krämer</organizationName>
+									<organizationURL>https://floriankraemer.net</organizationURL>
+									<inceptionYear>2024</inceptionYear>
+									<addHeader>false</addHeader>
+								</transformer>
 								<transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
 									<mainClass>net.floriankraemer.cognitive_analysis.App</mainClass>
 									<manifestEntries>
