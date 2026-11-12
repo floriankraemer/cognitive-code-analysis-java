@@ -51,7 +51,7 @@ final class CheckstyleReport implements Report {
   private Element error(final Document document, final Row row) {
     final CognitiveMetrics metrics = row.metrics();
     final Element error = document.createElement("error");
-    error.setAttribute("line", String.valueOf(metrics.getLine()));
+    error.setAttribute("line", String.valueOf(ReportSupport.line(metrics)));
     error.setAttribute("column", "1");
     error.setAttribute("severity", ReportSupport.isError(metrics, config) ? "error" : "warning");
     error.setAttribute("message", ReportSupport.complexityMessage(metrics, config));

@@ -194,6 +194,11 @@ final class ReportSupport {
     return reachesRatio(metrics.getCognitiveComplexity(), ERROR_FACTOR, config);
   }
 
+  /** The line of the method, at least 1, because the issue formats cannot express a line before the first. */
+  static int line(final CognitiveMetrics metrics) {
+    return Math.max(1, metrics.getLine());
+  }
+
   /** {@code Method m has cognitive complexity 2.2 (threshold: 0.5)}, shared by the issue formats. */
   static String complexityMessage(final CognitiveMetrics metrics, final CognitiveConfig config) {
     return "Method " + metrics.getMethodName() + " has cognitive complexity "

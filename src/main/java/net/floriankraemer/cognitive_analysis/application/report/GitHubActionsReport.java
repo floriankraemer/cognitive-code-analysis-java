@@ -32,7 +32,7 @@ final class GitHubActionsReport implements Report {
   private String annotation(final String file, final CognitiveMetrics metrics) {
     return "::" + (ReportSupport.isError(metrics, config) ? "error" : "warning")
         + " file=" + escapeProperty(ReportSupport.path(file))
-        + ",line=" + metrics.getLine()
+        + ",line=" + ReportSupport.line(metrics)
         + "::" + escapeData(ReportSupport.complexityMessage(metrics, config));
   }
 

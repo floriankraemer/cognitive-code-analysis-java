@@ -49,7 +49,7 @@ class ReportE2ETest {
   }
 
   private static String normalized(final Path report) throws Exception {
-    return ReportGoldens.maskVersion(Files.readString(report).replace("\r\n", "\n").replaceAll(TIMESTAMP, "<timestamp>"));
+    return ReportGoldens.mask(Files.readString(report).replace("\r\n", "\n").replaceAll(TIMESTAMP, "<timestamp>"));
   }
 
   @Test

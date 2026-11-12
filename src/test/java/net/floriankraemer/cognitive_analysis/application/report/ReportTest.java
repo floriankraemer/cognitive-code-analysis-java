@@ -93,7 +93,7 @@ class ReportTest {
   private static void approve(
       final ReportType type, final String yaml, final MetricsCollection metrics, final String extension)
       throws Exception {
-    Approvals.verify(ReportGoldens.maskVersion(render(type, yaml, metrics)), new Options().forFile().withExtension(extension));
+    Approvals.verify(ReportGoldens.mask(render(type, yaml, metrics)), new Options().forFile().withExtension(extension));
   }
 
   @Test
@@ -497,6 +497,17 @@ class ReportTest {
     assertThat(render(ReportType.GITHUB_ACTIONS, GROUPED, none)).isEmpty();
     assertThat(render(ReportType.JUNIT, GROUPED, none)).contains("tests=\"0\"", "failures=\"0\"");
     assertThat(render(ReportType.SARIF, GROUPED, none)).contains("\"results\" : [ ]");
+  }
+
+  @Test
+  void theLineOfAnIssueIsNeverBelowOne() throws Exception {
+    final MetricsCollection collection = new MetricsCollection();
+    add(collection, "A.java", method("A", "m", 0, 2.0, 0));
+
+    assertThat(render(ReportType.SARIF, GROUPED, collection)).contains("\"startLine\" : 1");
+    assertThat(render(ReportType.GITLAB_CODEQUALITY, GROUPED, collection)).contains("\"begin\" : 1");
+    assertThat(render(ReportType.CHECKSTYLE, GROUPED, collection)).contains("line=\"1\"");
+    assertThat(render(ReportType.GITHUB_ACTIONS, GROUPED, collection)).contains("A.java,line=1::");
   }
 
   @Test

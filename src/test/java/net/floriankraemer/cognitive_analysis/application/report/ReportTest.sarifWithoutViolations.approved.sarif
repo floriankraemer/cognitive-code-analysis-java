@@ -22,6 +22,11 @@
         } ]
       }
     },
+    "originalUriBaseIds" : {
+      "%SRCROOT%" : {
+        "uri" : "<working-directory-uri>"
+      }
+    },
     "results" : [ ]
   } ]
 }

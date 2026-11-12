@@ -22,6 +22,11 @@
         } ]
       }
     },
+    "originalUriBaseIds" : {
+      "%SRCROOT%" : {
+        "uri" : "<working-directory-uri>"
+      }
+    },
     "results" : [ {
       "ruleId" : "cognitive-complexity",
       "level" : "error",
@@ -31,7 +36,8 @@
       "locations" : [ {
         "physicalLocation" : {
           "artifactLocation" : {
-            "uri" : "src/test/resources/fixtures/sample/ClassToAnalyze.java"
+            "uri" : "src/test/resources/fixtures/sample/ClassToAnalyze.java",
+            "uriBaseId" : "%SRCROOT%"
           },
           "region" : {
             "startLine" : 9

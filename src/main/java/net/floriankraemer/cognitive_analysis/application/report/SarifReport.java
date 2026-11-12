@@ -2,12 +2,16 @@ package net.floriankraemer.cognitive_analysis.application.report;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.time.Clock;
+import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import net.floriankraemer.cognitive_analysis.CognitiveAnalysisException;
 import net.floriankraemer.cognitive_analysis.application.report.ReportSupport.Row;
 import net.floriankraemer.cognitive_analysis.config.CognitiveConfig;
@@ -26,6 +30,10 @@ final class SarifReport implements Report {
   private static final String TOOL_NAME = "cognitive-analysis";
   private static final String INFORMATION_URI = "https://github.com/floriankraemer/cognitive-code-analysis-java";
   private static final String BUILD_RESOURCE = "/jcca-build.properties";
+  /** The SARIF base for paths relative to the working directory, the source root of the run. */
+  private static final String SRCROOT = "%SRCROOT%";
+  /** A path with a drive letter, such as {@code C:/work/A.java}. */
+  private static final Pattern DRIVE_PATH = Pattern.compile("^([A-Za-z]):(/.*)$");
 
   private final CognitiveConfig config;
 
@@ -55,6 +63,7 @@ final class SarifReport implements Report {
 
     final Map<String, Object> run = new LinkedHashMap<>();
     run.put("tool", Map.of("driver", driver));
+    run.put("originalUriBaseIds", Map.of(SRCROOT, Map.of("uri", workingDirectoryUri())));
     run.put("results", results);
     return run;
   }
@@ -78,10 +87,62 @@ final class SarifReport implements Report {
     result.put("level", ReportSupport.isError(metrics, config) ? "error" : "warning");
     result.put("message", Map.of("text", ReportSupport.complexityMessage(metrics, config)));
     result.put("locations", List.of(Map.of("physicalLocation", ReportSupport.orderedMap(
-        "artifactLocation", Map.of("uri", path),
-        "region", Map.of("startLine", metrics.getLine())))));
+        "artifactLocation", artifactLocation(path),
+        "region", Map.of("startLine", ReportSupport.line(metrics))))));
     result.put("partialFingerprints", Map.of("primaryLocationLineHash", ReportSupport.fingerprint(path, metrics)));
     return result;
+  }
+
+  /** A relative path is a URI reference against the source root, an absolute one a file URI of its own. */
+  private static Map<String, Object> artifactLocation(final String path) {
+    if (isAbsolute(path)) {
+      return ReportSupport.orderedMap("uri", fileUri(path));
+    }
+    return ReportSupport.orderedMap("uri", encodePath(path), "uriBaseId", SRCROOT);
+  }
+
+  private static boolean isAbsolute(final String path) {
+    return path.startsWith("/") || DRIVE_PATH.matcher(path).matches();
+  }
+
+  /** The working directory as a file URI with a trailing slash, the base of the relative paths. */
+  private static String workingDirectoryUri() {
+    final String directory = ReportSupport.WORKING_DIRECTORY.toAbsolutePath().normalize().toString().replace('\\', '/');
+    final String uri = fileUri(directory);
+    return uri.endsWith("/") ? uri : uri + "/";
+  }
+
+  /**
+   * The file URI of an absolute path with {@code /} separators, such as {@code file:///C:/my%20dir/A.java}. The
+   * string is converted here instead of with {@link java.nio.file.Path#toUri()}, so that Windows paths give the
+   * same result on every platform.
+   */
+  static String fileUri(final String absolutePath) {
+    final Matcher drive = DRIVE_PATH.matcher(absolutePath);
+    if (drive.matches()) {
+      return "file:///" + drive.group(1) + ":" + encodePath(drive.group(2));
+    }
+    return "file://" + encodePath(absolutePath);
+  }
+
+  /** Percent-encodes every byte of the UTF-8 form that is not unreserved, keeping the {@code /} separators. */
+  static String encodePath(final String path) {
+    final StringBuilder encoded = new StringBuilder();
+    for (final byte value : path.getBytes(StandardCharsets.UTF_8)) {
+      final char character = (char) (value & 0xFF);
+      if (character == '/' || isUnreserved(character)) {
+        encoded.append(character);
+      } else {
+        encoded.append('%').append(HexFormat.of().withUpperCase().toHexDigits(value));
+      }
+    }
+    return encoded.toString();
+  }
+
+  private static boolean isUnreserved(final char character) {
+    return (character >= 'A' && character <= 'Z') || (character >= 'a' && character <= 'z')
+        || (character >= '0' && character <= '9') || character == '-' || character == '.'
+        || character == '_' || character == '~';
   }
 
   /** The version of this build, or empty when the build did not filter it in. */

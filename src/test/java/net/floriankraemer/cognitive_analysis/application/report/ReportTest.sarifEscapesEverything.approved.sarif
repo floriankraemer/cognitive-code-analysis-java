@@ -22,6 +22,11 @@
         } ]
       }
     },
+    "originalUriBaseIds" : {
+      "%SRCROOT%" : {
+        "uri" : "<working-directory-uri>"
+      }
+    },
     "results" : [ {
       "ruleId" : "cognitive-complexity",
       "level" : "error",
@@ -31,7 +36,8 @@
       "locations" : [ {
         "physicalLocation" : {
           "artifactLocation" : {
-            "uri" : "src/<dir>/F|le.java"
+            "uri" : "src/%3Cdir%3E/F%7Cle.java",
+            "uriBaseId" : "%SRCROOT%"
           },
           "region" : {
             "startLine" : 1

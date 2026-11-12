@@ -22,6 +22,11 @@
         } ]
       }
     },
+    "originalUriBaseIds" : {
+      "%SRCROOT%" : {
+        "uri" : "<working-directory-uri>"
+      }
+    },
     "results" : [ {
       "ruleId" : "cognitive-complexity",
       "level" : "warning",
@@ -31,7 +36,8 @@
       "locations" : [ {
         "physicalLocation" : {
           "artifactLocation" : {
-            "uri" : "src/Levels.java"
+            "uri" : "src/Levels.java",
+            "uriBaseId" : "%SRCROOT%"
           },
           "region" : {
             "startLine" : 2
@@ -50,7 +56,8 @@
       "locations" : [ {
         "physicalLocation" : {
           "artifactLocation" : {
-            "uri" : "src/Levels.java"
+            "uri" : "src/Levels.java",
+            "uriBaseId" : "%SRCROOT%"
           },
           "region" : {
             "startLine" : 3
@@ -69,7 +76,8 @@
       "locations" : [ {
         "physicalLocation" : {
           "artifactLocation" : {
-            "uri" : "src/Levels.java"
+            "uri" : "src/Levels.java",
+            "uriBaseId" : "%SRCROOT%"
           },
           "region" : {
             "startLine" : 4

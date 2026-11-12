@@ -4,7 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.time.Clock;
 import java.time.Instant;
@@ -20,6 +22,7 @@ import org.junit.jupiter.api.Test;
 class SarifReportTest {
 
   private static final Clock CLOCK = Clock.fixed(Instant.EPOCH, ZoneOffset.UTC);
+  private static final Path CWD = Path.of("").toAbsolutePath().normalize();
 
   /** One method above the threshold of 0.5 at the given line, and one below it. */
   private static MetricsCollection methods(final int line) {
@@ -96,5 +99,64 @@ class SarifReportTest {
 
     assertThat(render(methods(11)).at(fingerprint).asText())
         .isNotEqualTo(render(methods(10)).at(fingerprint).asText());
+  }
+
+  @Test
+  void aRelativePathIsPercentEncodedAndBasedOnTheSourceRoot() throws Exception {
+    final JsonNode artifact = artifact(single("my dir/ünï/A#b%c.java", 3));
+    final String uri = artifact.get("uri").asText();
+
+    assertThat(uri).isEqualTo("my%20dir/%C3%BCn%C3%AF/A%23b%25c.java");
+    assertThat(URI.create(uri).getPath()).isEqualTo("my dir/ünï/A#b%c.java");
+    assertThat(artifact.get("uriBaseId").asText()).isEqualTo("%SRCROOT%");
+  }
+
+  @Test
+  void anAbsolutePathOutsideTheWorkingDirectoryIsAFileUriWithoutABase() throws Exception {
+    final String file = CWD.resolveSibling("out side").resolve("ünï/A#b%c.java").toString().replace('\\', '/');
+    final JsonNode artifact = artifact(single(file, 3));
+    final String uri = artifact.get("uri").asText();
+
+    assertThat(uri).startsWith("file:///");
+    assertThat(URI.create(uri).getPath()).endsWith("/out side/ünï/A#b%c.java");
+    assertThat(artifact.has("uriBaseId")).isFalse();
+  }
+
+  @Test
+  void aWindowsPathWithADriveLetterBecomesAFileUri() throws Exception {
+    final String uri = artifact(single("C:\\work\\my dir\\A.java", 3)).get("uri").asText();
+
+    assertThat(uri).isEqualTo("file:///C:/work/my%20dir/A.java");
+    assertThat(URI.create(uri).getPath()).isEqualTo("/C:/work/my dir/A.java");
+  }
+
+  @Test
+  void theSourceRootIsTheWorkingDirectoryAsAFileUriWithATrailingSlash() throws Exception {
+    final String base = render(single("A.java", 3)).at("/runs/0/originalUriBaseIds/%SRCROOT%/uri").asText();
+
+    assertThat(base).startsWith("file:///").endsWith("/");
+    assertThat(URI.create(base).getPath()).endsWith(CWD.getFileName() + "/");
+  }
+
+  @Test
+  void fileUrisEncodeOnlyWhatTheUriSyntaxRequires() {
+    assertThat(SarifReport.fileUri("/tmp/a#b.java")).isEqualTo("file:///tmp/a%23b.java");
+    assertThat(SarifReport.fileUri("C:/Users/my dir/ünï.java"))
+        .isEqualTo("file:///C:/Users/my%20dir/%C3%BCn%C3%AF.java");
+    assertThat(SarifReport.encodePath("a-._~Z9/x")).isEqualTo("a-._~Z9/x");
+    assertThat(SarifReport.encodePath("a:b,c")).isEqualTo("a%3Ab%2Cc");
+  }
+
+  /** A single method with the given file and line, above the threshold. */
+  private static MetricsCollection single(final String file, final int line) {
+    final MetricsCollection collection = new MetricsCollection();
+    final CognitiveMetrics metrics = new CognitiveMetrics("a.B", "m", line);
+    metrics.setCognitiveComplexity(2.0);
+    collection.computeIfAbsent(file, key -> new LinkedHashMap<>()).put("m", metrics);
+    return collection;
+  }
+
+  private static JsonNode artifact(final MetricsCollection collection) throws Exception {
+    return render(collection).at("/runs/0/results/0/locations/0/physicalLocation/artifactLocation");
   }
 }

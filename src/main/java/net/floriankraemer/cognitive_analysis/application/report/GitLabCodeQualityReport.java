@@ -41,7 +41,7 @@ final class GitLabCodeQualityReport implements Report {
     issue.put("check_name", CHECK_NAME);
     issue.put("fingerprint", ReportSupport.fingerprint(path, metrics));
     issue.put("severity", severity(metrics.getCognitiveComplexity()));
-    issue.put("location", ReportSupport.orderedMap("path", path, "lines", Map.of("begin", metrics.getLine())));
+    issue.put("location", ReportSupport.orderedMap("path", path, "lines", Map.of("begin", ReportSupport.line(metrics))));
     return issue;
   }
 
