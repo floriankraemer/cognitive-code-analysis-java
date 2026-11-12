@@ -113,8 +113,9 @@ The analysis caches the metrics of each file, so a file that did not change is n
 
 - `cache.directory` is resolved against the working directory and defaults to `./.jcca.cache`.
 - Each entry is one JSON file at `<directory>/<first two characters of the key>/<key>.json`.
-- The key is a SHA-256 hash of the absolute path, the modification time, the size of the file, the canonical form of the whole configuration and the version and build time of the tool.
-- An entry is used only while all of these stay the same, so editing the file or changing any setting analyses the file again.
+- The key is a SHA-256 hash of the absolute path, the SHA-256 of the content of the file, the canonical form of the whole configuration and the version and build time of the tool.
+- An entry is used only while all of these stay the same, so editing the content of a file or changing any setting analyses the file again.
+- The modification time does not matter, so touching a file without changing it still uses the entry.
 - Entries written by another build of the tool are not reused, so an upgrade analyses every file again.
 - A corrupt, unreadable or outdated entry is treated as missing and is overwritten.
 - A file that cannot be parsed is never cached.

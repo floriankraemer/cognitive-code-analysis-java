@@ -15,17 +15,19 @@ import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.UUID;
 import net.floriankraemer.cognitive_analysis.config.CognitiveConfig;
 
 /**
  * Stores the collected metrics of each source file, so an unchanged file is not parsed again.
  *
- * <p>An entry is valid for one file state, one configuration and one build of the tool: its key hashes the
- * absolute path, the modification time, the size, the canonical form of the configuration and the build
+ * <p>An entry is valid for one file content, one configuration and one build of the tool: its key hashes the
+ * absolute path, the SHA-256 of the content, the canonical form of the configuration and the build
  * fingerprint. Entries live at {@code <directory>/<key[0:2]>/<key>.json}. A disabled cache never touches the
  * file system.
  */
@@ -38,6 +40,7 @@ public final class MetricsCache {
   private static final ObjectMapper PAYLOAD_MAPPER = JsonMapper.builder().build();
 
   private static final String BUILD_RESOURCE = "/jcca-build.properties";
+  private static final List<String> BUILD_PROPERTIES = List.of("version", "build.timestamp");
 
   /** The version and build time of this build, so entries of another build are not reused. */
   private static final String BUILD_FINGERPRINT = buildFingerprint();
@@ -67,25 +70,17 @@ public final class MetricsCache {
   }
 
   /**
-   * The key of the current state of a file. Computed before the file is read, so an edit made while
-   * reading cannot be stored under the new state.
+   * The key of a file state: its absolute path, the hash of its content, the configuration and the build.
+   * The caller passes the content it parses, so the key always describes what is analysed.
    *
-   * @return empty when the cache is disabled or the file attributes cannot be read; the read then reports the file
+   * @return empty when the cache is disabled
    */
-  public Optional<String> keyOf(final Path file) {
+  public Optional<String> keyOf(final Path file, final byte[] content) {
     if (!enabled) {
       return Optional.empty();
     }
-    try {
-      final String state = file.toAbsolutePath().normalize() + "|"
-          + Files.getLastModifiedTime(file).toMillis() + "|"
-          + Files.size(file) + "|"
-          + configHash + "|"
-          + BUILD_FINGERPRINT;
-      return Optional.of(sha256Hex(state));
-    } catch (IOException e) {
-      return Optional.empty();
-    }
+    return Optional.of(sha256Hex(file.toAbsolutePath().normalize() + "|" + sha256Hex(content) + "|"
+        + configHash + "|" + BUILD_FINGERPRINT));
   }
 
   /** @return the stored metrics, or empty for a missing, corrupt or outdated entry */
@@ -110,7 +105,8 @@ public final class MetricsCache {
     final Path entry = entryPath(key);
     try {
       Files.createDirectories(entry.getParent());
-      final Path temporary = Files.createTempFile(entry.getParent(), key, ".tmp");
+      // createTempFile would restrict the entry to its owner; createFile keeps the default permissions.
+      final Path temporary = Files.createFile(entry.getParent().resolve("." + UUID.randomUUID() + ".tmp"));
       try {
         PAYLOAD_MAPPER.writeValue(temporary.toFile(), new Payload(CACHE_FORMAT_VERSION, file.toString(), metrics));
         Files.move(temporary, entry, StandardCopyOption.ATOMIC_MOVE);
@@ -155,13 +151,31 @@ public final class MetricsCache {
     } catch (IOException e) {
       throw new IllegalStateException("Cannot read resource " + BUILD_RESOURCE, e);
     }
+    return fingerprintOf(build);
+  }
+
+  /**
+   * @throws IllegalStateException when a value is missing or still a Maven placeholder, which would make
+   *     every build share one fingerprint
+   */
+  static String fingerprintOf(final Properties build) {
+    for (final String name : BUILD_PROPERTIES) {
+      final String value = build.getProperty(name);
+      if (value == null || value.startsWith("${")) {
+        throw new IllegalStateException(
+            "Build property " + name + " is missing or was not filtered by Maven: " + value);
+      }
+    }
     return build.getProperty("version") + "|" + build.getProperty("build.timestamp");
   }
 
   private static String sha256Hex(final String text) {
+    return sha256Hex(text.getBytes(StandardCharsets.UTF_8));
+  }
+
+  private static String sha256Hex(final byte[] bytes) {
     try {
-      final byte[] digest = MessageDigest.getInstance("SHA-256").digest(text.getBytes(StandardCharsets.UTF_8));
-      return HexFormat.of().formatHex(digest);
+      return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes));
     } catch (NoSuchAlgorithmException e) {
       throw new IllegalStateException("SHA-256 is not available", e);
     }

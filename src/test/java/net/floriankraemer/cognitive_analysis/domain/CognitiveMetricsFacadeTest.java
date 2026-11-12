@@ -144,22 +144,25 @@ class CognitiveMetricsFacadeTest {
   }
 
   @Test
-  void reparsesAFileWhoseSizeOrModificationTimeChanged() throws Exception {
+  void reparsesAFileWhoseContentChangesAndKeepsAnEntryForAModificationTimeChange() throws Exception {
     Path source = write("src/A.java", "class A { void a() {} }");
     CognitiveConfig config = cachedIn(tempDir.resolve("cache"));
+    FileTime original = Files.getLastModifiedTime(source);
     facade(config).calculateCognitiveMetrics(List.of(srcDir()));
     replaceInEntries("A::a", "A::fromCache");
-    Files.writeString(source, "class A { void a() {}  }");
 
-    MetricsCollection resized = facade(config).calculateCognitiveMetrics(List.of(srcDir()));
-
-    assertThat(resized.get(source.toString())).containsOnlyKeys("A::a");
-    replaceInEntries("A::a", "A::fromCache");
-    Files.setLastModifiedTime(source, FileTime.fromMillis(Files.getLastModifiedTime(source).toMillis() + 1000));
-
+    Files.setLastModifiedTime(source, FileTime.fromMillis(original.toMillis() + 1000));
     MetricsCollection retimed = facade(config).calculateCognitiveMetrics(List.of(srcDir()));
+    assertThat(retimed.get(source.toString())).containsOnlyKeys("A::fromCache");
 
-    assertThat(retimed.get(source.toString())).containsOnlyKeys("A::a");
+    Files.writeString(source, "class A { void b() {} }");
+    Files.setLastModifiedTime(source, original);
+    MetricsCollection sameSize = facade(config).calculateCognitiveMetrics(List.of(srcDir()));
+    assertThat(sameSize.get(source.toString())).containsOnlyKeys("A::b");
+
+    Files.writeString(source, "class A { void b() {}  }");
+    MetricsCollection resized = facade(config).calculateCognitiveMetrics(List.of(srcDir()));
+    assertThat(resized.get(source.toString())).containsOnlyKeys("A::b");
   }
 
   @Test

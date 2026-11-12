@@ -1,15 +1,19 @@
 package net.floriankraemer.cognitive_analysis.domain;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Properties;
 import java.util.stream.Stream;
 import net.floriankraemer.cognitive_analysis.config.CognitiveConfig;
 import net.floriankraemer.cognitive_analysis.config.MetricName;
@@ -28,7 +32,7 @@ class MetricsCacheTest {
   void storesAndLoadsTheMetricsOfAFileInTheirOrder() throws Exception {
     Path source = write("A.java", "class A {}");
     MetricsCache cache = cache(cacheConfig(true, tempDir.resolve("cache")));
-    String key = cache.keyOf(source).orElseThrow();
+    String key = keyOf(cache, source);
 
     cache.store(key, source, sampleMetrics());
 
@@ -40,32 +44,32 @@ class MetricsCacheTest {
   }
 
   @Test
-  void keysChangeWhenTheSizeOrTheModificationTimeOfTheFileChanges() throws Exception {
+  void keysChangeWhenTheContentChangesEvenWithTheSameSizeAndModificationTime() throws Exception {
     Path source = write("A.java", "class A {}");
     MetricsCache cache = cache(cacheConfig(true, tempDir.resolve("cache")));
-    String original = cache.keyOf(source).orElseThrow();
+    FileTime original = Files.getLastModifiedTime(source);
+    String key = keyOf(cache, source);
 
-    Files.writeString(source, "class A { }");
-    String resized = cache.keyOf(source).orElseThrow();
-    Files.setLastModifiedTime(source, FileTime.fromMillis(Files.getLastModifiedTime(source).toMillis() + 1000));
-    String retimed = cache.keyOf(source).orElseThrow();
+    Files.setLastModifiedTime(source, FileTime.fromMillis(original.toMillis() + 1000));
+    assertThat(keyOf(cache, source)).isEqualTo(key);
 
-    assertThat(resized).isNotEqualTo(original);
-    assertThat(retimed).isNotEqualTo(resized);
+    Files.writeString(source, "class B {}");
+    Files.setLastModifiedTime(source, original);
+    assertThat(keyOf(cache, source)).isNotEqualTo(key);
   }
 
   @Test
   void keysChangeWhenTheConfigurationChanges() throws Exception {
     Path source = write("A.java", "class A {}");
     Path directory = tempDir.resolve("cache");
-    String withDefaults = cache(cacheConfig(true, directory)).keyOf(source).orElseThrow();
+    String withDefaults = cache(cacheConfig(true, directory)).keyOf(source, Files.readAllBytes(source)).orElseThrow();
 
     String withOtherThreshold = cache(TestConfigs.load("""
         cognitive:
           cache:
             directory: '%s'
           scoreThreshold: 1.0
-        """.formatted(directory))).keyOf(source).orElseThrow();
+        """.formatted(directory))).keyOf(source, Files.readAllBytes(source)).orElseThrow();
 
     assertThat(withOtherThreshold).isNotEqualTo(withDefaults);
   }
@@ -80,7 +84,7 @@ class MetricsCacheTest {
           cache:
             enabled: true
             directory: '%s'
-        """.formatted(directory))).keyOf(source).orElseThrow();
+        """.formatted(directory))).keyOf(source, Files.readAllBytes(source)).orElseThrow();
 
     String inOtherOrder = cache(TestConfigs.load("""
         cognitive:
@@ -88,7 +92,7 @@ class MetricsCacheTest {
             directory: '%s'
             enabled: true
           scoreThreshold: 1.0
-        """.formatted(directory))).keyOf(source).orElseThrow();
+        """.formatted(directory))).keyOf(source, Files.readAllBytes(source)).orElseThrow();
 
     assertThat(inOtherOrder).isEqualTo(inOneOrder);
   }
@@ -98,7 +102,7 @@ class MetricsCacheTest {
     Path source = write("A.java", "class A {}");
     Path directory = tempDir.resolve("cache");
     MetricsCache cache = cache(cacheConfig(true, directory));
-    String key = cache.keyOf(source).orElseThrow();
+    String key = keyOf(cache, source);
 
     cache.store(key, source, sampleMetrics());
 
@@ -114,17 +118,10 @@ class MetricsCacheTest {
     Path directory = tempDir.resolve("cache");
     MetricsCache cache = cache(cacheConfig(false, directory));
 
-    assertThat(cache.keyOf(source)).isEmpty();
+    assertThat(cache.keyOf(source, Files.readAllBytes(source))).isEmpty();
     cache.store("ab" + "c".repeat(62), source, sampleMetrics());
     assertThat(cache.load("ab" + "c".repeat(62))).isEmpty();
     assertThat(directory).doesNotExist();
-  }
-
-  @Test
-  void hasNoKeyForAFileThatCannotBeInspected() {
-    MetricsCache cache = cache(cacheConfig(true, tempDir.resolve("cache")));
-
-    assertThat(cache.keyOf(tempDir.resolve("missing.java"))).isEmpty();
   }
 
   @Test
@@ -138,7 +135,7 @@ class MetricsCacheTest {
   void missesACorruptEntry() throws Exception {
     Path source = write("A.java", "class A {}");
     MetricsCache cache = cache(cacheConfig(true, tempDir.resolve("cache")));
-    String key = cache.keyOf(source).orElseThrow();
+    String key = keyOf(cache, source);
     writeEntry(key, "{\"version\": 1, \"analysisResult\": {");
 
     assertThat(cache.load(key)).isEmpty();
@@ -148,7 +145,7 @@ class MetricsCacheTest {
   void missesAnEntryWrittenByAnotherFormatVersion() throws Exception {
     Path source = write("A.java", "class A {}");
     MetricsCache cache = cache(cacheConfig(true, tempDir.resolve("cache")));
-    String key = cache.keyOf(source).orElseThrow();
+    String key = keyOf(cache, source);
     writeEntry(key, "{\"version\": 0, \"filePath\": \"A.java\", \"analysisResult\": {}}");
 
     assertThat(cache.load(key)).isEmpty();
@@ -158,7 +155,7 @@ class MetricsCacheTest {
   void missesAnEntryWhoseMetricsDoNotMatchTheModel() throws Exception {
     Path source = write("A.java", "class A {}");
     MetricsCache cache = cache(cacheConfig(true, tempDir.resolve("cache")));
-    String key = cache.keyOf(source).orElseThrow();
+    String key = keyOf(cache, source);
     writeEntry(key, "{\"version\": 1, \"filePath\": \"A.java\", \"analysisResult\": {\"A::a\": {\"unknown\": 1}}}");
 
     assertThat(cache.load(key)).isEmpty();
@@ -168,7 +165,7 @@ class MetricsCacheTest {
   void missesAnEntryWithoutAnalysisResult() throws Exception {
     Path source = write("A.java", "class A {}");
     MetricsCache cache = cache(cacheConfig(true, tempDir.resolve("cache")));
-    String key = cache.keyOf(source).orElseThrow();
+    String key = keyOf(cache, source);
     writeEntry(key, "{\"version\": 1, \"filePath\": \"A.java\"}");
 
     assertThat(cache.load(key)).isEmpty();
@@ -180,7 +177,7 @@ class MetricsCacheTest {
     Path blocked = Files.writeString(tempDir.resolve("blocked"), "not a directory");
     MetricsCache cache = cache(cacheConfig(true, blocked));
 
-    cache.store(cache.keyOf(source).orElseThrow(), source, sampleMetrics());
+    cache.store(keyOf(cache, source), source, sampleMetrics());
     cache.store("ab" + "c".repeat(62), source, sampleMetrics());
 
     assertThat(warnings.toString().lines())
@@ -190,11 +187,49 @@ class MetricsCacheTest {
   }
 
   @Test
+  void storedEntriesGetTheDefaultPermissionsOfANewFile() throws Exception {
+    assumeTrue(FileSystems.getDefault().supportedFileAttributeViews().contains("posix"));
+    Path source = write("A.java", "class A {}");
+    Path directory = tempDir.resolve("cache");
+    MetricsCache cache = cache(cacheConfig(true, directory));
+    String key = keyOf(cache, source);
+
+    cache.store(key, source, sampleMetrics());
+
+    Path entry = directory.resolve(key.substring(0, 2)).resolve(key + ".json");
+    Path probe = Files.createFile(entry.getParent().resolve("probe"));
+    assertThat(Files.getPosixFilePermissions(entry)).isEqualTo(Files.getPosixFilePermissions(probe));
+  }
+
+  @Test
+  void fingerprintCombinesTheVersionAndTheBuildTime() {
+    assertThat(MetricsCache.fingerprintOf(buildProperties("0.0.1", "2026-01-01T00:00:00Z")))
+        .isEqualTo("0.0.1|2026-01-01T00:00:00Z");
+  }
+
+  @Test
+  void rejectsAFingerprintWhoseBuildTimeWasNotFilteredByMaven() {
+    assertThatThrownBy(() -> MetricsCache.fingerprintOf(buildProperties("0.0.1", "${maven.build.timestamp}")))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("build.timestamp");
+  }
+
+  @Test
+  void rejectsAFingerprintWithoutAVersion() {
+    Properties properties = new Properties();
+    properties.setProperty("build.timestamp", "2026-01-01T00:00:00Z");
+
+    assertThatThrownBy(() -> MetricsCache.fingerprintOf(properties))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("version");
+  }
+
+  @Test
   void leavesNoTemporaryFileBehindAfterAWrite() throws Exception {
     Path source = write("A.java", "class A {}");
     Path directory = tempDir.resolve("cache");
     MetricsCache cache = cache(cacheConfig(true, directory));
-    String key = cache.keyOf(source).orElseThrow();
+    String key = keyOf(cache, source);
 
     cache.store(key, source, sampleMetrics());
     cache.store(key, source, sampleMetrics());
@@ -219,6 +254,17 @@ class MetricsCacheTest {
     Path entry = tempDir.resolve("cache").resolve(key.substring(0, 2)).resolve(key + ".json");
     Files.createDirectories(entry.getParent());
     Files.writeString(entry, content);
+  }
+
+  private static String keyOf(final MetricsCache cache, final Path file) throws IOException {
+    return cache.keyOf(file, Files.readAllBytes(file)).orElseThrow();
+  }
+
+  private static Properties buildProperties(final String version, final String timestamp) {
+    Properties properties = new Properties();
+    properties.setProperty("version", version);
+    properties.setProperty("build.timestamp", timestamp);
+    return properties;
   }
 
   private MetricsCache cache(final CognitiveConfig config) {
