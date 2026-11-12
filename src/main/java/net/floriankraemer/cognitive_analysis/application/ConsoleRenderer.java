@@ -1,5 +1,8 @@
 package net.floriankraemer.cognitive_analysis.application;
 
+import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.toList;
+
 import java.io.PrintWriter;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -55,14 +58,11 @@ final class ConsoleRenderer {
   private record ClassInFile(String className, String file) {}
 
   private void renderByClass(final PrintWriter out, final List<ScoredMethod> methods) {
-    final Map<ClassInFile, List<ScoredMethod>> byClass = new TreeMap<>(
-        Comparator.comparing(ClassInFile::className).thenComparing(ClassInFile::file));
-    for (final ScoredMethod method : methods) {
-      final ClassInFile key = new ClassInFile(method.metrics().getClassName(), method.file());
-      byClass.computeIfAbsent(key, k -> new ArrayList<>()).add(method);
-    }
     final boolean withCoverage = ResultTableBuilder.hasCoverage(metricsOf(methods));
-    byClass.forEach((group, classMethods) -> {
+    methods.stream().collect(groupingBy(
+        method -> new ClassInFile(method.metrics().getClassName(), method.file()),
+        () -> new TreeMap<>(Comparator.comparing(ClassInFile::className).thenComparing(ClassInFile::file)),
+        toList())).forEach((group, classMethods) -> {
       out.println();
       out.println("Class: " + group.className());
       out.println("File: " + group.file());

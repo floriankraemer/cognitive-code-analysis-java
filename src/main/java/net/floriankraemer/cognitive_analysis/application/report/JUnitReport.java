@@ -27,25 +27,26 @@ final class JUnitReport implements Report {
 
   @Override
   public String render(final List<ScoredMethod> methods) throws CognitiveAnalysisException {
-    final List<Row> rows = ReportSupport.rows(methods);
-    final int failures = ReportSupport.violations(rows, config).size();
-
     final Document document = ReportSupport.newXmlDocument();
+    appendSuites(document, ReportSupport.rows(methods));
+    return ReportSupport.toXml(document);
+  }
+
+  private void appendSuites(final Document document, final List<Row> rows) {
     final Element suites = document.createElement("testsuites");
     document.appendChild(suites);
     final Element suite = document.createElement("testsuite");
     suites.appendChild(suite);
+    final String failures = String.valueOf(ReportSupport.violations(rows, config).size());
     for (final Element element : List.of(suites, suite)) {
       element.setAttribute("name", SUITE_NAME);
       element.setAttribute("tests", String.valueOf(rows.size()));
-      element.setAttribute("failures", String.valueOf(failures));
+      element.setAttribute("failures", failures);
       element.setAttribute("errors", "0");
     }
-
     for (final Row row : rows) {
       suite.appendChild(testCase(document, row.metrics()));
     }
-    return ReportSupport.toXml(document);
   }
 
   private Element testCase(final Document document, final CognitiveMetrics metrics) {

@@ -65,11 +65,14 @@ public final class TextTable {
     for (int line = 0; line < height; line++) {
       out.append('│');
       for (int c = 0; c < widths.length; c++) {
-        final String text = line < cells.get(c).length ? cells.get(c)[line] : "";
-        out.append(pad(text, widths[c], c >= firstCenteredColumn)).append('│');
+        out.append(pad(lineOf(cells.get(c), line), widths[c], c >= firstCenteredColumn)).append('│');
       }
       out.append('\n');
     }
+  }
+
+  private static String lineOf(final String[] cell, final int line) {
+    return line < cell.length ? cell[line] : "";
   }
 
   private String pad(final String text, final int width, final boolean center) {

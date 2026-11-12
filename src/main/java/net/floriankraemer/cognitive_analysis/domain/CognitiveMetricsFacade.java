@@ -79,30 +79,34 @@ public class CognitiveMetricsFacade {
     final MetricsCollection result = new MetricsCollection();
 
     for (final Path file : files) {
-      final Map<String, CognitiveMetrics> collected;
-      try {
-        collected = collect(file);
-      } catch (SourceParseException e) {
-        statistics.fileFailed();
-        warnings.println("Parser failed for file " + file + ": " + e.getMessage());
-        processed.accept(file);
-        continue;
-      }
-
-      final Map<String, CognitiveMetrics> methods = new LinkedHashMap<>();
-      collected.forEach((key, metrics) -> {
-        if (!isExcluded(key)) {
-          calculator.calculate(metrics);
-          methods.put(key, metrics);
-        }
-      });
-      statistics.fileAnalysed(methods.size());
+      final Map<String, CognitiveMetrics> methods = analyseFile(file);
       if (!methods.isEmpty()) {
         result.put(file.toString(), methods);
       }
       processed.accept(file);
     }
     return result;
+  }
+
+  /** @return the scored methods of the file that are not excluded; empty when it cannot be parsed */
+  private Map<String, CognitiveMetrics> analyseFile(final Path file) throws CognitiveAnalysisException {
+    final Map<String, CognitiveMetrics> collected;
+    try {
+      collected = collect(file);
+    } catch (SourceParseException e) {
+      statistics.fileFailed();
+      warnings.println("Parser failed for file " + file + ": " + e.getMessage());
+      return Map.of();
+    }
+    final Map<String, CognitiveMetrics> methods = new LinkedHashMap<>();
+    collected.forEach((key, metrics) -> {
+      if (!isExcluded(key)) {
+        calculator.calculate(metrics);
+        methods.put(key, metrics);
+      }
+    });
+    statistics.fileAnalysed(methods.size());
+    return methods;
   }
 
   /**
