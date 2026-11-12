@@ -1,0 +1,6 @@
+Class,File,Score,Churn,Times Changed,Risk Churn,Coverage,Risk Level
+a.Critical,a.Critical.java,5,40,8,30,0.25,CRITICAL
+a.High,a.High.java,5,25,5,10,0.6,HIGH
+a.Medium,a.Medium.java,5,15,3,3.75,0.75,MEDIUM
+a.Low,a.Low.java,5,10,2,0,1,LOW
+a.Unknown,a.Unknown.java,0.5,0.5,1,0.5,0,LOW

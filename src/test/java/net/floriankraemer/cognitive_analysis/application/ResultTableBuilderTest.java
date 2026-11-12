@@ -29,31 +29,31 @@ class ResultTableBuilderTest {
 
   @Test
   void rendersOneRowPerMethodWithTheWeightNextToTheCount() {
-    Approvals.verify(new ResultTableBuilder(defaults, Ansi.OFF).build(List.of(first(), second())));
+    Approvals.verify(new ResultTableBuilder(defaults, Ansi.OFF).build(List.of(first(), second()), false));
   }
 
   @Test
   void leadsWithTheClassWhenTheTableMixesClasses() {
-    Approvals.verify(new ResultTableBuilder(defaults, Ansi.OFF).buildWithClass(List.of(first(), second())));
+    Approvals.verify(new ResultTableBuilder(defaults, Ansi.OFF).buildWithClass(List.of(first(), second()), false));
   }
 
   @Test
   void rendersOnlyTheHeaderWhenThereAreNoMethods() {
-    Approvals.verify(new ResultTableBuilder(defaults, Ansi.OFF).build(List.of()));
+    Approvals.verify(new ResultTableBuilder(defaults, Ansi.OFF).build(List.of(), false));
   }
 
   @Test
   void leavesOutTheDetailColumnsWhenTheyAreSwitchedOff() {
     CognitiveConfig config = TestConfigs.load("cognitive:\n  showDetailedCognitiveMetrics: false\n");
 
-    Approvals.verify(new ResultTableBuilder(config, Ansi.OFF).build(List.of(first(), second())));
+    Approvals.verify(new ResultTableBuilder(config, Ansi.OFF).build(List.of(first(), second()), false));
   }
 
   @Test
   void addsTheHalsteadCyclomaticAndUnderstandabilityColumns() {
     CognitiveConfig config = TestConfigs.load(ALL_COLUMNS);
 
-    Approvals.verify(new ResultTableBuilder(config, Ansi.OFF).build(List.of(withAllMetrics(), second())));
+    Approvals.verify(new ResultTableBuilder(config, Ansi.OFF).build(List.of(withAllMetrics(), second()), false));
   }
 
   @Test
@@ -61,8 +61,8 @@ class ResultTableBuilderTest {
     CognitiveConfig config = TestConfigs.load(ALL_COLUMNS);
     List<CognitiveMetrics> methods = List.of(withAllMetrics(), second());
 
-    String plain = new ResultTableBuilder(config, Ansi.OFF).build(methods);
-    String colored = new ResultTableBuilder(config, Ansi.ON).build(methods);
+    String plain = new ResultTableBuilder(config, Ansi.OFF).build(methods, false);
+    String colored = new ResultTableBuilder(config, Ansi.ON).build(methods, false);
 
     assertThat(colored).isNotEqualTo(plain);
     assertThat(colored.replaceAll("\u001B\\[[0-9;]*m", "")).isEqualTo(plain);
@@ -72,7 +72,7 @@ class ResultTableBuilderTest {
   void colorsTheScoreRedAboveTheThresholdAndGreenAtOrBelowIt() {
     CognitiveConfig config = TestConfigs.load(ALL_COLUMNS);
 
-    String table = new ResultTableBuilder(config, Ansi.ON).build(List.of(withAllMetrics(), second()));
+    String table = new ResultTableBuilder(config, Ansi.ON).build(List.of(withAllMetrics(), second()), false);
 
     assertThat(table)
         .contains("\u001B[32m5.000\u001B[39m")
@@ -88,7 +88,7 @@ class ResultTableBuilderTest {
     metrics.setCyclomatic(new CyclomaticComplexity(7, Map.of()));
     metrics.setUnderstandability(new Understandability(12, Map.of()));
 
-    String table = new ResultTableBuilder(config, Ansi.ON).build(List.of(metrics));
+    String table = new ResultTableBuilder(config, Ansi.ON).build(List.of(metrics), false);
 
     assertThat(table)
         .contains("\u001B[31m1080.48\u001B[39m")
@@ -102,7 +102,7 @@ class ResultTableBuilderTest {
   void printsNoEscapeCodesWhenAnsiIsOff() {
     CognitiveConfig config = TestConfigs.load(ALL_COLUMNS);
 
-    assertThat(new ResultTableBuilder(config, Ansi.OFF).build(List.of(withAllMetrics()))).doesNotContain("\u001B");
+    assertThat(new ResultTableBuilder(config, Ansi.OFF).build(List.of(withAllMetrics()), false)).doesNotContain("\u001B");
   }
 
   private static CognitiveMetrics first() {

@@ -42,7 +42,8 @@ final class ConsoleRenderer {
     }
     out.println();
     out.println("All Methods (" + shown.size() + " total)");
-    out.println(tables.buildWithClass(metricsOf(shown)));
+    final List<CognitiveMetrics> metrics = metricsOf(shown);
+    out.println(tables.buildWithClass(metrics, ResultTableBuilder.hasCoverage(metrics)));
   }
 
   private boolean isShown(final ScoredMethod method) {
@@ -60,11 +61,12 @@ final class ConsoleRenderer {
       final ClassInFile key = new ClassInFile(method.metrics().getClassName(), method.file());
       byClass.computeIfAbsent(key, k -> new ArrayList<>()).add(method);
     }
+    final boolean withCoverage = ResultTableBuilder.hasCoverage(metricsOf(methods));
     byClass.forEach((group, classMethods) -> {
       out.println();
       out.println("Class: " + group.className());
       out.println("File: " + group.file());
-      out.println(tables.build(metricsOf(classMethods)));
+      out.println(tables.build(metricsOf(classMethods), withCoverage));
     });
   }
 

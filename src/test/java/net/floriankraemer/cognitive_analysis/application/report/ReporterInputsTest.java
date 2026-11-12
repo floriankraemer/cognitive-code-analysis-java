@@ -69,6 +69,19 @@ class ReporterInputsTest {
   }
 
   @Test
+  void carriesTheCoverageOrNull() {
+    final CognitiveMetrics covered = metrics(1);
+    covered.setCoverage(0.25);
+
+    final CognitiveReportInput input = ReporterInputs.of(
+        List.of(new ScoredMethod("f", "a.B::run", covered), new ScoredMethod("f", "a.B::walk", metrics(1))),
+        TestConfigs.defaults());
+
+    assertThat(input.methods().get(0).coverage()).isEqualTo(0.25);
+    assertThat(input.methods().get(1).coverage()).isNull();
+  }
+
+  @Test
   void theInputIsImmutable() {
     final List<CognitiveReportInput.Method> methods = new ArrayList<>(
         ReporterInputs.of(List.of(new ScoredMethod("f", "a.B::run", metrics(1))), TestConfigs.defaults()).methods());

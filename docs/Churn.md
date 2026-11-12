@@ -75,3 +75,11 @@ The risk level is the first rule that matches.
 | `HIGH` | above 20 | below 0.7 |
 | `MEDIUM` | above 10 | below 0.8 |
 | `LOW` | anything else | |
+
+## Classes without coverage data
+
+A class that is absent from the coverage report, or present without any lines, has no coverage.
+Its `coverage`, `riskChurn` and `riskLevel` are `null` in JSON and `N/A` in the other outputs, and it gets no risk level.
+The PHP original treats such a class as uncovered, which turns every class of a mismatched report into a critical risk.
+The Java port does not guess, and warns instead when the report matches none or only some of the analysed classes.
+The coverage columns are shown whenever a coverage option is given.

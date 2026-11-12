@@ -1,0 +1,39 @@
+Config: src/test/resources/fixtures/no-cache.yaml
+Cache: disabled
+
+Found 2 files. Starting analysis.
+Coverage report src/test/resources/fixtures/coverage/jacoco.xml matched 2 of 3 analysed classes.
+
+Class: shapes.Shapes
+File: src/test/resources/fixtures/coverage/Shapes.java
+┌───────────────┬───────┬───────────┬───────────┬───────────┬──────────┬───────┬────────────┬───────┬────────────┬──────────┐
+│ Method Name   │ Lines │ Arguments │  Returns  │ Variables │ Property │  If   │ If Nesting │ Else  │ Cognitive  │   Line   │
+│               │       │           │           │           │ Accesses │       │   Level    │       │ Complexity │ Coverage │
+├───────────────┼───────┼───────────┼───────────┼───────────┼──────────┼───────┼────────────┼───────┼────────────┼──────────┤
+│ Shapes        │ 3 (0) │   1 (0)   │   0 (0)   │   1 (0)   │  1 (0)   │ 0 (0) │   0 (0)    │ 0 (0) │   0.000    │ 100.00%  │
+│ area(int)     │ 3 (0) │   1 (0)   │   1 (0)   │   1 (0)   │  1 (0)   │ 0 (0) │   0 (0)    │ 0 (0) │   0.000    │ 100.00%  │
+│ area(int,int) │ 9 (0) │   2 (0)   │ 3 (0.182) │   1 (0)   │  1 (0)   │ 2 (0) │   1 (0)    │ 0 (0) │   0.182    │  80.00%  │
+│ describe      │ 9 (0) │   1 (0)   │ 3 (0.182) │   0 (0)   │  0 (0)   │ 2 (0) │   1 (0)    │ 0 (0) │   0.182    │  80.00%  │
+│ unused        │ 4 (0) │   1 (0)   │   1 (0)   │   2 (0)   │  1 (0)   │ 0 (0) │   0 (0)    │ 0 (0) │   0.000    │  0.00%   │
+└───────────────┴───────┴───────────┴───────────┴───────────┴──────────┴───────┴────────────┴───────┴────────────┴──────────┘
+
+Class: shapes.Shapes.Inner
+File: src/test/resources/fixtures/coverage/Shapes.java
+┌─────────────┬───────┬───────────┬─────────┬───────────┬──────────┬───────┬────────────┬───────┬────────────┬──────────┐
+│ Method Name │ Lines │ Arguments │ Returns │ Variables │ Property │  If   │ If Nesting │ Else  │ Cognitive  │   Line   │
+│             │       │           │         │           │ Accesses │       │   Level    │       │ Complexity │ Coverage │
+├─────────────┼───────┼───────────┼─────────┼───────────┼──────────┼───────┼────────────┼───────┼────────────┼──────────┤
+│ perimeter   │ 3 (0) │   1 (0)   │  1 (0)  │   0 (0)   │  0 (0)   │ 0 (0) │   0 (0)    │ 0 (0) │   0.000    │ 100.00%  │
+│ never       │ 3 (0) │   1 (0)   │  1 (0)  │   0 (0)   │  0 (0)   │ 0 (0) │   0 (0)    │ 0 (0) │   0.000    │  0.00%   │
+└─────────────┴───────┴───────────┴─────────┴───────────┴──────────┴───────┴────────────┴───────┴────────────┴──────────┘
+
+Class: shapes.Untested
+File: src/test/resources/fixtures/coverage/Untested.java
+┌─────────────┬───────┬───────────┬─────────┬───────────┬──────────┬───────┬────────────┬───────┬────────────┬──────────┐
+│ Method Name │ Lines │ Arguments │ Returns │ Variables │ Property │  If   │ If Nesting │ Else  │ Cognitive  │   Line   │
+│             │       │           │         │           │ Accesses │       │   Level    │       │ Complexity │ Coverage │
+├─────────────┼───────┼───────────┼─────────┼───────────┼──────────┼───────┼────────────┼───────┼────────────┼──────────┤
+│ answer      │ 3 (0) │   0 (0)   │  1 (0)  │   0 (0)   │  0 (0)   │ 0 (0) │   0 (0)    │ 0 (0) │   0.000    │   N/A    │
+└─────────────┴───────┴───────────┴─────────┴───────────┴──────────┴───────┴────────────┴───────┴────────────┴──────────┘
+
+Cognitive metrics calculated for src/test/resources/fixtures/coverage
