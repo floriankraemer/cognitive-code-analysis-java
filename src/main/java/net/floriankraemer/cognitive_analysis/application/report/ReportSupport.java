@@ -14,7 +14,7 @@ import java.util.TreeMap;
 import net.floriankraemer.cognitive_analysis.config.CognitiveConfig;
 import net.floriankraemer.cognitive_analysis.config.MetricName;
 import net.floriankraemer.cognitive_analysis.domain.CognitiveMetrics;
-import net.floriankraemer.cognitive_analysis.domain.MetricsCollection;
+import net.floriankraemer.cognitive_analysis.domain.ScoredMethod;
 
 /** What the report formats have in common: grouping, filtering, number and text formatting. */
 final class ReportSupport {
@@ -27,11 +27,9 @@ final class ReportSupport {
 
   private ReportSupport() {}
 
-  /** All methods in collection order. */
-  static List<Row> rows(final MetricsCollection collection) {
-    final List<Row> rows = new ArrayList<>();
-    collection.forEach((file, methods) -> methods.values().forEach(metrics -> rows.add(new Row(file, metrics))));
-    return rows;
+  /** All methods in the given order. */
+  static List<Row> rows(final List<ScoredMethod> methods) {
+    return methods.stream().map(method -> new Row(method.file(), method.metrics())).toList();
   }
 
   /**

@@ -12,10 +12,12 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.LinkedHashMap;
+import java.util.List;
 import net.floriankraemer.cognitive_analysis.CognitiveAnalysisException;
 import net.floriankraemer.cognitive_analysis.config.TestConfigs;
 import net.floriankraemer.cognitive_analysis.domain.CognitiveMetrics;
 import net.floriankraemer.cognitive_analysis.domain.MetricsCollection;
+import net.floriankraemer.cognitive_analysis.domain.ScoredMethod;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -26,11 +28,11 @@ class ReportWriterTest {
   @TempDir
   Path tempDir;
 
-  private static MetricsCollection metrics() {
+  private static List<ScoredMethod> metrics() {
     final MetricsCollection collection = new MetricsCollection();
     collection.put("A.java", new LinkedHashMap<>());
     collection.get("A.java").put("mä日", new CognitiveMetrics("A", "mä日", 1));
-    return collection;
+    return collection.methods();
   }
 
   @Test

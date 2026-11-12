@@ -9,7 +9,7 @@ import net.floriankraemer.cognitive_analysis.config.CognitiveConfig;
 import net.floriankraemer.cognitive_analysis.config.MetricName;
 import net.floriankraemer.cognitive_analysis.domain.CognitiveMetrics;
 import net.floriankraemer.cognitive_analysis.domain.Delta;
-import net.floriankraemer.cognitive_analysis.domain.MetricsCollection;
+import net.floriankraemer.cognitive_analysis.domain.ScoredMethod;
 
 /** A self-contained page, styled by Bootstrap from a CDN: one table per class, or one of all methods. */
 final class HtmlReport implements Report {
@@ -27,7 +27,7 @@ final class HtmlReport implements Report {
   }
 
   @Override
-  public String render(final MetricsCollection metrics) {
+  public String render(final List<ScoredMethod> metrics) {
     final List<Row> rows = ReportSupport.visible(ReportSupport.rows(metrics), config);
     final Map<String, List<Row>> classes = ReportSupport.byClass(rows);
     final String title = "Cognitive Metrics Report - " + ReportSupport.timestamp(clock);

@@ -8,9 +8,10 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.time.Clock;
 import java.util.UUID;
+import java.util.List;
 import net.floriankraemer.cognitive_analysis.CognitiveAnalysisException;
 import net.floriankraemer.cognitive_analysis.config.CognitiveConfig;
-import net.floriankraemer.cognitive_analysis.domain.MetricsCollection;
+import net.floriankraemer.cognitive_analysis.domain.ScoredMethod;
 
 /** Renders a report and writes it as UTF-8 to a file, so that a failed write never damages an existing file. */
 public final class ReportWriter {
@@ -23,7 +24,7 @@ public final class ReportWriter {
 
   /** The directory of the file must exist. */
   public void write(
-      final ReportType type, final String file, final CognitiveConfig config, final MetricsCollection metrics)
+      final ReportType type, final String file, final CognitiveConfig config, final List<ScoredMethod> metrics)
       throws CognitiveAnalysisException {
     final Path path = Path.of(file);
     final Path directory = path.toAbsolutePath().getParent();

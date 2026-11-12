@@ -52,8 +52,8 @@ Options:
 
 ## Settings
 
-`metrics`, `excludeFilePatterns`, `excludePatterns` and `cache` affect the analysis today.
-`scoreThreshold`, `show*` and `groupByClass` shape the HTML and Markdown reports, see [Reports](./Reports.md).
+`metrics`, `excludeFilePatterns`, `excludePatterns` and `cache` affect the analysis.
+`scoreThreshold`, `show*` and `groupByClass` shape the console output, see [Console output](#console-output), and the HTML and Markdown reports, see [Reports](./Reports.md).
 `customReporters` is parsed and validated, and is applied from a later release.
 
 ```yaml
@@ -107,6 +107,25 @@ cognitive:
 ```
 
 Use single quotes in YAML, so a backslash reaches the regular expression unchanged.
+
+## Console output
+
+These settings change only what the console prints, never the score or the reports.
+
+| Setting | Effect |
+|---|---|
+| `scoreThreshold` | A score above it is red, any other score is green. |
+| `showOnlyMethodsExceedingThreshold` | Hides the methods whose score is at or below `scoreThreshold`. A class or table without any remaining method is not printed. |
+| `groupByClass` | `true` prints `Class:` and `File:` lines and one table per class, ordered by class name. `false` prints `All Methods (N total)` and one table with a leading `Class` column. |
+| `showDetailedCognitiveMetrics` | Adds the columns Lines, Arguments, Returns, Variables, Property Accesses, If, If Nesting Level and Else, each as `count (weight)`. |
+| `showHalsteadComplexity` | Adds Halstead Volume, Difficulty and Effort with two decimals. Volume is yellow from 100 and red from 1000, difficulty from 10 and 50, effort from 500 and 5000. |
+| `showCyclomaticComplexity` | Adds the Cyclomatic Complexity as `n (risk)`. |
+| `showUnderstandability` | Adds the Understandability as `n (risk)`. |
+
+The risk level is yellow for `medium` and red for `high` and `very_high`.
+The Cognitive Complexity column is always shown.
+
+The first lines of the output name the configuration file, relative to the working directory when it lies below it, or `built-in`, and say whether the cache is `enabled` or `disabled`.
 
 ## Cache
 

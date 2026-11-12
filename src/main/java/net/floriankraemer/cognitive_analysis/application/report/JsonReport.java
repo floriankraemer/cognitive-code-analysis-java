@@ -13,7 +13,7 @@ import net.floriankraemer.cognitive_analysis.application.report.ReportSupport.Ro
 import net.floriankraemer.cognitive_analysis.config.CognitiveConfig;
 import net.floriankraemer.cognitive_analysis.config.MetricName;
 import net.floriankraemer.cognitive_analysis.domain.CognitiveMetrics;
-import net.floriankraemer.cognitive_analysis.domain.MetricsCollection;
+import net.floriankraemer.cognitive_analysis.domain.ScoredMethod;
 
 /**
  * {@code {"<class>": {"file": ..., "methods": {"<method>": {...}}}}}, classes sorted. A class found in
@@ -31,7 +31,7 @@ final class JsonReport implements Report {
   }
 
   @Override
-  public String render(final MetricsCollection metrics) throws CognitiveAnalysisException {
+  public String render(final List<ScoredMethod> metrics) throws CognitiveAnalysisException {
     final Map<String, Object> classes = new LinkedHashMap<>();
     ReportSupport.byClass(ReportSupport.rows(metrics)).forEach((key, rows) -> classes.put(key, toClass(rows)));
     try {

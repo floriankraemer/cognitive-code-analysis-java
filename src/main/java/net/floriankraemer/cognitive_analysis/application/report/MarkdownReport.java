@@ -8,7 +8,7 @@ import net.floriankraemer.cognitive_analysis.application.report.ReportSupport.Ro
 import net.floriankraemer.cognitive_analysis.config.CognitiveConfig;
 import net.floriankraemer.cognitive_analysis.config.MetricName;
 import net.floriankraemer.cognitive_analysis.domain.CognitiveMetrics;
-import net.floriankraemer.cognitive_analysis.domain.MetricsCollection;
+import net.floriankraemer.cognitive_analysis.domain.ScoredMethod;
 
 /** Tables per class, or one table of all methods; the columns follow the {@code show*} settings. */
 final class MarkdownReport implements Report {
@@ -22,7 +22,7 @@ final class MarkdownReport implements Report {
   }
 
   @Override
-  public String render(final MetricsCollection metrics) {
+  public String render(final List<ScoredMethod> metrics) {
     final List<Row> rows = ReportSupport.visible(ReportSupport.rows(metrics), config);
     final Map<String, List<Row>> classes = ReportSupport.byClass(rows);
     final StringBuilder md = new StringBuilder("# Cognitive Metrics Report\n\n")

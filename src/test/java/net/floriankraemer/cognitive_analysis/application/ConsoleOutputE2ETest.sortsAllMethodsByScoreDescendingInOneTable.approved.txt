@@ -1,0 +1,20 @@
+Config: src/test/resources/fixtures/console/single-table.yaml
+Cache: disabled
+
+Found 3 files. Starting analysis.
+
+All Methods (7 total)
+┌──────────────────────────────┬────────────────────────┬────────┬───────────┬─────────┬───────────┬──────────┬───────┬────────────┬───────────┬────────────┬──────────┬────────────┬──────────┬────────────┐
+│ Class                        │ Method Name            │ Lines  │ Arguments │ Returns │ Variables │ Property │  If   │ If Nesting │   Else    │ Cognitive  │ Halstead │  Halstead  │ Halstead │ Cyclomatic │
+│                              │                        │        │           │         │           │ Accesses │       │   Level    │           │ Complexity │  Volume  │ Difficulty │  Effort  │ Complexity │
+├──────────────────────────────┼────────────────────────┼────────┼───────────┼─────────┼───────────┼──────────┼───────┼────────────┼───────────┼────────────┼──────────┼────────────┼──────────┼────────────┤
+│ test.testcode.ClassToAnalyze │ methodWithTwoArguments │ 16 (0) │   2 (0)   │  0 (0)  │   0 (0)   │  0 (0)   │ 3 (0) │ 3 (1.099)  │ 3 (1.099) │   2.197    │  106.30  │    2.88    │  305.62  │  5 (low)   │
+│ multi.Alpha                  │ first                  │ 3 (0)  │   0 (0)   │  0 (0)  │   0 (0)   │  0 (0)   │ 0 (0) │   0 (0)    │   0 (0)   │   0.000    │   8.00   │    0.50    │   4.00   │  1 (low)   │
+│ multi.Alpha                  │ second                 │ 3 (0)  │   0 (0)   │  0 (0)  │   0 (0)   │  0 (0)   │ 0 (0) │   0 (0)    │   0 (0)   │   0.000    │   8.00   │    0.50    │   4.00   │  1 (low)   │
+│ multi.Beta                   │ alpha                  │ 3 (0)  │   0 (0)   │  0 (0)  │   0 (0)   │  0 (0)   │ 0 (0) │   0 (0)    │   0 (0)   │   0.000    │   8.00   │    0.50    │   4.00   │  1 (low)   │
+│ multi.Beta                   │ zulu                   │ 3 (0)  │   0 (0)   │  0 (0)  │   0 (0)   │  0 (0)   │ 0 (0) │   0 (0)    │   0 (0)   │   0.000    │   8.00   │    0.50    │   4.00   │  1 (low)   │
+│ multi.Helper                 │ run                    │ 5 (0)  │   2 (0)   │  0 (0)  │   0 (0)   │  0 (0)   │ 1 (0) │   1 (0)    │   0 (0)   │   0.000    │  19.65   │    1.00    │  19.65   │  2 (low)   │
+│ test.testcode.ClassToAnalyze │ simpleMethod           │ 3 (0)  │   0 (0)   │  0 (0)  │   0 (0)   │  0 (0)   │ 0 (0) │   0 (0)    │   0 (0)   │   0.000    │   8.00   │    0.50    │   4.00   │  1 (low)   │
+└──────────────────────────────┴────────────────────────┴────────┴───────────┴─────────┴───────────┴──────────┴───────┴────────────┴───────────┴────────────┴──────────┴────────────┴──────────┴────────────┘
+
+Cognitive metrics calculated for src/test/resources/fixtures/sample,src/test/resources/fixtures/multi

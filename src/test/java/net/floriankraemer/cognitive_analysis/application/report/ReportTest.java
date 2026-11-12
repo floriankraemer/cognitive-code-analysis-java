@@ -77,7 +77,7 @@ class ReportTest {
 
   private static String render(final ReportType type, final String yaml, final MetricsCollection metrics) throws Exception {
     final CognitiveConfig config = TestConfigs.load(yaml);
-    return type.create(config, CLOCK).render(metrics).replace("\r\n", "\n");
+    return type.create(config, CLOCK).render(metrics.methods()).replace("\r\n", "\n");
   }
 
   private static void verify(final ReportType type, final String yaml, final boolean deltas, final String extension)

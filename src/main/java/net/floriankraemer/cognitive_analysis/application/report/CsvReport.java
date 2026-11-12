@@ -10,7 +10,7 @@ import net.floriankraemer.cognitive_analysis.application.report.ReportSupport.Ro
 import net.floriankraemer.cognitive_analysis.config.CognitiveConfig;
 import net.floriankraemer.cognitive_analysis.config.MetricName;
 import net.floriankraemer.cognitive_analysis.domain.CognitiveMetrics;
-import net.floriankraemer.cognitive_analysis.domain.MetricsCollection;
+import net.floriankraemer.cognitive_analysis.domain.ScoredMethod;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
 
@@ -27,7 +27,7 @@ final class CsvReport implements Report {
   }
 
   @Override
-  public String render(final MetricsCollection metrics) throws CognitiveAnalysisException {
+  public String render(final List<ScoredMethod> metrics) throws CognitiveAnalysisException {
     final StringWriter out = new StringWriter();
     try (CSVPrinter printer = new CSVPrinter(out, FORMAT)) {
       printer.printRecord(header());

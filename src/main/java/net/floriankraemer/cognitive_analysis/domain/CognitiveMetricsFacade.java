@@ -11,6 +11,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Consumer;
 import net.floriankraemer.cognitive_analysis.CognitiveAnalysisException;
 import net.floriankraemer.cognitive_analysis.config.CognitiveConfig;
 
@@ -23,6 +24,7 @@ public class CognitiveMetricsFacade {
   private final CognitiveMetricsCollector collector = new CognitiveMetricsCollector();
   private final ComplexityCalculator calculator;
   private final MetricsCache cache;
+  private final AnalysisStatistics statistics = new AnalysisStatistics();
 
   /**
    * @param warnings receives a line per file that cannot be parsed, and one line when the cache cannot be written
@@ -49,14 +51,38 @@ public class CognitiveMetricsFacade {
    */
   public MetricsCollection calculateCognitiveMetrics(final List<String> paths)
       throws CognitiveAnalysisException {
+    return analyse(findFiles(paths), file -> { });
+  }
+
+  /** The Java files of the given paths, each once and sorted, without the excluded ones. */
+  public List<Path> findFiles(final List<String> paths) throws CognitiveAnalysisException {
+    final List<Path> files = fileFinder.findJavaFiles(paths, config.excludeFilePatterns());
+    statistics.filesFound(files.size());
+    return files;
+  }
+
+  /** The counters of the runs of this facade. */
+  public AnalysisStatistics statistics() {
+    return statistics;
+  }
+
+  /**
+   * Analyses the given files, see {@link #calculateCognitiveMetrics}.
+   *
+   * @param processed called after each file, also after one that cannot be parsed
+   */
+  public MetricsCollection analyse(final List<Path> files, final Consumer<Path> processed)
+      throws CognitiveAnalysisException {
     final MetricsCollection result = new MetricsCollection();
 
-    for (final Path file : fileFinder.findJavaFiles(paths, config.excludeFilePatterns())) {
+    for (final Path file : files) {
       final Map<String, CognitiveMetrics> collected;
       try {
         collected = collect(file);
       } catch (SourceParseException e) {
+        statistics.fileFailed();
         warnings.println("Parser failed for file " + file + ": " + e.getMessage());
+        processed.accept(file);
         continue;
       }
 
@@ -67,9 +93,11 @@ public class CognitiveMetricsFacade {
           methods.put(key, metrics);
         }
       });
+      statistics.fileAnalysed(methods.size());
       if (!methods.isEmpty()) {
         result.put(file.toString(), methods);
       }
+      processed.accept(file);
     }
     return result;
   }
@@ -85,7 +113,11 @@ public class CognitiveMetricsFacade {
     final Optional<String> key = cache.keyOf(file, content);
     final Optional<Map<String, CognitiveMetrics>> cached = key.flatMap(cache::load);
     if (cached.isPresent()) {
+      statistics.cacheHit();
       return cached.get();
+    }
+    if (key.isPresent()) {
+      statistics.cacheMiss();
     }
     final Map<String, CognitiveMetrics> collected = collector.collect(decode(file, content));
     key.ifPresent(cacheKey -> cache.store(cacheKey, file, collected));

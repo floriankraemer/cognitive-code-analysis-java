@@ -44,7 +44,7 @@ class ReportE2ETest {
     final int exitCode = run("analyse", FIXTURE, "-r", type, "-f", report.toString());
     assertThat(exitCode).isZero();
     assertThat(err.toString()).isEmpty();
-    assertThat(out.toString()).isEqualTo("Report generated at: " + report + System.lineSeparator());
+    assertThat(out.toString()).endsWith("Report generated at: " + report + System.lineSeparator()).doesNotContain("┌");
     return report;
   }
 
@@ -96,6 +96,25 @@ class ReportE2ETest {
   }
 
   @Test
+  void csvFollowsTheSortOrderAcrossFiles() throws Exception {
+    final Path ascending = tempDir.resolve("asc.csv");
+    final Path descending = tempDir.resolve("desc.csv");
+
+    assertThat(run("analyse", "src/test/resources/fixtures/multi", "--sort-by", "method", "-r", "csv", "-f", ascending.toString())).isZero();
+    assertThat(run("analyse", "src/test/resources/fixtures/multi", "--sort-by", "method", "--sort-order", "desc", "-r", "csv", "-f", descending.toString())).isZero();
+
+    final java.util.List<String> up = methods(ascending);
+    final java.util.List<String> down = new java.util.ArrayList<>(methods(descending));
+    java.util.Collections.reverse(down);
+    assertThat(up).hasSizeGreaterThan(2).isEqualTo(down).isSorted();
+    assertThat(Files.readAllLines(ascending).stream().skip(1).map(line -> line.split(",")[2]).distinct().count()).isEqualTo(2);
+  }
+
+  private static java.util.List<String> methods(final Path csv) throws java.io.IOException {
+    return Files.readAllLines(csv).stream().skip(1).map(line -> line.split(",")[1]).toList();
+  }
+
+  @Test
   void failsOnAnInvalidReportType() {
     final Path report = tempDir.resolve("report.xml");
 
@@ -114,8 +133,8 @@ class ReportE2ETest {
     final int exitCode = run("analyse", FIXTURE, "-r", "json", "-f", directory.resolve("report.json").toString());
 
     assertThat(exitCode).isEqualTo(1);
-    assertThat(out.toString()).isEmpty();
-    assertThat(err.toString()).isEqualTo("Directory " + directory + " does not exist" + System.lineSeparator());
+    assertThat(out.toString()).doesNotContain("Report generated");
+    assertThat(err.toString()).endsWith("Directory " + directory + " does not exist" + System.lineSeparator());
   }
 
   @Test

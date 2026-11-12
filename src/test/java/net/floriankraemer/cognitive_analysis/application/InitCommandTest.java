@@ -377,14 +377,14 @@ class InitCommandTest {
 
   @Test
   void aConsoleThatIsNotATerminalAsksNoQuestions() {
-    assertThat(InitCommand.isInteractive(null, console -> true)).isFalse();
-    assertThat(InitCommand.isInteractive("console", console -> false)).isFalse();
-    assertThat(InitCommand.isInteractive("console", console -> true)).isTrue();
+    assertThat(Terminal.isInteractive(null, console -> true)).isFalse();
+    assertThat(Terminal.isInteractive("console", console -> false)).isFalse();
+    assertThat(Terminal.isInteractive("console", console -> true)).isTrue();
   }
 
   @Test
   void theTerminalCheckIsNotConsultedWithoutAConsole() {
-    assertThat(InitCommand.isInteractive(null, console -> {
+    assertThat(Terminal.isInteractive(null, console -> {
       throw new AssertionError("no console to check");
     })).isFalse();
   }
