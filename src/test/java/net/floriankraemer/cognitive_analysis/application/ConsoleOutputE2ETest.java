@@ -32,7 +32,8 @@ class ConsoleOutputE2ETest {
   private final StringWriter out = new StringWriter();
   private final StringWriter err = new StringWriter();
   private Ansi ansi = Ansi.OFF;
-  private boolean terminal;
+  /** The terminal the progress goes to; null when the process is not interactive. */
+  private StringWriter terminal;
   private AtomicLong now;
 
   // --- golden files, one per combination of the console options ---
@@ -146,7 +147,7 @@ class ConsoleOutputE2ETest {
   }
 
   @Test
-  void printsNoProgressWhenTheErrorStreamIsNotATerminal() {
+  void printsNoProgressWhenTheProcessIsNotInteractive() {
     assertThat(run("analyse", SOURCES, "-c", NO_CACHE)).isZero();
 
     assertThat(err.toString()).isEmpty();
@@ -154,32 +155,63 @@ class ConsoleOutputE2ETest {
   }
 
   @Test
-  void printsProgressOnTheErrorStreamWhenItIsATerminal() {
-    terminal = true;
+  void printsProgressOnlyToTheTerminalAndClearsItWithSpacesWithoutAnsi() {
+    terminal = new StringWriter();
 
     assertThat(run("analyse", SOURCES, "-c", NO_CACHE)).isZero();
 
-    assertThat(err.toString()).isEqualTo("\rAnalysing 1/3\rAnalysing 2/3\rAnalysing 3/3\n");
-    assertThat(out.toString()).doesNotContain("Analysing");
+    assertThat(terminal.toString())
+        .isEqualTo("\rAnalysing 1/3\rAnalysing 2/3\rAnalysing 3/3\r" + " ".repeat(13) + "\r");
+    assertThat(err.toString()).isEmpty();
+    assertThat(out.toString()).doesNotContain("Analysing").doesNotContain("\r");
   }
 
   @Test
-  void countsAFileThatCannotBeParsedAsProcessedAndKeepsTheParserMessage() {
-    terminal = true;
+  void clearsTheProgressLineWithAnEraseSequenceOnAnAnsiTerminal() {
+    terminal = new StringWriter();
+    ansi = Ansi.ON;
 
-    assertThat(run("analyse", PARSE_ERROR, "-c", NO_CACHE)).isZero();
+    assertThat(run("analyse", SOURCES, "-c", NO_CACHE)).isZero();
+
+    assertThat(terminal.toString()).endsWith("\rAnalysing 3/3\r\u001B[K");
+  }
+
+  @Test
+  void clearsTheProgressLineBeforeAParserWarningSoItStartsOnACleanLine() {
+    terminal = err; // one stream, to see the order in which the two writers are used
+
+    assertThat(run("analyse", FIXTURES + "/multi," + PARSE_ERROR, "-c", NO_CACHE)).isZero();
 
     assertThat(err.toString())
-        .contains("\rAnalysing 1/1\n")
-        .contains("Parser failed for file " + PARSE_ERROR + "/Broken.java: ");
+        .contains("\rAnalysing 2/3\r" + " ".repeat(13) + "\rParser failed for file " + PARSE_ERROR + "/Broken.java: ")
+        .endsWith("\rAnalysing 3/3\r" + " ".repeat(13) + "\r");
+  }
+
+  @Test
+  void keepsTheParserMessageAloneOnTheErrorStreamWhenItIsNotATerminal() {
+    assertThat(run("analyse", FIXTURES + "/multi," + PARSE_ERROR, "-c", NO_CACHE)).isZero();
+
+    assertThat(err.toString()).startsWith("Parser failed for file " + PARSE_ERROR + "/Broken.java: ").doesNotContain("\r");
+  }
+
+  @Test
+  void clearsTheProgressLineBeforeAFailureIsReported() throws Exception {
+    terminal = err;
+    Files.write(tempDir.resolve("Broken.java"), new byte[] {(byte) 0xC3, (byte) 0x28});
+    Files.writeString(tempDir.resolve("A.java"), "class A { void a() {} }");
+
+    assertThat(run("analyse", tempDir.toString(), "-c", NO_CACHE)).isEqualTo(1);
+
+    assertThat(err.toString()).contains("\rAnalysing 1/2\r" + " ".repeat(13) + "\rError reading file: ");
   }
 
   @Test
   void printsNoProgressLineForAnEmptyDirectory() {
-    terminal = true;
+    terminal = new StringWriter();
 
     assertThat(run("analyse", tempDir.toString(), "-c", NO_CACHE)).isZero();
 
+    assertThat(terminal.toString()).isEmpty();
     assertThat(err.toString()).isEmpty();
   }
 
@@ -414,7 +446,7 @@ class ConsoleOutputE2ETest {
     CommandLine commandLine = new CommandLine(new App());
     AnalyseCommand command = (AnalyseCommand) commandLine.getSubcommands().get("analyse").getCommand();
     command.ansi = ansi;
-    command.stderrIsTerminal = () -> terminal;
+    command.terminalWriter = () -> terminal == null ? null : new PrintWriter(terminal, true);
     if (now != null) {
       final long step = 250_000_000L;
       command.ticker = () -> now.getAndAdd(step);

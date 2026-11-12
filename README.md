@@ -65,7 +65,7 @@ Reports follow the same order.
 Within a class table the methods keep the sort order, and the class tables themselves are always ordered by class name.
 
 Use `--debug` to print the time of each stage (`config`, `discovery`, `analysis`, `sorting`, `output`) and the counters `filesFound`, `filesAnalysed`, `filesFailed`, `methodsAnalysed`, `cacheHits` and `cacheMisses` after the run.
-On a terminal, a progress line on the error stream shows how many files are analysed.
+On a terminal, a progress line written to the terminal itself shows how many files are analysed; it never reaches redirected output.
 
 Write an HTML, CSV or JSON report instead:
 

@@ -16,6 +16,8 @@ public final class TextTable {
   /** Spaces between the border and the text of a cell, on each side. */
   private static final int PADDING = 1;
 
+  private static final int ZERO_WIDTH_JOINER = 0x200D;
+
   /** Columns from this index on are centered; earlier ones are left-aligned. */
   private final int firstCenteredColumn;
 
@@ -85,7 +87,45 @@ public final class TextTable {
     return line.toString();
   }
 
+  /**
+   * The number of terminal columns of a text: color codes take none, combining marks take none, and wide
+   * characters take two.
+   *
+   * <p>ponytail: the wide ranges are an approximate East Asian Width table (CJK, Hiragana, Katakana, Hangul,
+   * fullwidth forms and the common emoji blocks). Characters outside it count as one column; take a full
+   * Unicode table if exact widths of rare scripts matter.
+   */
   private static int visibleLength(final String text) {
-    return ANSI_CODE.matcher(text).replaceAll("").length();
+    final String plain = ANSI_CODE.matcher(text).replaceAll("");
+    int width = 0;
+    for (int i = 0; i < plain.length(); ) {
+      final int codePoint = plain.codePointAt(i);
+      width += columns(codePoint);
+      i += Character.charCount(codePoint);
+    }
+    return width;
+  }
+
+  private static int columns(final int codePoint) {
+    final int type = Character.getType(codePoint);
+    if (type == Character.NON_SPACING_MARK || type == Character.ENCLOSING_MARK
+        || codePoint == ZERO_WIDTH_JOINER || (codePoint >= 0xFE00 && codePoint <= 0xFE0F)) {
+      return 0;
+    }
+    return isWide(codePoint) ? 2 : 1;
+  }
+
+  private static boolean isWide(final int c) {
+    return (c >= 0x1100 && c <= 0x115F)
+        || (c >= 0x2E80 && c <= 0xA4CF)
+        || (c >= 0xAC00 && c <= 0xD7A3)
+        || (c >= 0xF900 && c <= 0xFAFF)
+        || (c >= 0xFE30 && c <= 0xFE6F)
+        || (c >= 0xFF00 && c <= 0xFF60)
+        || (c >= 0xFFE0 && c <= 0xFFE6)
+        || (c >= 0x1F300 && c <= 0x1F64F)
+        || (c >= 0x1F680 && c <= 0x1F6FF)
+        || (c >= 0x1F900 && c <= 0x1F9FF)
+        || (c >= 0x20000 && c <= 0x3FFFD);
   }
 }

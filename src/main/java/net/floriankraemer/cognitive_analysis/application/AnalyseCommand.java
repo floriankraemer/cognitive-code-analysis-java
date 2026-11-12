@@ -7,7 +7,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.Callable;
-import java.util.function.BooleanSupplier;
+import java.util.function.Supplier;
 import java.util.function.LongSupplier;
 import net.floriankraemer.cognitive_analysis.CognitiveAnalysisException;
 import net.floriankraemer.cognitive_analysis.application.report.CsvReportBuilder;
@@ -103,14 +103,16 @@ public class AnalyseCommand implements Callable<Integer> {
   /** Replaceable by tests: the clock of the stage timings, the colors and the terminal check. */
   LongSupplier ticker = System::nanoTime;
   Ansi ansi = Ansi.AUTO;
-  BooleanSupplier stderrIsTerminal = Terminal::isAttached;
+  /** The terminal the progress goes to, or null when the process is not interactive. */
+  Supplier<PrintWriter> terminalWriter = () -> Terminal.isAttached() ? System.console().writer() : null;
 
   private final ReportBuilder reportBuilder = new ReportBuilder(
       new HtmlReportBuilder(), new CsvReportBuilder(), new JsonReportBuilder());
 
   @Override
   public Integer call() {
-    final PrintWriter err = spec.commandLine().getErr();
+    final ProgressIndicator progress = new ProgressIndicator(terminalWriter.get(), ansi.enabled());
+    final PrintWriter err = progress.clearingBefore(spec.commandLine().getErr());
 
     if ((reportType == null) != (reportFile == null)) {
       err.println("Both report type and file must be provided.");
@@ -133,9 +135,9 @@ public class AnalyseCommand implements Callable<Integer> {
       out.println("Found " + files.size() + " files. Starting analysis.");
       summary.endStage("discovery");
 
-      final ProgressIndicator progress = new ProgressIndicator(err, stderrIsTerminal.getAsBoolean(), files.size());
+      progress.start(files.size());
       final MetricsCollection analysed = facade.analyse(files, file -> progress.advance());
-      progress.finish();
+      progress.clear();
       summary.endStage("analysis");
 
       final List<ScoredMethod> methods = sorter.sort(analysed.methods());

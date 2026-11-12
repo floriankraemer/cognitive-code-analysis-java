@@ -54,4 +54,53 @@ class TextTableTest {
         │ \u001B[31m1\u001B[39m │
         └───┘""");
   }
+
+  @Test
+  void countsWideCharactersAsTwoColumns() {
+    assertThat(table.render(List.of("Name", "N"), List.of(List.of("メソッド", "1"), List.of("日本", "2")))).isEqualTo("""
+        ┌──────────┬───┐
+        │ Name     │ N │
+        ├──────────┼───┤
+        │ メソッド │ 1 │
+        │ 日本     │ 2 │
+        └──────────┴───┘""");
+  }
+
+  @Test
+  void countsHangulFullwidthFormsAndEmojiAsTwoColumns() {
+    assertThat(table.render(List.of("N"), List.of(List.of("한글"), List.of("Ａ"), List.of("🙂"), List.of("abcd"))))
+        .isEqualTo("""
+        ┌──────┐
+        │ N    │
+        ├──────┤
+        │ 한글 │
+        │ Ａ   │
+        │ 🙂   │
+        │ abcd │
+        └──────┘""");
+  }
+
+  @Test
+  void countsCombiningMarksJoinersAndVariationSelectorsAsZeroColumns() {
+    // "e" + combining acute, and a heart with a variation selector, which is one column wide here
+    assertThat(table.render(List.of("N"), List.of(List.of("e\u0301"), List.of("ab"), List.of("\u2764\uFE0F"))))
+        .isEqualTo("""
+        ┌────┐
+        │ N  │
+        ├────┤
+        │ e\u0301  │
+        │ ab │
+        │ \u2764\uFE0F  │
+        └────┘""");
+  }
+
+  @Test
+  void countsAZeroWidthJoinerAsZeroColumns() {
+    assertThat(table.render(List.of("N"), List.of(List.of("a\u200Db")))).isEqualTo("""
+        ┌────┐
+        │ N  │
+        ├────┤
+        │ a\u200Db │
+        └────┘""");
+  }
 }
