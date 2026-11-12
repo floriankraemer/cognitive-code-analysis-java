@@ -4,6 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -188,10 +191,12 @@ class MetricsCacheTest {
     String key = keyOf(cache, source);
     cache.store(key, source, sampleMetrics());
     Path entry = tempDir.resolve("cache").resolve(key.substring(0, 2)).resolve(key + ".json");
-    String stored = Files.readString(entry);
+    ObjectMapper mapper = new ObjectMapper();
 
     for (String part : List.of("values", "weights", "deltas")) {
-      writeEntry(key, stored.replace("\"" + part + "\"", "\"x" + part + "\""));
+      JsonNode tree = mapper.readTree(entry.toFile());
+      ((ObjectNode) tree.get("analysisResult").get("A::a")).remove(part);
+      writeEntry(key, mapper.writeValueAsString(tree));
       assertThat(cache.load(key)).as("without " + part).isEmpty();
     }
   }
