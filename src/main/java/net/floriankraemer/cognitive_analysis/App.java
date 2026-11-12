@@ -1,13 +1,14 @@
 package net.floriankraemer.cognitive_analysis;
 
 import net.floriankraemer.cognitive_analysis.application.AnalyseCommand;
+import net.floriankraemer.cognitive_analysis.application.InitCommand;
 import net.floriankraemer.cognitive_analysis.churn.ChurnCommand;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 
 @Command(
     name = "cognitive-analysis",
-    subcommands = {AnalyseCommand.class, ChurnCommand.class},
+    subcommands = {AnalyseCommand.class, ChurnCommand.class, InitCommand.class},
     mixinStandardHelpOptions = true,
     version = "cognitive-analysis 0.0.1",
     exitCodeOnInvalidInput = 1

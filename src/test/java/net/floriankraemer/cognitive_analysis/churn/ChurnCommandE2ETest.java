@@ -249,6 +249,11 @@ class ChurnCommandE2ETest {
     final ChurnCommand churn = (ChurnCommand) commandLine.getSubcommands().get("churn").getCommand();
     churn.clock = Clock.fixed(Instant.parse("2023-10-01T12:00:00Z"), ZoneOffset.UTC);
     churn.gitExecutable = gitExecutable;
-    return commandLine.execute(args);
+    // A run without a configuration of its own gets the no-cache fixture, so no test writes a cache into the project.
+    final java.util.List<String> effective = new java.util.ArrayList<>(java.util.List.of(args));
+    if (!effective.contains("-c") && !effective.contains("--config")) {
+      effective.addAll(java.util.List.of("-c", "src/test/resources/fixtures/no-cache.yaml"));
+    }
+    return commandLine.execute(effective.toArray(String[]::new));
   }
 }

@@ -15,6 +15,33 @@ The file is chosen in this order:
 java -jar cognitive-analysis.jar analyse <path-to-folder> --config <path-to-config-file>
 ```
 
+## Creating a config file
+
+`init` writes a config file with the bundled defaults, so you can start from a complete file.
+
+```bash
+java -jar cognitive-analysis.jar init
+```
+
+In an interactive console, `init` asks for the settings below.
+Each question is preceded by a one-line explanation, and an empty answer keeps the default in brackets.
+
+- `scoreThreshold` (default `0.5`) must be a number greater than 0.
+- The `show*` questions and `groupByClass` accept `y`, `yes`, `true`, `n`, `no` or `false`, in any letter case.
+
+An invalid answer is reported, and the question is asked again.
+The answers are written into the bundled defaults, so the file contains every setting.
+
+Options:
+
+- `--path`, `-p` sets the file to create.
+  The default is `./jcca.yaml`, and missing parent directories are created.
+- `--silent` skips the questions and writes the defaults.
+  Questions are also skipped when standard input is not a console, such as when input is piped.
+- `--force`, `-f` overwrites an existing file.
+  The new content is written next to the file first and moved over it, so a failed write keeps the old file.
+  Without it, `init` refuses to replace the file and exits with status 1.
+
 ## Merge rules
 
 - Mappings are merged key by key.
@@ -25,8 +52,8 @@ java -jar cognitive-analysis.jar analyse <path-to-folder> --config <path-to-conf
 
 ## Settings
 
-`metrics`, `excludeFilePatterns` and `excludePatterns` affect the analysis today.
-The other settings (`scoreThreshold`, `show*`, `groupByClass`, `cache`, `customReporters`) are parsed and validated, and are applied from a later release.
+`metrics`, `excludeFilePatterns`, `excludePatterns` and `cache` affect the analysis today.
+The other settings (`scoreThreshold`, `show*`, `groupByClass`, `customReporters`) are parsed and validated, and are applied from a later release.
 
 ```yaml
 cognitive:
@@ -79,6 +106,22 @@ cognitive:
 ```
 
 Use single quotes in YAML, so a backslash reaches the regular expression unchanged.
+
+## Cache
+
+The analysis caches the metrics of each file, so a file that did not change is not parsed again.
+
+- `cache.directory` is resolved against the working directory and defaults to `./.jcca.cache`.
+- Each entry is one JSON file at `<directory>/<first two characters of the key>/<key>.json`.
+- The key is a SHA-256 hash of the absolute path, the SHA-256 of the content of the file, the canonical form of the whole configuration and the version and build time of the tool.
+- An entry is used only while all of these stay the same, so editing the content of a file or changing any setting analyses the file again.
+- The modification time does not matter, so touching a file without changing it still uses the entry.
+- Entries written by another build of the tool are not reused, so an upgrade analyses every file again.
+- A corrupt, unreadable or outdated entry is treated as missing and is overwritten.
+- A file that cannot be parsed is never cached.
+- Set `cache.enabled: false` to turn the cache off; then nothing is read, written or created.
+- The directory is safe to delete at any time; the next run rebuilds it.
+- When the cache cannot be written, the analysis prints one warning and continues without it.
 
 ## Tuning the calculation
 

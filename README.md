@@ -35,6 +35,17 @@ Write an HTML, CSV or JSON report instead:
 java -jar target/cognitive-analysis.jar analyse src/main/java --report-type html --report-file report.html
 ```
 
+Create a `jcca.yaml` with the bundled defaults in the working directory.
+The command asks a few questions, and an empty answer keeps the default in brackets:
+
+```bash
+java -jar target/cognitive-analysis.jar init
+```
+
+Use `--silent` to skip the questions, `--path` (`-p`) to choose another file, and `--force` (`-f`) to overwrite an existing file.
+Questions are asked only in an interactive console, so piped input always takes the defaults.
+See [Configuration](./docs/Configuration.md#creating-a-config-file) for details.
+
 Find the classes that are complex and change often with the `churn` command, which asks git for the number of changes per file:
 
 ```bash

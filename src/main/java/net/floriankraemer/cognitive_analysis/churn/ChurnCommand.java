@@ -102,7 +102,7 @@ public class ChurnCommand implements Callable<Integer> {
     try {
       final CognitiveConfig config =
           new ConfigLoader(Path.of("")).load(configFile == null ? null : Path.of(configFile));
-      final MetricsCollection metrics = new CognitiveMetricsFacade(config, err).calculateCognitiveMetrics(paths());
+      final MetricsCollection metrics = new CognitiveMetricsFacade(config, err, Path.of("")).calculateCognitiveMetrics(paths());
       final List<ChurnMetrics> churn =
           ChurnCalculator.calculate(metrics, new GitChangeCounter(gitExecutable, sinceDate, GIT_TIMEOUT));
 
