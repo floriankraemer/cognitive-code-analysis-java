@@ -25,6 +25,9 @@ public final class CoverageData {
 
   private static final String CONSTRUCTOR = "<init>";
 
+  /** Suffixes of compiler-generated methods, which are no module names. */
+  private static final List<String> SYNTHETIC_PREFIXES = List.of("lambda", "default", "access");
+
   private final Map<String, ClassCoverage> classes;
 
   /** @param classes by fully qualified class name, nested classes separated by dots */
@@ -79,8 +82,7 @@ public final class CoverageData {
       return Optional.empty();
     }
     final String name = reportName(method);
-    final List<MethodCoverage> sameName =
-        coveredClass.methods().stream().filter(covered -> sourceName(covered.name()).equals(name)).toList();
+    final List<MethodCoverage> sameName = candidates(coveredClass.methods(), name);
     final int from = method.getLine();
     final int to = from + method.value(MetricName.LINE_COUNT);
     return sameName.stream()
@@ -90,10 +92,30 @@ public final class CoverageData {
         .or(() -> classCoverage(method.getClassName()));
   }
 
-  /** Kotlin compiles an {@code internal fun audit()} of module {@code app} to {@code audit$app}. */
-  private static String sourceName(final String reportName) {
-    final int mangled = reportName.indexOf('$');
-    return mangled > 0 ? reportName.substring(0, mangled) : reportName;
+  /**
+   * The methods of the report with the name, or else those that Kotlin compiled from an internal function of
+   * that name.
+   */
+  private static List<MethodCoverage> candidates(final List<MethodCoverage> methods, final String name) {
+    final List<MethodCoverage> exact = methods.stream().filter(covered -> covered.name().equals(name)).toList();
+    return exact.isEmpty()
+        ? methods.stream().filter(covered -> isInternalFunction(covered.name(), name)).toList()
+        : exact;
+  }
+
+  /**
+   * True for {@code audit$app}, the name Kotlin gives an {@code internal fun audit()} of the module {@code app}.
+   * Synthetic names such as {@code run$lambda$0}, {@code run$default}, {@code access$run} or {@code run$1} are not.
+   */
+  static boolean isInternalFunction(final String reportName, final String name) {
+    if (!reportName.startsWith(name + "$")) {
+      return false;
+    }
+    final String module = reportName.substring(name.length() + 1);
+    return !module.isEmpty()
+        && module.indexOf('$') < 0
+        && !Character.isDigit(module.charAt(0))
+        && SYNTHETIC_PREFIXES.stream().noneMatch(module::startsWith);
   }
 
   /** A method without lines in the report is only taken when no other method has its name. */
