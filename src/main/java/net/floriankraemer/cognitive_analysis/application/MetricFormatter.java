@@ -2,11 +2,14 @@ package net.floriankraemer.cognitive_analysis.application;
 
 import java.math.BigDecimal;
 import java.util.Locale;
+import java.util.Optional;
+import net.floriankraemer.cognitive_analysis.domain.Delta;
 import picocli.CommandLine.Help.Ansi;
 
 /** Formats metric values as table cells and colors them by their thresholds. */
 final class MetricFormatter {
 
+  private static final String NOT_AVAILABLE = "N/A";
   private static final String RED = "red";
   private static final String YELLOW = "yellow";
   private static final String GREEN = "green";
@@ -28,7 +31,7 @@ final class MetricFormatter {
   }
 
   String weighted(final int count, final double weight) {
-    return count + " (" + new BigDecimal(String.format(Locale.ROOT, "%.3f", weight)).stripTrailingZeros().toPlainString() + ")";
+    return count + " (" + trimmed(weight) + ")";
   }
 
   String score(final double score) {
@@ -55,6 +58,25 @@ final class MetricFormatter {
       default -> null;
     };
     return complexity + " (" + (color == null ? riskLevel : paint(color, riskLevel)) + ")";
+  }
+
+  /** The cell with the change against the baseline in a second line; unchanged metrics keep the plain cell. */
+  String withDelta(final String cell, final Optional<Delta> delta) {
+    return delta.filter(Delta::hasChanged).map(change -> {
+      if (!Double.isFinite(change.getValue())) {
+        return cell + "\nΔ " + NOT_AVAILABLE;
+      }
+      final String amount = trimmed(Math.abs(change.getValue()));
+      return cell + "\n" + (change.hasIncreased() ? paint(RED, "Δ +" + amount) : paint(GREEN, "Δ -" + amount));
+    }).orElse(cell);
+  }
+
+  /** Up to three decimals without trailing zeros, {@code N/A} for NaN and infinity. */
+  private static String trimmed(final double value) {
+    if (!Double.isFinite(value)) {
+      return NOT_AVAILABLE;
+    }
+    return new BigDecimal(String.format(Locale.ROOT, "%.3f", value)).stripTrailingZeros().toPlainString();
   }
 
   private String halstead(final double value, final double high, final double medium) {

@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -13,6 +14,7 @@ import java.util.Map;
 import net.floriankraemer.cognitive_analysis.config.CognitiveConfig;
 import net.floriankraemer.cognitive_analysis.config.MetricName;
 import net.floriankraemer.cognitive_analysis.config.TestConfigs;
+import net.floriankraemer.cognitive_analysis.domain.BaselineMethod;
 import net.floriankraemer.cognitive_analysis.domain.CognitiveMetrics;
 import net.floriankraemer.cognitive_analysis.domain.CyclomaticComplexity;
 import net.floriankraemer.cognitive_analysis.domain.HalsteadMetrics;
@@ -54,7 +56,11 @@ class ReportTest {
     final CognitiveMetrics previous =
         method(metrics.getClassName(), metrics.getMethodName(), metrics.getLine(), 0, seed + 1);
     previous.setWeight(MetricName.ELSE_COUNT, metrics.weight(MetricName.ELSE_COUNT));
-    metrics.calculateDeltas(previous);
+    final Map<MetricName, Double> before = new EnumMap<>(MetricName.class);
+    for (final MetricName name : MetricName.values()) {
+      before.put(name, previous.weight(name));
+    }
+    metrics.applyBaseline(new BaselineMethod(before, Map.of()));
   }
 
   private static void add(final MetricsCollection collection, final String file, final CognitiveMetrics metrics) {

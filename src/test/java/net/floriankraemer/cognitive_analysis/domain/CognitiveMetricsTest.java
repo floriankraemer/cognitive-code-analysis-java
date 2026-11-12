@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
+import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -41,15 +42,15 @@ class CognitiveMetricsTest {
   }
 
   @Test
-  void calculatesTheDeltaOfEveryWeightAgainstThePreviousMetrics() {
-    CognitiveMetrics previous = new CognitiveMetrics("pkg.TestClass", "testMethod", 40);
+  void calculatesTheDeltaOfEveryWeightAgainstTheBaseline() {
+    Map<MetricName, Double> before = new EnumMap<>(MetricName.class);
     for (MetricName name : MetricName.values()) {
-      previous.setWeight(name, 1.0);
+      before.put(name, 1.0);
       metrics.setWeight(name, 1.5);
     }
     metrics.setWeight(MetricName.PROPERTY_CALL_COUNT, 0.5);
 
-    metrics.calculateDeltas(previous);
+    metrics.applyBaseline(new BaselineMethod(before, Map.of()));
 
     assertThat(metrics.delta(MetricName.IF_COUNT)).get().extracting(Delta::getValue).isEqualTo(0.5);
     assertThat(metrics.delta(MetricName.LINE_COUNT)).get().extracting(Delta::getValue).isEqualTo(0.5);
@@ -71,9 +72,11 @@ class CognitiveMetricsTest {
     metrics.setValue(MetricName.LINE_COUNT, 61);
     metrics.setWeight(MetricName.IF_COUNT, 0.4054651081081644);
     metrics.setCognitiveComplexity(1.5);
-    CognitiveMetrics previous = new CognitiveMetrics("pkg.TestClass", "testMethod", 42);
-    previous.setWeight(MetricName.IF_COUNT, 0.1);
-    metrics.calculateDeltas(previous);
+    Map<MetricName, Double> before = new EnumMap<>(MetricName.class);
+    for (MetricName name : MetricName.values()) {
+      before.put(name, 0.1);
+    }
+    metrics.applyBaseline(new BaselineMethod(before, Map.of(DeltaMetric.SCORE, 1.0)));
     Map<String, Integer> decisionPoints = new LinkedHashMap<>();
     decisionPoints.put("if", 2);
     decisionPoints.put("boolean", 1);
@@ -91,9 +94,14 @@ class CognitiveMetricsTest {
     assertThat(restored.value(MetricName.LINE_COUNT)).isEqualTo(61);
     assertThat(restored.weight(MetricName.IF_COUNT)).isEqualTo(0.4054651081081644);
     assertThat(restored.delta(MetricName.IF_COUNT)).hasValueSatisfying(delta -> {
-      assertThat(delta.getValue()).isEqualTo(0.4054651081081644 - 0.1);
+      assertThat(delta.getValue()).isEqualTo(Delta.rounded(0.1, 0.4054651081081644).getValue());
       assertThat(delta.hasIncreased()).isTrue();
     });
+    assertThat(restored.otherDelta(DeltaMetric.SCORE)).hasValueSatisfying(delta -> {
+      assertThat(delta.getValue()).isEqualTo(0.5);
+      assertThat(delta.hasIncreased()).isTrue();
+    });
+    assertThat(restored.otherDelta(DeltaMetric.CYCLOMATIC)).isEmpty();
     assertThat(restored.getCyclomatic()).isEqualTo(metrics.getCyclomatic());
     assertThat(restored.getCyclomatic().breakdown().keySet())
         .containsExactlyElementsOf(List.of("total", "base", "if", "boolean"));
