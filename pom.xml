@@ -194,6 +194,15 @@
 							</filters>
 							<transformers>
 								<transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+								<!-- The libraries' copies of the Apache License 2.0 are one text, shipped once in META-INF/THIRD-PARTY-LICENSES.txt. -->
+								<transformer implementation="org.apache.maven.plugins.shade.resource.ApacheLicenseResourceTransformer"/>
+								<transformer implementation="org.apache.maven.plugins.shade.resource.ApacheNoticeResourceTransformer">
+									<projectName>cognitive-analysis</projectName>
+									<organizationName>Florian Krämer</organizationName>
+									<organizationURL>https://floriankraemer.net</organizationURL>
+									<inceptionYear>2024</inceptionYear>
+									<addHeader>false</addHeader>
+								</transformer>
 								<transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
 									<mainClass>net.floriankraemer.cognitive_analysis.App</mainClass>
 									<manifestEntries>

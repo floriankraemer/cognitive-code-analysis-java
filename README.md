@@ -196,3 +196,8 @@ Cognitive metrics calculated for src/main/java/net/floriankraemer/cognitive_anal
 Copyright Florian Krämer
 
 Licensed under the [GPL3 license](LICENSE).
+
+### Third-party licenses
+
+The executable jar bundles picocli, JavaParser, the Kotlin compiler and runtime, Jackson, SnakeYAML and Apache Commons, each under its own license, mostly the Apache License 2.0.
+The jar lists them with their licenses in `META-INF/THIRD-PARTY-LICENSES.txt` and carries their notices in `META-INF/NOTICE`.
