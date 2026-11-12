@@ -27,7 +27,7 @@ public class ConfigLoader {
   static final String DEFAULTS_RESOURCE = "/jcca-defaults.yaml";
   private static final String ROOT = "cognitive";
 
-  private final ObjectMapper yaml =
+  private static final ObjectMapper YAML =
       new ObjectMapper(YAMLFactory.builder()
           .enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION)
           .build());
@@ -52,6 +52,11 @@ public class ConfigLoader {
     return ConfigParser.parse(merged.get(ROOT), source);
   }
 
+  /** The bundled defaults only; the user file in the working directory is not read. */
+  public static CognitiveConfig loadBundledDefaults() throws CognitiveAnalysisException {
+    return ConfigParser.parse(defaults().get(ROOT), Optional.empty());
+  }
+
   private Optional<Path> resolveSource(final Path explicitFile) throws CognitiveAnalysisException {
     if (explicitFile != null) {
       if (!Files.isRegularFile(workingDirectory.resolve(explicitFile))) {
@@ -63,9 +68,9 @@ public class ConfigLoader {
     return Files.isRegularFile(workingDirectory.resolve(discovered)) ? Optional.of(discovered) : Optional.empty();
   }
 
-  private JsonNode defaults() {
+  private static JsonNode defaults() {
     try (InputStream in = ConfigLoader.class.getResourceAsStream(DEFAULTS_RESOURCE)) {
-      return yaml.readTree(in);
+      return YAML.readTree(in);
     } catch (IOException e) {
       throw new IllegalStateException("Cannot read the bundled defaults " + DEFAULTS_RESOURCE, e);
     }
@@ -75,7 +80,7 @@ public class ConfigLoader {
     final JsonNode user;
     try {
       final MappingIterator<JsonNode> documents =
-          yaml.readerFor(JsonNode.class).readValues(Files.readString(workingDirectory.resolve(file)));
+          YAML.readerFor(JsonNode.class).readValues(Files.readString(workingDirectory.resolve(file)));
       user = documents.hasNext() ? documents.next() : null;
       if (documents.hasNext()) {
         throw new CognitiveAnalysisException("Config file " + file + " must contain a single YAML document.");
