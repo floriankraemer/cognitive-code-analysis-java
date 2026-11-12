@@ -27,7 +27,9 @@ No file is written in that case.
 `CognitiveReportInput` has:
 
 - `methods`: the analysed methods, in the order of the run (see `--sort-by`).
-  Each has `file`, `className`, `methodName`, `line`, `score`, `cyclomatic`, `understandability`, `halstead` and `metrics`.
+  Each has `file`, `className`, `methodName`, `line`, `score`, `cyclomatic`, `understandability`, `halstead`, `coverage` and `metrics`.
+  `halstead` has the counts `distinctOperators`, `distinctOperands`, `totalOperators` and `totalOperands`, and the values `volume`, `difficulty` and `effort`.
+  `coverage` is the line coverage between 0.0 and 1.0, or `null` without a coverage report, see [Coverage](./Coverage.md).
   `metrics` maps the key of each of the eight scored metrics (`lineCount`, `argCount`, `returnCount`, `variableCount`, `propertyCallCount`, `ifCount`, `ifNestingLevel`, `elseCount`) to its `count`, its `weight` and its `weightDelta`.
   The `weightDelta` is `null` when there is no baseline.
 - `settings`: `scoreThreshold`, `showOnlyMethodsExceedingThreshold`, `showHalsteadComplexity`, `showCyclomaticComplexity`, `showUnderstandability`, `groupByClass` and `showDetailedCognitiveMetrics`.
