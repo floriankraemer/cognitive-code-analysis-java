@@ -1,59 +1,108 @@
 package net.floriankraemer.cognitive_analysis.domain;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
+
+import net.floriankraemer.cognitive_analysis.config.TestConfigs;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.*;
 
-import java.util.HashMap;
-import java.util.Map;
+class ComplexityCalculatorTest {
 
-public class ComplexityCalculatorTest {
+  private static final double EXACT = 1e-12;
 
-  private ComplexityCalculator scoreCalculator;
   private CognitiveMetrics metrics;
 
   @BeforeEach
-  public void setUp() {
-    scoreCalculator = new ComplexityCalculator();
+  void setUp() {
     metrics = new CognitiveMetrics();
-
     metrics.setLineCount(100);
-    metrics.setArgumentCount(5);
-    metrics.incrementReturnCount();
-    metrics.incrementReturnCount();
-    metrics.incrementReturnCount();
-    metrics.incrementIfCount();
-    metrics.incrementIfCount();
-    metrics.incrementIfCount();
-    metrics.incrementIfCount();
+    metrics.setArgCount(5);
+    for (int i = 0; i < 3; i++) {
+      metrics.incrementReturnCount();
+    }
+    for (int i = 0; i < 4; i++) {
+      metrics.incrementIfCount();
+    }
     metrics.setIfNestingLevel(2);
     metrics.incrementElseCount();
   }
 
   @Test
-  public void testCalculateWithDefaultConfig() {
-    scoreCalculator.calculate(metrics, null); // Pass null to use default config
+  void scoresWithTheBundledDefaultsAndStoresUnroundedWeights() {
+    new ComplexityCalculator(TestConfigs.defaults()).calculate(metrics);
 
-    // Assert that the cognitive complexity score is calculated correctly.
-    // These values are rounded to 3 decimal places as per the method.
-    assertEquals(5.306, metrics.getCognitiveComplexity());
+    assertThat(metrics.getLineCountWeight()).isCloseTo(Math.log(1 + 40 / 25.0), within(EXACT));
+    assertThat(metrics.getArgCountWeight()).isCloseTo(Math.log(2), within(EXACT));
+    assertThat(metrics.getReturnCountWeight()).isCloseTo(Math.log(1 + 1 / 5.0), within(EXACT));
+    assertThat(metrics.getIfCountWeight()).isCloseTo(Math.log(2), within(EXACT));
+    assertThat(metrics.getIfNestingLevelWeight()).isCloseTo(Math.log(2), within(EXACT));
+    assertThat(metrics.getElseCountWeight()).isZero();
+    assertThat(metrics.getVariableCountWeight()).isZero();
+    assertThat(metrics.getPropertyCallCountWeight()).isZero();
+    assertThat(metrics.getCognitiveComplexity()).isEqualTo(3.217);
   }
 
   @Test
-  public void testCalculateWithCustomConfig() {
-    Map<String, MetricConfig> customConfig = new HashMap<String, MetricConfig>();
-    customConfig.put("lineCount", new MetricConfig(80, 1.5f));
-    customConfig.put("argumentCount", new MetricConfig(3, 1.0f));
-    customConfig.put("returnCount", new MetricConfig(1, 2.0f));
-    customConfig.put("variableCount", new MetricConfig(3, 2.0f));
-    customConfig.put("propertyCallCount", new MetricConfig(1, 10.0f));
-    customConfig.put("ifCount", new MetricConfig(2, 1.0f));
-    customConfig.put("ifNestingLevel", new MetricConfig(1, 1.0f));
-    customConfig.put("elseCount", new MetricConfig(1, 1.0f));
+  void aValueEqualToTheThresholdHasNoWeightButOneAboveDoes() {
+    metrics = new CognitiveMetrics();
+    metrics.setArgCount(4);
+    new ComplexityCalculator(TestConfigs.defaults()).calculate(metrics);
+    assertThat(metrics.getArgCountWeight()).isZero();
+    assertThat(metrics.getCognitiveComplexity()).isZero();
 
-    scoreCalculator.calculate(metrics, customConfig);
+    metrics.setArgCount(5);
+    new ComplexityCalculator(TestConfigs.defaults()).calculate(metrics);
+    assertThat(metrics.getArgCountWeight()).isCloseTo(Math.log(2), within(EXACT));
+    assertThat(metrics.getCognitiveComplexity()).isEqualTo(0.693);
+  }
 
-    // Assert that the cognitive complexity score is calculated correctly based on custom config
-    assertEquals(6.246, metrics.getCognitiveComplexity());
+  @Test
+  void usesTheConfiguredThresholdAndScale() {
+    var config = TestConfigs.load("""
+        cognitive:
+          metrics:
+            lineCount: {threshold: 80, scale: 1.5}
+            argCount: {threshold: 3, scale: 1.0}
+            returnCount: {threshold: 1, scale: 2.0}
+            ifCount: {threshold: 2, scale: 1.0}
+            ifNestingLevel: {threshold: 1, scale: 1.0}
+            elseCount: {threshold: 0, scale: 1.0}
+        """);
+
+    new ComplexityCalculator(config).calculate(metrics);
+
+    assertThat(metrics.getCognitiveComplexity()).isEqualTo(6.939);
+  }
+
+  @Test
+  void aDisabledMetricHasNoWeightAndIsExcludedFromTheScore() {
+    var config = TestConfigs.load("""
+        cognitive:
+          metrics:
+            lineCount: {enabled: false}
+        """);
+
+    new ComplexityCalculator(config).calculate(metrics);
+
+    assertThat(metrics.getLineCountWeight()).isZero();
+    assertThat(metrics.getArgCountWeight()).isPositive();
+    assertThat(metrics.getCognitiveComplexity()).isEqualTo(2.262);
+  }
+
+  @Test
+  void roundsTheScoreHalfUpToThreeDecimalsInsteadOfTruncating() {
+    var config = TestConfigs.load("""
+        cognitive:
+          metrics:
+            argCount: {threshold: 0, scale: 1000.0}
+        """);
+    metrics = new CognitiveMetrics();
+    metrics.setArgCount(1);
+
+    new ComplexityCalculator(config).calculate(metrics);
+
+    assertThat(metrics.getArgCountWeight()).isCloseTo(Math.log(1.001), within(EXACT));
+    assertThat(metrics.getCognitiveComplexity()).isEqualTo(0.001);
   }
 }

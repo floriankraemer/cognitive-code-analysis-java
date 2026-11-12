@@ -12,7 +12,8 @@ import net.floriankraemer.cognitive_analysis.application.report.HtmlReportBuilde
 import net.floriankraemer.cognitive_analysis.application.report.JsonReportBuilder;
 import net.floriankraemer.cognitive_analysis.application.report.ReportBuilder;
 import net.floriankraemer.cognitive_analysis.application.report.ReportBuilder.ReportType;
-import net.floriankraemer.cognitive_analysis.config.AppConfigService;
+import net.floriankraemer.cognitive_analysis.config.CognitiveConfig;
+import net.floriankraemer.cognitive_analysis.config.ConfigLoader;
 import net.floriankraemer.cognitive_analysis.domain.CognitiveMetrics;
 import net.floriankraemer.cognitive_analysis.domain.CognitiveMetricsCollector;
 import net.floriankraemer.cognitive_analysis.domain.CognitiveMetricsFacade;
@@ -84,12 +85,10 @@ public class AnalyseCommand implements Callable<Integer> {
     }
 
     try {
-      if (configFile != null) {
-        new AppConfigService().loadFromFile(configFile);
-      }
-
+      final CognitiveConfig config =
+          new ConfigLoader(Path.of("")).load(configFile == null ? null : Path.of(configFile));
       final CognitiveMetricsFacade facade = new CognitiveMetricsFacade(
-          new FileFinder(), new CognitiveMetricsCollector(err), new ComplexityCalculator());
+          new FileFinder(), new CognitiveMetricsCollector(err), new ComplexityCalculator(config));
       final MetricsCollection metrics = facade.calculateCognitiveMetrics(path);
       final PrintWriter out = spec.commandLine().getOut();
 

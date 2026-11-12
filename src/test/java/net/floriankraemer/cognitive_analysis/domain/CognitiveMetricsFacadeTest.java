@@ -32,7 +32,7 @@ public class CognitiveMetricsFacadeTest {
     // Instantiate the actual components used in the facade
     FileFinder fileFinder = new FileFinder();
     CognitiveMetricsCollector cognitiveMetricsCollector = new CognitiveMetricsCollector(new PrintWriter(new StringWriter()));
-    ComplexityCalculator complexityCalculator = new ComplexityCalculator();
+    ComplexityCalculator complexityCalculator = new ComplexityCalculator(net.floriankraemer.cognitive_analysis.config.TestConfigs.defaults());
 
     cognitiveMetricsFacade = new CognitiveMetricsFacade(
         fileFinder,

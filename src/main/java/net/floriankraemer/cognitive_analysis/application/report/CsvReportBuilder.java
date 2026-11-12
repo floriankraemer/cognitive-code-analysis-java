@@ -41,7 +41,7 @@ public class CsvReportBuilder extends AbstractReportBuilder {
                 metrics.getSwitchCount(),
                 metrics.getMethodCallCount(),
                 metrics.getReturnCount(),
-                metrics.getArgumentCount(),
+                metrics.getArgCount(),
                 metrics.getTryCatchNestingLevel(),
                 String.format(Locale.ROOT, "%.3f", metrics.getCognitiveComplexity())
             );

@@ -22,7 +22,7 @@ class CognitiveMetricsTest {
     assertEquals(0, cognitiveMetrics.getElseCount());
     assertEquals(0, cognitiveMetrics.getLoopCount());
     assertEquals(0, cognitiveMetrics.getMethodCallCount());
-    assertEquals(0, cognitiveMetrics.getFieldAccessCount());
+    assertEquals(0, cognitiveMetrics.getPropertyCallCount());
     assertEquals(0, cognitiveMetrics.getReturnCount());
     assertEquals(0, cognitiveMetrics.getSwitchCount());
     assertEquals(0, cognitiveMetrics.getVariableCount());
@@ -35,7 +35,7 @@ class CognitiveMetricsTest {
     cognitiveMetrics.incrementElseCount();
     cognitiveMetrics.incrementLoopCount();
     cognitiveMetrics.incrementMethodCallCount();
-    cognitiveMetrics.incrementFieldAccessCount();
+    cognitiveMetrics.incrementPropertyCallCount();
     cognitiveMetrics.incrementReturnCount();
     cognitiveMetrics.incrementSwitchCount();
     cognitiveMetrics.incrementVariableCount();
@@ -44,7 +44,7 @@ class CognitiveMetricsTest {
     assertEquals(1, cognitiveMetrics.getElseCount());
     assertEquals(1, cognitiveMetrics.getLoopCount());
     assertEquals(1, cognitiveMetrics.getMethodCallCount());
-    assertEquals(1, cognitiveMetrics.getFieldAccessCount());
+    assertEquals(1, cognitiveMetrics.getPropertyCallCount());
     assertEquals(1, cognitiveMetrics.getReturnCount());
     assertEquals(1, cognitiveMetrics.getSwitchCount());
     assertEquals(1, cognitiveMetrics.getVariableCount());
@@ -58,7 +58,7 @@ class CognitiveMetricsTest {
     cognitiveMetrics.setIfNestingLevel(2);
     cognitiveMetrics.setLineCount(100);
     cognitiveMetrics.setLineNumber(50);
-    cognitiveMetrics.setArgumentCount(3);
+    cognitiveMetrics.setArgCount(3);
     cognitiveMetrics.setCognitiveComplexity(15.5);
 
     assertEquals("NewClassName", cognitiveMetrics.getClassName());
@@ -67,7 +67,7 @@ class CognitiveMetricsTest {
     assertEquals(2, cognitiveMetrics.getIfNestingLevel());
     assertEquals(100, cognitiveMetrics.getLineCount());
     assertEquals(50, cognitiveMetrics.getLineNumber());
-    assertEquals(3, cognitiveMetrics.getArgumentCount());
+    assertEquals(3, cognitiveMetrics.getArgCount());
     assertEquals(15.5, cognitiveMetrics.getCognitiveComplexity());
   }
 
@@ -79,7 +79,7 @@ class CognitiveMetricsTest {
     cognitiveMetrics.setSwitchCountWeight(4.5);
     cognitiveMetrics.setMethodCallCountWeight(0.5);
     cognitiveMetrics.setReturnCountWeight(1.0);
-    cognitiveMetrics.setArgumentCountWeight(2.0);
+    cognitiveMetrics.setArgCountWeight(2.0);
     cognitiveMetrics.setLineNumberWeight(3.5);
     cognitiveMetrics.setIfNestingLevelWeight(2.2);
     cognitiveMetrics.setTryCatchNestingLevelWeight(1.8);
@@ -93,7 +93,7 @@ class CognitiveMetricsTest {
     assertEquals(4.5, cognitiveMetrics.getSwitchCountWeight());
     assertEquals(0.5, cognitiveMetrics.getMethodCallCountWeight());
     assertEquals(1.0, cognitiveMetrics.getReturnCountWeight());
-    assertEquals(2.0, cognitiveMetrics.getArgumentCountWeight());
+    assertEquals(2.0, cognitiveMetrics.getArgCountWeight());
     assertEquals(3.5, cognitiveMetrics.getLineNumberWeight());
     assertEquals(2.2, cognitiveMetrics.getIfNestingLevelWeight());
     assertEquals(1.8, cognitiveMetrics.getTryCatchNestingLevelWeight());
@@ -112,7 +112,7 @@ class CognitiveMetricsTest {
     cognitiveMetrics.setSwitchCountDelta(delta);
     cognitiveMetrics.setMethodCallCountDelta(delta);
     cognitiveMetrics.setReturnCountDelta(delta);
-    cognitiveMetrics.setArgumentCountDelta(delta);
+    cognitiveMetrics.setArgCountDelta(delta);
     cognitiveMetrics.setLineNumberDelta(delta);
     cognitiveMetrics.setIfNestingLevelDelta(delta);
     cognitiveMetrics.setTryCatchNestingLevelDelta(delta);
@@ -126,7 +126,7 @@ class CognitiveMetricsTest {
     assertSame(delta, cognitiveMetrics.getSwitchCountDelta());
     assertSame(delta, cognitiveMetrics.getMethodCallCountDelta());
     assertSame(delta, cognitiveMetrics.getReturnCountDelta());
-    assertSame(delta, cognitiveMetrics.getArgumentCountDelta());
+    assertSame(delta, cognitiveMetrics.getArgCountDelta());
     assertSame(delta, cognitiveMetrics.getLineNumberDelta());
     assertSame(delta, cognitiveMetrics.getIfNestingLevelDelta());
     assertSame(delta, cognitiveMetrics.getTryCatchNestingLevelDelta());
@@ -150,7 +150,7 @@ class CognitiveMetricsTest {
     previous.setSwitchCountWeight(1.0);
     previous.setMethodCallCountWeight(1.0);
     previous.setReturnCountWeight(1.0);
-    previous.setArgumentCountWeight(1.0);
+    previous.setArgCountWeight(1.0);
     previous.setLineNumberWeight(1.0);
     previous.setIfNestingLevelWeight(1.0);
     previous.setTryCatchNestingLevelWeight(1.0);
@@ -164,7 +164,7 @@ class CognitiveMetricsTest {
     cognitiveMetrics.setSwitchCountWeight(1.5);
     cognitiveMetrics.setMethodCallCountWeight(1.5);
     cognitiveMetrics.setReturnCountWeight(1.5);
-    cognitiveMetrics.setArgumentCountWeight(1.5);
+    cognitiveMetrics.setArgCountWeight(1.5);
     cognitiveMetrics.setLineNumberWeight(1.5);
     cognitiveMetrics.setIfNestingLevelWeight(1.5);
     cognitiveMetrics.setTryCatchNestingLevelWeight(1.5);
@@ -180,7 +180,7 @@ class CognitiveMetricsTest {
     assertEquals(0.5, cognitiveMetrics.getSwitchCountDelta().getValue());
     assertEquals(0.5, cognitiveMetrics.getMethodCallCountDelta().getValue());
     assertEquals(0.5, cognitiveMetrics.getReturnCountDelta().getValue());
-    assertEquals(0.5, cognitiveMetrics.getArgumentCountDelta().getValue());
+    assertEquals(0.5, cognitiveMetrics.getArgCountDelta().getValue());
     assertEquals(0.5, cognitiveMetrics.getLineNumberDelta().getValue());
     assertEquals(0.5, cognitiveMetrics.getIfNestingLevelDelta().getValue());
     assertEquals(0.5, cognitiveMetrics.getTryCatchNestingLevelDelta().getValue());

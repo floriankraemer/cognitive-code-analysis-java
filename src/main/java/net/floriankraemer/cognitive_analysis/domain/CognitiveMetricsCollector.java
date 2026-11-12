@@ -149,7 +149,7 @@ public class CognitiveMetricsCollector {
     @Override
     public void visit(FieldDeclaration fieldDeclaration, Void arg) {
       super.visit(fieldDeclaration, arg);
-      metrics.incrementFieldAccessCount();
+      metrics.incrementPropertyCallCount();
     }
   }
 
@@ -185,7 +185,7 @@ public class CognitiveMetricsCollector {
 
       methodMetrics.put(methodName, metrics);
 
-      metrics.setArgumentCount(methodDeclaration.getParameters().size());
+      metrics.setArgCount(methodDeclaration.getParameters().size());
       metrics.setLineCount(methodDeclaration.getEnd().map(end ->
               end.line - methodDeclaration.getBegin().get().line + 1
           )

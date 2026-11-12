@@ -86,12 +86,20 @@ class AnalyseCommandE2ETest {
   }
 
   @Test
-  void acceptsAConfigFile() {
+  void aCustomConfigChangesTheScores() {
+    run("analyse", FIXTURE_DIR);
+    String defaultOutput = out.toString();
+    out.getBuffer().setLength(0);
+
     int exitCode = run("analyse", FIXTURE_DIR, "--config", CUSTOM_CONFIG);
 
     assertThat(exitCode).isZero();
     assertThat(err.toString()).isEmpty();
     assertThat(out.toString()).contains("Cognitive metrics calculated for " + FIXTURE_DIR);
+    assertThat(out.toString()).isNotEqualTo(defaultOutput);
+    // argCount threshold 0 adds ln(1 + 2) to the default score of 3.178
+    assertThat(defaultOutput).contains("3.178").doesNotContain("4.277");
+    assertThat(out.toString()).contains("4.277").doesNotContain("3.178");
   }
 
   @Test
@@ -100,7 +108,8 @@ class AnalyseCommandE2ETest {
 
     assertThat(exitCode).isEqualTo(1);
     assertThat(out.toString()).isEmpty();
-    assertThat(err.toString()).contains("Error loading config file: " + INVALID_CONFIG);
+    assertThat(err.toString())
+        .isEqualTo("Unknown configuration key \"cognitive.unknownKey\"." + System.lineSeparator());
   }
 
   @Test
@@ -108,7 +117,8 @@ class AnalyseCommandE2ETest {
     int exitCode = run("analyse", FIXTURE_DIR, "-c", "missing.yaml");
 
     assertThat(exitCode).isEqualTo(1);
-    assertThat(err.toString()).contains("The File does not exist: missing.yaml");
+    assertThat(out.toString()).isEmpty();
+    assertThat(err.toString()).isEqualTo("Config file not found: missing.yaml" + System.lineSeparator());
   }
 
   @Test

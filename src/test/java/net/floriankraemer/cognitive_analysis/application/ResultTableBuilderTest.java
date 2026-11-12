@@ -38,7 +38,7 @@ class ResultTableBuilderTest {
     metrics1.incrementElseCount();
     metrics1.incrementLoopCount();
     metrics1.incrementReturnCount();
-    metrics1.setArgumentCount(2);
+    metrics1.setArgCount(2);
     metrics1.setCognitiveComplexity(5.0);
 
     CognitiveMetrics metrics2 = new CognitiveMetrics("TestClass2", "method2");
@@ -53,7 +53,7 @@ class ResultTableBuilderTest {
     metrics2.incrementMethodCallCount();
     metrics2.incrementReturnCount();
     metrics2.incrementReturnCount();
-    metrics2.setArgumentCount(3);
+    metrics2.setArgCount(3);
     metrics2.setTryCatchNestingLevel(1);
     metrics2.setCognitiveComplexity(7.5);
 

@@ -32,9 +32,9 @@ public class CognitiveMetrics {
   private double returnCountWeight;
   private Delta returnCountDelta;
 
-  private int argumentCount;
-  private double argumentCountWeight;
-  private Delta argumentCountDelta;
+  private int argCount;
+  private double argCountWeight;
+  private Delta argCountDelta;
 
   private int lineNumber;
   private double lineNumberWeight;
@@ -56,7 +56,7 @@ public class CognitiveMetrics {
   private double variableCountWeight;
   private Delta variableCountDelta;
 
-  private int fieldAccessCount;
+  private int propertyCallCount;
   private double propertyCallCountWeight;
   private Delta propertyCallCountDelta;
 
@@ -68,6 +68,33 @@ public class CognitiveMetrics {
   public CognitiveMetrics(String className, String methodName) {
     this.className = className;
     this.methodName = methodName;
+  }
+
+  /** The raw count of a scored metric. */
+  public int value(MetricName name) {
+    return switch (name) {
+      case LINE_COUNT -> lineCount;
+      case ARG_COUNT -> argCount;
+      case RETURN_COUNT -> returnCount;
+      case VARIABLE_COUNT -> variableCount;
+      case PROPERTY_CALL_COUNT -> propertyCallCount;
+      case IF_COUNT -> ifCount;
+      case IF_NESTING_LEVEL -> ifNestingLevel;
+      case ELSE_COUNT -> elseCount;
+    };
+  }
+
+  public void setWeight(MetricName name, double weight) {
+    switch (name) {
+      case LINE_COUNT -> lineCountWeight = weight;
+      case ARG_COUNT -> argCountWeight = weight;
+      case RETURN_COUNT -> returnCountWeight = weight;
+      case VARIABLE_COUNT -> variableCountWeight = weight;
+      case PROPERTY_CALL_COUNT -> propertyCallCountWeight = weight;
+      case IF_COUNT -> ifCountWeight = weight;
+      case IF_NESTING_LEVEL -> ifNestingLevelWeight = weight;
+      case ELSE_COUNT -> elseCountWeight = weight;
+    }
   }
 
   // Increment methods
@@ -87,8 +114,8 @@ public class CognitiveMetrics {
     methodCallCount++;
   }
 
-  public void incrementFieldAccessCount() {
-    fieldAccessCount++;
+  public void incrementPropertyCallCount() {
+    propertyCallCount++;
   }
 
   public void incrementReturnCount() {
@@ -116,8 +143,8 @@ public class CognitiveMetrics {
     this.className = className;
   }
 
-  public int getArgumentCount() {
-    return argumentCount;
+  public int getArgCount() {
+    return argCount;
   }
 
   // Setters
@@ -125,8 +152,8 @@ public class CognitiveMetrics {
     this.packageName = packageName;
   }
 
-  public void setArgumentCount(int count) {
-    argumentCount = count;
+  public void setArgCount(int count) {
+    argCount = count;
   }
 
   public int getElseCount() {
@@ -177,8 +204,8 @@ public class CognitiveMetrics {
     this.methodName = methodName;
   }
 
-  public int getFieldAccessCount() {
-    return fieldAccessCount;
+  public int getPropertyCallCount() {
+    return propertyCallCount;
   }
 
   public int getReturnCount() {
@@ -261,12 +288,12 @@ public class CognitiveMetrics {
     this.returnCountWeight = returnCountWeight;
   }
 
-  public double getArgumentCountWeight() {
-    return argumentCountWeight;
+  public double getArgCountWeight() {
+    return argCountWeight;
   }
 
-  public void setArgumentCountWeight(double argumentCountWeight) {
-    this.argumentCountWeight = argumentCountWeight;
+  public void setArgCountWeight(double argCountWeight) {
+    this.argCountWeight = argCountWeight;
   }
 
   public double getLineNumberWeight() {
@@ -341,8 +368,8 @@ public class CognitiveMetrics {
     return returnCountDelta;
   }
 
-  public Delta getArgumentCountDelta() {
-    return argumentCountDelta;
+  public Delta getArgCountDelta() {
+    return argCountDelta;
   }
 
   public Delta getLineNumberDelta() {
@@ -393,8 +420,8 @@ public class CognitiveMetrics {
     this.returnCountDelta = returnCountDelta;
   }
 
-  public void setArgumentCountDelta(Delta argumentCountDelta) {
-    this.argumentCountDelta = argumentCountDelta;
+  public void setArgCountDelta(Delta argCountDelta) {
+    this.argCountDelta = argCountDelta;
   }
 
   public void setLineNumberDelta(Delta lineNumberDelta) {
@@ -428,7 +455,7 @@ public class CognitiveMetrics {
     switchCountDelta = new Delta(previousMetrics.getSwitchCountWeight(), switchCountWeight);
     methodCallCountDelta = new Delta(previousMetrics.getMethodCallCountWeight(), methodCallCountWeight);
     returnCountDelta = new Delta(previousMetrics.getReturnCountWeight(), returnCountWeight);
-    argumentCountDelta = new Delta(previousMetrics.getArgumentCountWeight(), argumentCountWeight);
+    argCountDelta = new Delta(previousMetrics.getArgCountWeight(), argCountWeight);
     lineNumberDelta = new Delta(previousMetrics.getLineNumberWeight(), lineNumberWeight);
     ifNestingLevelDelta = new Delta(previousMetrics.getIfNestingLevelWeight(), ifNestingLevelWeight);
     tryCatchNestingLevelDelta = new Delta(previousMetrics.getTryCatchNestingLevelWeight(), tryCatchNestingLevelWeight);

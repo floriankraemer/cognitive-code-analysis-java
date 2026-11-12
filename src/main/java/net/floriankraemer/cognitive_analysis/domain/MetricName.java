@@ -1,17 +1,30 @@
 package net.floriankraemer.cognitive_analysis.domain;
 
-public final class MetricName {
+import java.util.Arrays;
+import java.util.Optional;
 
-  private MetricName() {
+/** The scored metrics. The key is the name used in the configuration file. */
+public enum MetricName {
+  LINE_COUNT("lineCount"),
+  ARG_COUNT("argCount"),
+  RETURN_COUNT("returnCount"),
+  VARIABLE_COUNT("variableCount"),
+  PROPERTY_CALL_COUNT("propertyCallCount"),
+  IF_COUNT("ifCount"),
+  IF_NESTING_LEVEL("ifNestingLevel"),
+  ELSE_COUNT("elseCount");
+
+  private final String key;
+
+  MetricName(final String key) {
+    this.key = key;
   }
 
-  public static final String ELSE_COUNT = "elseCount";
-  public static final String IF_NESTING_LEVEL = "ifNestingLevel";
-  public static final String IF_COUNT = "ifCount";
-  public static final String PROPERTY_CALL_COUNT = "propertyCallCount";
-  public static final String VARIABLE_COUNT = "variableCount";
-  public static final String RETURN_COUNT = "returnCount";
-  public static final String ARGUMENT_COUNT = "argumentCount";
-  public static final String LINE_COUNT = "lineCount";
+  public String key() {
+    return key;
+  }
 
+  public static Optional<MetricName> fromKey(final String key) {
+    return Arrays.stream(values()).filter(name -> name.key.equals(key)).findFirst();
+  }
 }

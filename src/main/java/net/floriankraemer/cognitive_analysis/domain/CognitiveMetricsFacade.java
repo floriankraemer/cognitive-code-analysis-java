@@ -37,7 +37,7 @@ public class CognitiveMetricsFacade {
       cognitiveMetricsCollector.analyze(readFile(file));
       Map<String, CognitiveMetrics> methodMetrics = cognitiveMetricsCollector.getMethodMetrics();
 
-      methodMetrics.values().forEach(metrics -> scoreCalculator.calculate(metrics, null));
+      methodMetrics.values().forEach(metrics -> scoreCalculator.calculate(metrics));
 
       metricsCollection.put(file.getPath(), methodMetrics);
     }
