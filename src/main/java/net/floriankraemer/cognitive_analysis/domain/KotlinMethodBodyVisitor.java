@@ -1,6 +1,7 @@
 package net.floriankraemer.cognitive_analysis.domain;
 
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 import net.floriankraemer.cognitive_analysis.config.MetricName;
 import org.jetbrains.kotlin.com.intellij.psi.util.PsiTreeUtil;
@@ -91,15 +92,14 @@ final class KotlinMethodBodyVisitor extends KotlinUnitScopeVisitor {
   private void visitChain(final KtIfExpression expression) {
     acceptIfPresent(expression.getCondition());
     acceptIfPresent(expression.getThen());
-    final KtExpression elseBranch = expression.getElse();
-    if (elseBranch != null) {
+    Optional.ofNullable(expression.getElse()).ifPresent(elseBranch -> {
       elseCount++;
       if (elseBranch instanceof KtIfExpression elseIf) {
         visitChain(elseIf);
       } else {
         elseBranch.accept(this);
       }
-    }
+    });
   }
 
   private void acceptIfPresent(final KtExpression expression) {
@@ -147,13 +147,15 @@ final class KotlinMethodBodyVisitor extends KotlinUnitScopeVisitor {
       return;
     }
     if (name.getParent() instanceof KtQualifiedExpression qualified && qualified.getSelectorExpression() == name) {
-      if (!isTypeExpression(qualified.getReceiverExpression())) {
-        properties.add(identifier);
-      }
-    } else if (isImplicitLambdaParameter(name)) {
-      declare(identifier);
-    } else {
-      bareNames.add(identifier);
+      countProperty(identifier, qualified.getReceiverExpression());
+      return;
+    }
+    (isImplicitLambdaParameter(name) ? declaredNames : bareNames).add(identifier);
+  }
+
+  private void countProperty(final String identifier, final KtExpression receiver) {
+    if (!isTypeExpression(receiver)) {
+      properties.add(identifier);
     }
   }
 

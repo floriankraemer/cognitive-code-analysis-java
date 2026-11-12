@@ -3,6 +3,7 @@ package net.floriankraemer.cognitive_analysis.domain;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import org.jetbrains.kotlin.com.intellij.psi.tree.IElementType;
 import org.jetbrains.kotlin.lexer.KtTokens;
 import org.jetbrains.kotlin.psi.KtBinaryExpression;
 import org.jetbrains.kotlin.psi.KtCatchClause;
@@ -19,6 +20,9 @@ import org.jetbrains.kotlin.psi.KtWhileExpression;
  * the else branch adds nothing. A Kotlin {@code for} loop is a for-each loop.
  */
 final class KotlinCyclomaticVisitor extends KotlinUnitScopeVisitor {
+
+  private static final Map<IElementType, String> OPERATOR_KINDS =
+      Map.of(KtTokens.ANDAND, "logicalAnd", KtTokens.OROR, "logicalOr", KtTokens.ELVIS, "elvis");
 
   private final Map<String, Integer> counts = new LinkedHashMap<>();
 
@@ -75,13 +79,9 @@ final class KotlinCyclomaticVisitor extends KotlinUnitScopeVisitor {
 
   @Override
   public void visitBinaryExpression(final KtBinaryExpression expression) {
-    final var operator = expression.getOperationToken();
-    if (operator == KtTokens.ANDAND) {
-      count("logicalAnd");
-    } else if (operator == KtTokens.OROR) {
-      count("logicalOr");
-    } else if (operator == KtTokens.ELVIS) {
-      count("elvis");
+    final String kind = OPERATOR_KINDS.get(expression.getOperationToken());
+    if (kind != null) {
+      count(kind);
     }
     super.visitBinaryExpression(expression);
   }

@@ -1,6 +1,7 @@
 package net.floriankraemer.cognitive_analysis.application;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -66,38 +67,42 @@ public class ResultTableBuilder {
   private List<Column> columns(final boolean withClass, final boolean withCoverage) {
     final List<Column> columns = new ArrayList<>();
     columns.add(new Column("Method Name", CognitiveMetrics::getMethodName));
-    if (config.showDetailedCognitiveMetrics()) {
-      for (final MetricName name : MetricName.values()) {
-        columns.add(new Column(
-            DETAIL_HEADERS.get(name), metrics -> formatter.withDelta(
-                formatter.weighted(metrics.value(name), metrics.weight(name)), metrics.delta(name))));
-      }
-    }
+    columns.addAll(when(config.showDetailedCognitiveMetrics(), detailColumns()));
     columns.add(new Column("Cognitive\nComplexity", metrics -> formatter.withDelta(
         formatter.score(metrics.getCognitiveComplexity()), metrics.otherDelta(DeltaMetric.SCORE))));
-    if (config.showHalsteadComplexity()) {
-      columns.add(new Column("Halstead\nVolume", metrics -> formatter.withDelta(
-          formatter.halsteadVolume(metrics.getHalstead().volume()), metrics.otherDelta(DeltaMetric.HALSTEAD_VOLUME))));
-      columns.add(new Column("Halstead\nDifficulty", metrics -> formatter.withDelta(
-          formatter.halsteadDifficulty(metrics.getHalstead().difficulty()),
-          metrics.otherDelta(DeltaMetric.HALSTEAD_DIFFICULTY))));
-      columns.add(new Column("Halstead\nEffort", metrics -> formatter.withDelta(
-          formatter.halsteadEffort(metrics.getHalstead().effort()), metrics.otherDelta(DeltaMetric.HALSTEAD_EFFORT))));
-    }
-    if (config.showCyclomaticComplexity()) {
-      columns.add(new Column("Cyclomatic\nComplexity", metrics -> formatter.withDelta(
-          formatter.withRisk(metrics.getCyclomatic().complexity(), metrics.getCyclomatic().riskLevel()),
-          metrics.otherDelta(DeltaMetric.CYCLOMATIC))));
-    }
-    if (config.showUnderstandability()) {
-      columns.add(new Column("Understandability", metrics -> formatter.withDelta(
-          formatter.withRisk(metrics.getUnderstandability().complexity(), metrics.getUnderstandability().riskLevel()),
-          metrics.otherDelta(DeltaMetric.UNDERSTANDABILITY))));
-    }
-    if (withCoverage) {
-      columns.add(new Column(
-          withClass ? "Coverage" : "Line\nCoverage", metrics -> CoverageData.percent(metrics.coverage().orElse(null))));
-    }
+    columns.addAll(when(config.showHalsteadComplexity(), halsteadColumns()));
+    columns.addAll(when(config.showCyclomaticComplexity(), List.of(new Column("Cyclomatic\nComplexity",
+        metrics -> formatter.withDelta(
+            formatter.withRisk(metrics.getCyclomatic().complexity(), metrics.getCyclomatic().riskLevel()),
+            metrics.otherDelta(DeltaMetric.CYCLOMATIC))))));
+    columns.addAll(when(config.showUnderstandability(), List.of(new Column("Understandability",
+        metrics -> formatter.withDelta(
+            formatter.withRisk(metrics.getUnderstandability().complexity(), metrics.getUnderstandability().riskLevel()),
+            metrics.otherDelta(DeltaMetric.UNDERSTANDABILITY))))));
+    columns.addAll(when(withCoverage, List.of(new Column(withClass ? "Coverage" : "Line\nCoverage",
+        metrics -> CoverageData.percent(metrics.coverage().orElse(null))))));
     return columns;
+  }
+
+  private List<Column> detailColumns() {
+    return Arrays.stream(MetricName.values())
+        .map(name -> new Column(DETAIL_HEADERS.get(name), metrics -> formatter.withDelta(
+            formatter.weighted(metrics.value(name), metrics.weight(name)), metrics.delta(name))))
+        .toList();
+  }
+
+  private List<Column> halsteadColumns() {
+    return List.of(
+        new Column("Halstead\nVolume", metrics -> formatter.withDelta(
+            formatter.halsteadVolume(metrics.getHalstead().volume()), metrics.otherDelta(DeltaMetric.HALSTEAD_VOLUME))),
+        new Column("Halstead\nDifficulty", metrics -> formatter.withDelta(
+            formatter.halsteadDifficulty(metrics.getHalstead().difficulty()),
+            metrics.otherDelta(DeltaMetric.HALSTEAD_DIFFICULTY))),
+        new Column("Halstead\nEffort", metrics -> formatter.withDelta(
+            formatter.halsteadEffort(metrics.getHalstead().effort()), metrics.otherDelta(DeltaMetric.HALSTEAD_EFFORT))));
+  }
+
+  private static List<Column> when(final boolean enabled, final List<Column> columns) {
+    return enabled ? columns : List.of();
   }
 }

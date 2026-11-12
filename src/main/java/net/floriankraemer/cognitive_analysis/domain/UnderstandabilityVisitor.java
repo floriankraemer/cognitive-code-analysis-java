@@ -23,6 +23,7 @@ import com.github.javaparser.ast.stmt.WhileStmt;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.IntStream;
 
 /**
  * Measures the cognitive complexity of one method body as specified in the SonarSource white paper
@@ -197,15 +198,18 @@ final class UnderstandabilityVisitor extends UnitScopeVisitor {
   @Override
   public void visit(final BinaryExpr expression, final Void arg) {
     if (isLogical(expression) && !isLogical(parentSkippingParentheses(expression))) {
-      final List<Operator> operators = new ArrayList<>();
-      flatten(expression, operators);
-      for (int i = 0; i < operators.size(); i++) {
-        if (i == 0 || operators.get(i) != operators.get(i - 1)) {
-          fundamental++;
-        }
-      }
+      fundamental += operatorRuns(expression);
     }
     super.visit(expression, arg);
+  }
+
+  /** The number of runs of like operators in the sequence, e.g. 2 for {@code a && b || c}. */
+  private static int operatorRuns(final BinaryExpr sequence) {
+    final List<Operator> operators = new ArrayList<>();
+    flatten(sequence, operators);
+    return (int) IntStream.range(0, operators.size())
+        .filter(i -> i == 0 || operators.get(i) != operators.get(i - 1))
+        .count();
   }
 
   /** Collects the operators of a sequence in source order, looking through parentheses. */

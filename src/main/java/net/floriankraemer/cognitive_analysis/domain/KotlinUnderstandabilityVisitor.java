@@ -3,6 +3,7 @@ package net.floriankraemer.cognitive_analysis.domain;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.IntStream;
 import org.jetbrains.kotlin.com.intellij.psi.PsiElement;
 import org.jetbrains.kotlin.com.intellij.psi.tree.IElementType;
 import org.jetbrains.kotlin.lexer.KtTokens;
@@ -86,15 +87,14 @@ final class KotlinUnderstandabilityVisitor extends KotlinUnitScopeVisitor {
   private void visitIfChain(final KtIfExpression expression) {
     accept(expression.getCondition());
     nested(expression.getThen());
-    final KtExpression otherwise = expression.getElse();
-    if (otherwise != null) {
+    Optional.ofNullable(expression.getElse()).ifPresent(otherwise -> {
       hybrid++;
       if (otherwise instanceof KtIfExpression elseIf) {
         visitIfChain(elseIf);
       } else {
         nested(otherwise);
       }
-    }
+    });
   }
 
   @Override
@@ -188,15 +188,18 @@ final class KotlinUnderstandabilityVisitor extends KotlinUnitScopeVisitor {
   @Override
   public void visitBinaryExpression(final KtBinaryExpression expression) {
     if (isLogical(expression) && !isLogical(parentSkippingParentheses(expression))) {
-      final List<IElementType> operators = new ArrayList<>();
-      flatten(expression, operators);
-      for (int i = 0; i < operators.size(); i++) {
-        if (i == 0 || operators.get(i) != operators.get(i - 1)) {
-          fundamental++;
-        }
-      }
+      fundamental += operatorRuns(expression);
     }
     super.visitBinaryExpression(expression);
+  }
+
+  /** The number of runs of like operators in the sequence, e.g. 2 for {@code a && b || c}. */
+  private static int operatorRuns(final KtBinaryExpression sequence) {
+    final List<IElementType> operators = new ArrayList<>();
+    flatten(sequence, operators);
+    return (int) IntStream.range(0, operators.size())
+        .filter(i -> i == 0 || operators.get(i) != operators.get(i - 1))
+        .count();
   }
 
   /** Collects the operators of a sequence in source order, looking through parentheses. */
