@@ -46,6 +46,20 @@ class KotlinE2ETest {
         new Options().forFile().withExtension(".json"));
   }
 
+  /**
+   * The JaCoCo report was recorded from the compiled fixture. It names the classes {@code ledger/LedgerKt}
+   * and {@code ledger/Ledger$Companion}, and the internal function {@code audit$ledger}.
+   */
+  @Test
+  void matchesTheJacocoCoverageOfKotlinFacadeClassesCompanionsAndInternalFunctions() {
+    final String fixture = "src/test/resources/fixtures/kotlin/coverage";
+
+    assertThat(run("analyse", fixture, "-c", NO_CACHE, "--coverage-jacoco", fixture + "/jacoco.xml")).isZero();
+
+    assertThat(err.toString()).isEmpty();
+    Approvals.verify(out.toString().replace("\r\n", "\n"));
+  }
+
   @Test
   void reportsAKotlinFileThatCannotBeParsedAndAnalysesTheOthers() {
     assertThat(run("analyse", MIXED + "," + PARSE_ERROR, "-c", NO_CACHE)).isZero();

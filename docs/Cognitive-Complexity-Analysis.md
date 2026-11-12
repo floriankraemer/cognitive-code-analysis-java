@@ -176,6 +176,13 @@ To leave out a class or function, put `@cca-ignore` into its KDoc, into a commen
 
 The cyclomatic breakdown of a Kotlin function has the kinds `if`, `case`, `while`, `doWhile`, `forEach`, `catch`, `logicalAnd`, `logicalOr` and `elvis`.
 
+### Kotlin coverage
+
+The class names are the JVM names, so a JaCoCo, Cobertura or Clover report of Kotlin code matches without configuration.
+A report names the facade class `pkg/ToolsKt` and the companion object `pkg/Outer$Companion`, which are `pkg.ToolsKt` and `pkg.Outer.Companion` here.
+Kotlin compiles an `internal fun audit()` to `audit$<module>`, which matches `audit`.
+A secondary constructor matches the `<init>` whose first line lies inside it, not the primary constructor.
+
 ### Kotlin limits
 
 Names are not resolved, so the same guesses as for Java apply: a name starting with an upper-case letter is a type or constant, and a chain of at least two lower-case names before an upper-case name is a package.

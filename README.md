@@ -132,7 +132,7 @@ Limitations:
 
 * Names are not resolved against a classpath, so upper-case names are taken for types and constants, as for Java.
 * `init` blocks, property accessors, primary constructors, enum entry bodies and Kotlin scripts (`.kts`) are not analysed.
-* The Kotlin compiler makes the jar about 60 MB larger, and its parser adds about half a second to a run that finds Kotlin files.
+* The Kotlin compiler makes the jar about 66 MB larger (6 MB to 72 MB), and its parser adds about half a second to a run that finds Kotlin files.
 
 See [Kotlin](./docs/Cognitive-Complexity-Analysis.md#kotlin) for the full mapping and the limits.
 

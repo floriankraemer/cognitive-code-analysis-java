@@ -80,7 +80,7 @@ public final class CoverageData {
     }
     final String name = reportName(method);
     final List<MethodCoverage> sameName =
-        coveredClass.methods().stream().filter(covered -> covered.name().equals(name)).toList();
+        coveredClass.methods().stream().filter(covered -> sourceName(covered.name()).equals(name)).toList();
     final int from = method.getLine();
     final int to = from + method.value(MetricName.LINE_COUNT);
     return sameName.stream()
@@ -88,6 +88,12 @@ public final class CoverageData {
         .findFirst()
         .map(MethodCoverage::rate)
         .or(() -> classCoverage(method.getClassName()));
+  }
+
+  /** Kotlin compiles an {@code internal fun audit()} of module {@code app} to {@code audit$app}. */
+  private static String sourceName(final String reportName) {
+    final int mangled = reportName.indexOf('$');
+    return mangled > 0 ? reportName.substring(0, mangled) : reportName;
   }
 
   /** A method without lines in the report is only taken when no other method has its name. */
