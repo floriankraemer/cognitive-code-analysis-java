@@ -46,6 +46,7 @@ class CyclomaticComplexityTest {
         guardedPattern total=3 case=1 logicalAnd=1
         nullAndDefault total=1
         switchInLambda total=3 case=2
+        doWhileBodyCounts total=3 if=1 doWhile=1
         """);
   }
 

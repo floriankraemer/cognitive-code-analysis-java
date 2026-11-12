@@ -37,6 +37,8 @@ class HalsteadMetricsTest {
         lambdasCount n1=3 n2=5 N1=3 N2=5
         unaryVersusBinary n1=3 n2=1 N1=3 N2=2
         methodReferences n1=5 n2=1 N1=5 N2=2
+        methodReferenceOnAnExpression n1=3 n2=2 N1=3 N2=3
+        qualifiedCreation n1=1 n2=1 N1=1 N2=1
         """);
     // add: operators {+}; operands a, b.
     // assignmentsAndUnary: operators +=, =, - ; operands a (the declarator "int x" is neither), x, 1, x, x.
@@ -51,6 +53,8 @@ class HalsteadMetricsTest {
     // methodReferences: call:forEach, call:stream, call:map and the references call:println and
     // call:length; operand list twice. The parser reads the scopes System.out and String as types, so they
     // are no operands.
+    // methodReferenceOnAnExpression: call:forEach, call:equals, call:get; operands list twice and 0.
+    // qualifiedCreation: new:Holder; the scope outer is an operand.
     // lambdasCount: call:forEach, call:println, *; operands list, out, System, x, 2.
   }
 
