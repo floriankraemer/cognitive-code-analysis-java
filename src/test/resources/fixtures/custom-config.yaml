@@ -4,3 +4,5 @@ cognitive:
     argCount:
       threshold: 0
       scale: 1.0
+  cache:
+    enabled: false

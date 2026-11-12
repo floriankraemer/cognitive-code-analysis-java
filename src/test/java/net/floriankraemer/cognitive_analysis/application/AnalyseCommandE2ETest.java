@@ -2,11 +2,15 @@ package net.floriankraemer.cognitive_analysis.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
+import java.util.stream.Stream;
 import net.floriankraemer.cognitive_analysis.App;
 import org.approvaltests.Approvals;
 import org.junit.jupiter.api.AfterEach;
@@ -21,6 +25,7 @@ class AnalyseCommandE2ETest {
   private static final String FIXTURE_DIR = "src/test/resources/fixtures/sample";
   private static final String CUSTOM_CONFIG = "src/test/resources/fixtures/custom-config.yaml";
   private static final String INVALID_CONFIG = "src/test/resources/fixtures/invalid-config.yaml";
+  private static final String NO_CACHE_CONFIG = "src/test/resources/fixtures/no-cache.yaml";
 
   @TempDir
   Path tempDir;
@@ -226,6 +231,74 @@ class AnalyseCommandE2ETest {
   }
 
   @Test
+  void printsTheSameOutputOnACachedRunAndWritesNoNewCacheFiles() throws Exception {
+    Path cacheDir = tempDir.resolve("cache");
+    Path config = cacheConfig(cacheDir);
+
+    int firstExit = run("analyse", "src/test/resources/fixtures/multi", "-c", config.toString());
+    String firstOutput = out.toString();
+    List<Path> firstEntries = cacheEntries(cacheDir);
+    out.getBuffer().setLength(0);
+    int secondExit = run("analyse", "src/test/resources/fixtures/multi", "-c", config.toString());
+
+    assertThat(firstExit).isZero();
+    assertThat(secondExit).isZero();
+    assertThat(err.toString()).isEmpty();
+    assertThat(firstEntries).hasSize(2);
+    assertThat(out.toString()).isEqualTo(firstOutput);
+    assertThat(cacheEntries(cacheDir)).containsExactlyElementsOf(firstEntries);
+  }
+
+  @Test
+  void warnsOnceAndStillPrintsTheAnalysisWhenTheCacheCannotBeWritten() throws Exception {
+    Path blocked = Files.writeString(tempDir.resolve("blocked"), "a file, not a directory");
+    Path config = cacheConfig(blocked);
+
+    int exitCode = run("analyse", "src/test/resources/fixtures/multi", "-c", config.toString());
+
+    assertThat(exitCode).isZero();
+    assertThat(err.toString().lines())
+        .hasSize(1)
+        .allSatisfy(line -> assertThat(line).startsWith("Warning: cannot write the cache to " + blocked));
+    assertThat(out.toString()).contains("File: src/test/resources/fixtures/multi/Alpha.java")
+        .contains("File: src/test/resources/fixtures/multi/Beta.java");
+  }
+
+  @Test
+  void doesNotCreateTheCacheDirectoryWhenTheCacheIsDisabled() throws Exception {
+    Path cacheDir = tempDir.resolve("cache");
+    Path config = Files.writeString(tempDir.resolve("disabled.yaml"), """
+        cognitive:
+          cache:
+            enabled: false
+            directory: '%s'
+        """.formatted(cacheDir));
+
+    int exitCode = run("analyse", FIXTURE_DIR, "-c", config.toString());
+
+    assertThat(exitCode).isZero();
+    assertThat(err.toString()).isEmpty();
+    assertThat(cacheDir).doesNotExist();
+  }
+
+  private Path cacheConfig(final Path cacheDir) throws IOException {
+    return Files.writeString(tempDir.resolve("cache.yaml"), """
+        cognitive:
+          cache:
+            directory: '%s'
+        """.formatted(cacheDir));
+  }
+
+  private static List<Path> cacheEntries(final Path cacheDir) throws IOException {
+    if (!Files.exists(cacheDir)) {
+      return List.of();
+    }
+    try (Stream<Path> files = Files.walk(cacheDir)) {
+      return files.filter(Files::isRegularFile).sorted().toList();
+    }
+  }
+
+  @Test
   void failsWhenThePathArgumentIsMissing() {
     int exitCode = run("analyse");
 
@@ -363,10 +436,18 @@ class AnalyseCommandE2ETest {
     assertThat(err.toString()).contains("Unmatched argument");
   }
 
+  /**
+   * Runs the command. A run without a configuration of its own gets the no-cache fixture, so no test reads or
+   * writes the cache in the project directory. The cache has its own tests with a temporary directory.
+   */
   private int run(String... args) {
+    final List<String> effective = new ArrayList<>(List.of(args));
+    if (!effective.contains("-c") && !effective.contains("--config")) {
+      effective.addAll(List.of("-c", NO_CACHE_CONFIG));
+    }
     CommandLine commandLine = new CommandLine(new App());
     commandLine.setOut(new PrintWriter(out, true));
     commandLine.setErr(new PrintWriter(err, true));
-    return commandLine.execute(args);
+    return commandLine.execute(effective.toArray(String[]::new));
   }
 }

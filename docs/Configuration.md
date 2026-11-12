@@ -52,8 +52,8 @@ Options:
 
 ## Settings
 
-`metrics`, `excludeFilePatterns` and `excludePatterns` affect the analysis today.
-The other settings (`scoreThreshold`, `show*`, `groupByClass`, `cache`, `customReporters`) are parsed and validated, and are applied from a later release.
+`metrics`, `excludeFilePatterns`, `excludePatterns` and `cache` affect the analysis today.
+The other settings (`scoreThreshold`, `show*`, `groupByClass`, `customReporters`) are parsed and validated, and are applied from a later release.
 
 ```yaml
 cognitive:
@@ -106,6 +106,22 @@ cognitive:
 ```
 
 Use single quotes in YAML, so a backslash reaches the regular expression unchanged.
+
+## Cache
+
+The analysis caches the metrics of each file, so a file that did not change is not parsed again.
+
+- `cache.directory` is resolved against the working directory and defaults to `./.jcca.cache`.
+- Each entry is one JSON file at `<directory>/<first two characters of the key>/<key>.json`.
+- The key is a SHA-256 hash of the absolute path, the SHA-256 of the content of the file, the canonical form of the whole configuration and the version and build time of the tool.
+- An entry is used only while all of these stay the same, so editing the content of a file or changing any setting analyses the file again.
+- The modification time does not matter, so touching a file without changing it still uses the entry.
+- Entries written by another build of the tool are not reused, so an upgrade analyses every file again.
+- A corrupt, unreadable or outdated entry is treated as missing and is overwritten.
+- A file that cannot be parsed is never cached.
+- Set `cache.enabled: false` to turn the cache off; then nothing is read, written or created.
+- The directory is safe to delete at any time; the next run rebuilds it.
+- When the cache cannot be written, the analysis prints one warning and continues without it.
 
 ## Tuning the calculation
 

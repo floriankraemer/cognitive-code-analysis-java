@@ -1,5 +1,7 @@
 package net.floriankraemer.cognitive_analysis.domain;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.EnumMap;
 import java.util.Map;
 import java.util.Optional;
@@ -12,10 +14,16 @@ public class CognitiveMetrics {
   private final String methodName;
   private final int line;
 
-  private final Map<MetricName, Integer> values = new EnumMap<>(MetricName.class);
-  private final Map<MetricName, Double> weights = new EnumMap<>(MetricName.class);
-  private final Map<MetricName, Delta> deltas = new EnumMap<>(MetricName.class);
+  @JsonProperty("values")
+  private final Map<MetricName, Integer> values;
 
+  @JsonProperty("weights")
+  private final Map<MetricName, Double> weights;
+
+  @JsonProperty("deltas")
+  private final Map<MetricName, Delta> deltas;
+
+  @JsonProperty("cognitiveComplexity")
   private double cognitiveComplexity;
   private CyclomaticComplexity cyclomatic = new CyclomaticVisitor().result();
   private HalsteadMetrics halstead = new HalsteadMetrics(0, 0, 0, 0);
@@ -26,9 +34,29 @@ public class CognitiveMetrics {
    * @param line the line the declaration starts on
    */
   public CognitiveMetrics(final String className, final String methodName, final int line) {
+    this(className, methodName, line, Map.of(), Map.of(), Map.of(), 0.0);
+  }
+
+  /** Restores a state written by Jackson, see the annotated fields. */
+  @JsonCreator
+  CognitiveMetrics(
+      @JsonProperty("className") final String className,
+      @JsonProperty("methodName") final String methodName,
+      @JsonProperty("line") final int line,
+      @JsonProperty("values") final Map<MetricName, Integer> values,
+      @JsonProperty("weights") final Map<MetricName, Double> weights,
+      @JsonProperty("deltas") final Map<MetricName, Delta> deltas,
+      @JsonProperty("cognitiveComplexity") final double cognitiveComplexity) {
     this.className = className;
     this.methodName = methodName;
     this.line = line;
+    this.values = new EnumMap<>(MetricName.class);
+    this.values.putAll(values);
+    this.weights = new EnumMap<>(MetricName.class);
+    this.weights.putAll(weights);
+    this.deltas = new EnumMap<>(MetricName.class);
+    this.deltas.putAll(deltas);
+    this.cognitiveComplexity = cognitiveComplexity;
   }
 
   public String getClassName() {
