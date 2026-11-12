@@ -57,7 +57,8 @@ final class KotlinUnderstandabilityVisitor extends KotlinUnitScopeVisitor {
 
   Understandability result() {
     final int recursion = recursive ? 1 : 0;
-    return Understandability.of(structural, hybrid, fundamental + recursion, nestingPoints, recursion);
+    return Understandability.of(
+        new Understandability.Increments(structural, hybrid, fundamental + recursion, nestingPoints, recursion));
   }
 
   private void structural() {

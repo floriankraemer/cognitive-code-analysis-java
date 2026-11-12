@@ -113,17 +113,16 @@ public final class ReporterLoader {
   }
 
   // The loader stays open on purpose: the reporter needs it until the process ends, which is right after the run.
+  private static Path existing(final Path jar) throws CognitiveAnalysisException {
+    if (!Files.isRegularFile(jar)) {
+      throw new CognitiveAnalysisException("Reporter jar not found: " + jar);
+    }
+    return jar;
+  }
+
   private static Class<?> loadClass(final String className, final Path jar) throws CognitiveAnalysisException {
     final ClassLoader parent = ReporterLoader.class.getClassLoader();
-    final ClassLoader loader;
-    if (jar == null) {
-      loader = parent;
-    } else {
-      if (!Files.isRegularFile(jar)) {
-        throw new CognitiveAnalysisException("Reporter jar not found: " + jar);
-      }
-      loader = urlLoader(jar, parent);
-    }
+    final ClassLoader loader = jar == null ? parent : urlLoader(existing(jar), parent);
     try {
       return Class.forName(className, false, loader);
     } catch (ClassNotFoundException e) {

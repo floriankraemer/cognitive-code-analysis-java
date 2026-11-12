@@ -92,26 +92,32 @@ public final class BaselineFiles {
    */
   public Path generate(final Path workingDirectory, final CognitiveConfig config, final List<ScoredMethod> methods)
       throws CognitiveAnalysisException {
-    final LocalDateTime now = LocalDateTime.now(clock.withZone(ZoneOffset.UTC));
-    final Map<String, Object> file = new LinkedHashMap<>();
-    file.put("version", "2.0");
-    file.put("createdAt", ReportSupport.timestamp(clock.withZone(ZoneOffset.UTC)));
-    file.put("configHash", Baseline.configHashOf(config));
-    file.put("metrics", JsonReport.body(methods, false));
-    final String content = ReportSupport.toJson(file) + "\n";
-
-    final String stem = "baseline-" + now.format(FILE_TIMESTAMP);
-    final Path directory = workingDirectory.resolve(DIRECTORY);
-    try {
-      Files.createDirectories(directory);
-    } catch (IOException e) {
-      throw new CognitiveAnalysisException("Unable to create directory " + directory + ": " + e.getMessage(), e);
-    }
+    final String stem = "baseline-" + LocalDateTime.now(clock.withZone(ZoneOffset.UTC)).format(FILE_TIMESTAMP);
+    final String content = content(config, methods);
+    createDirectory(workingDirectory.resolve(DIRECTORY));
     for (int suffix = 0; ; suffix++) {
       final Path relative = DIRECTORY.resolve(stem + (suffix == 0 ? "" : "-" + suffix) + ".json");
       if (AtomicFileWriter.writeNew(workingDirectory.resolve(relative), content)) {
         return relative;
       }
     }
+  }
+
+  private static void createDirectory(final Path directory) throws CognitiveAnalysisException {
+    try {
+      Files.createDirectories(directory);
+    } catch (IOException e) {
+      throw new CognitiveAnalysisException("Unable to create directory " + directory + ": " + e.getMessage(), e);
+    }
+  }
+
+  private String content(final CognitiveConfig config, final List<ScoredMethod> methods)
+      throws CognitiveAnalysisException {
+    final Map<String, Object> file = new LinkedHashMap<>();
+    file.put("version", "2.0");
+    file.put("createdAt", ReportSupport.timestamp(clock.withZone(ZoneOffset.UTC)));
+    file.put("configHash", Baseline.configHashOf(config));
+    file.put("metrics", JsonReport.body(methods, false));
+    return ReportSupport.toJson(file) + "\n";
   }
 }
