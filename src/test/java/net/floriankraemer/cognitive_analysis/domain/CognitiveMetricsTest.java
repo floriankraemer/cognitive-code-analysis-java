@@ -2,11 +2,9 @@ package net.floriankraemer.cognitive_analysis.domain;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@SpringBootTest
 class CognitiveMetricsTest {
 
   private CognitiveMetrics cognitiveMetrics;
@@ -105,12 +103,90 @@ class CognitiveMetricsTest {
   }
 
   @Test
-  void testToString() {
-    String toStringResult = cognitiveMetrics.toString();
-    assertTrue(toStringResult.contains("className='TestClass'"));
-    assertTrue(toStringResult.contains("methodName='testMethod'"));
-    assertTrue(toStringResult.contains("ifCount=0"));
-    assertTrue(toStringResult.contains("elseCount=0"));
-    assertTrue(toStringResult.contains("loopCount=0"));
+  void testDeltaSettersAndGetters() {
+    Delta delta = new Delta(1, 2);
+
+    cognitiveMetrics.setIfCountDelta(delta);
+    cognitiveMetrics.setElseCountDelta(delta);
+    cognitiveMetrics.setLoopCountDelta(delta);
+    cognitiveMetrics.setSwitchCountDelta(delta);
+    cognitiveMetrics.setMethodCallCountDelta(delta);
+    cognitiveMetrics.setReturnCountDelta(delta);
+    cognitiveMetrics.setArgumentCountDelta(delta);
+    cognitiveMetrics.setLineNumberDelta(delta);
+    cognitiveMetrics.setIfNestingLevelDelta(delta);
+    cognitiveMetrics.setTryCatchNestingLevelDelta(delta);
+    cognitiveMetrics.setLineCountDelta(delta);
+    cognitiveMetrics.setVariableCountDelta(delta);
+    cognitiveMetrics.setPropertyCallCountDelta(delta);
+
+    assertSame(delta, cognitiveMetrics.getIfCountDelta());
+    assertSame(delta, cognitiveMetrics.getElseCountDelta());
+    assertSame(delta, cognitiveMetrics.getLoopCountDelta());
+    assertSame(delta, cognitiveMetrics.getSwitchCountDelta());
+    assertSame(delta, cognitiveMetrics.getMethodCallCountDelta());
+    assertSame(delta, cognitiveMetrics.getReturnCountDelta());
+    assertSame(delta, cognitiveMetrics.getArgumentCountDelta());
+    assertSame(delta, cognitiveMetrics.getLineNumberDelta());
+    assertSame(delta, cognitiveMetrics.getIfNestingLevelDelta());
+    assertSame(delta, cognitiveMetrics.getTryCatchNestingLevelDelta());
+    assertSame(delta, cognitiveMetrics.getLineCountDelta());
+    assertSame(delta, cognitiveMetrics.getVariableCountDelta());
+    assertSame(delta, cognitiveMetrics.getPropertyCallCountDelta());
+  }
+
+  @Test
+  void testDeltasAreEmptyUntilCalculated() {
+    assertNull(cognitiveMetrics.getIfCountDelta());
+    assertNull(cognitiveMetrics.getPropertyCallCountDelta());
+  }
+
+  @Test
+  void testCalculateDeltasComparesWeightsWithThePreviousMetrics() {
+    CognitiveMetrics previous = new CognitiveMetrics("TestClass", "testMethod");
+    previous.setIfCountWeight(1.0);
+    previous.setElseCountWeight(1.0);
+    previous.setLoopCountWeight(1.0);
+    previous.setSwitchCountWeight(1.0);
+    previous.setMethodCallCountWeight(1.0);
+    previous.setReturnCountWeight(1.0);
+    previous.setArgumentCountWeight(1.0);
+    previous.setLineNumberWeight(1.0);
+    previous.setIfNestingLevelWeight(1.0);
+    previous.setTryCatchNestingLevelWeight(1.0);
+    previous.setLineCountWeight(1.0);
+    previous.setVariableCountWeight(1.0);
+    previous.setPropertyCallCountWeight(1.0);
+
+    cognitiveMetrics.setIfCountWeight(1.5);
+    cognitiveMetrics.setElseCountWeight(1.5);
+    cognitiveMetrics.setLoopCountWeight(1.5);
+    cognitiveMetrics.setSwitchCountWeight(1.5);
+    cognitiveMetrics.setMethodCallCountWeight(1.5);
+    cognitiveMetrics.setReturnCountWeight(1.5);
+    cognitiveMetrics.setArgumentCountWeight(1.5);
+    cognitiveMetrics.setLineNumberWeight(1.5);
+    cognitiveMetrics.setIfNestingLevelWeight(1.5);
+    cognitiveMetrics.setTryCatchNestingLevelWeight(1.5);
+    cognitiveMetrics.setLineCountWeight(1.5);
+    cognitiveMetrics.setVariableCountWeight(1.5);
+    cognitiveMetrics.setPropertyCallCountWeight(0.5);
+
+    cognitiveMetrics.calculateDeltas(previous);
+
+    assertEquals(0.5, cognitiveMetrics.getIfCountDelta().getValue());
+    assertEquals(0.5, cognitiveMetrics.getElseCountDelta().getValue());
+    assertEquals(0.5, cognitiveMetrics.getLoopCountDelta().getValue());
+    assertEquals(0.5, cognitiveMetrics.getSwitchCountDelta().getValue());
+    assertEquals(0.5, cognitiveMetrics.getMethodCallCountDelta().getValue());
+    assertEquals(0.5, cognitiveMetrics.getReturnCountDelta().getValue());
+    assertEquals(0.5, cognitiveMetrics.getArgumentCountDelta().getValue());
+    assertEquals(0.5, cognitiveMetrics.getLineNumberDelta().getValue());
+    assertEquals(0.5, cognitiveMetrics.getIfNestingLevelDelta().getValue());
+    assertEquals(0.5, cognitiveMetrics.getTryCatchNestingLevelDelta().getValue());
+    assertEquals(0.5, cognitiveMetrics.getLineCountDelta().getValue());
+    assertEquals(0.5, cognitiveMetrics.getVariableCountDelta().getValue());
+    assertEquals(-0.5, cognitiveMetrics.getPropertyCallCountDelta().getValue());
+    assertTrue(cognitiveMetrics.getPropertyCallCountDelta().hasDecreased());
   }
 }

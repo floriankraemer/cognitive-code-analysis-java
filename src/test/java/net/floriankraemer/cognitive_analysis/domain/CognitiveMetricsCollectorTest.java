@@ -5,20 +5,18 @@ import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.Map;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
 public class CognitiveMetricsCollectorTest {
 
+  private final StringWriter warnings = new StringWriter();
   private CognitiveMetricsCollector collector;
 
   @BeforeEach
   public void setUp() {
-    Logger logger = LoggerFactory.getLogger("CognitiveMetricsCollectorTest");
-    collector = new CognitiveMetricsCollector(logger);
+    collector = new CognitiveMetricsCollector(new PrintWriter(warnings, true));
   }
 
   @Test
@@ -139,9 +137,38 @@ public class CognitiveMetricsCollectorTest {
     assertEquals("com.example", metrics.getPackageName());  // Check package name
   }
 
-  /*
   @Test
-  public void testAnalyzeInvalidJavaCode() {
+  public void testAnalyzeCountsDoWhileLoopsAndFieldsOfAnonymousClasses() {
+    String code = """
+        public class TestClass {
+            public void loopMethod() {
+                do {
+                    Object o = new Object() {
+                        int field = 1;
+                    };
+                } while (false);
+            }
+        }
+        """;
+
+    collector.analyze(code);
+
+    CognitiveMetrics metrics = collector.getMethodMetrics().get("TestClass.loopMethod");
+    assertEquals(1, metrics.getLoopCount());
+    assertEquals(1, metrics.getFieldAccessCount());
+    assertEquals("", metrics.getPackageName());
+  }
+
+  @Test
+  public void testAnalyzeResetsMetricsBetweenRuns() {
+    collector.analyze("class A { void one() {} }");
+    collector.analyze("class B { void two() {} }");
+
+    assertEquals(java.util.Set.of("B.two"), collector.getMethodMetrics().keySet());
+  }
+
+  @Test
+  public void testAnalyzeInvalidJavaCodeWarnsAndCollectsNothing() {
     String invalidCode = """
         package com.example;
 
@@ -151,7 +178,9 @@ public class CognitiveMetricsCollectorTest {
             }
         """;
 
-    assertThrows(RuntimeException.class, () -> collector.analyze(invalidCode));
+    collector.analyze(invalidCode);
+
+    assertTrue(collector.getMethodMetrics().isEmpty());
+    assertTrue(warnings.toString().startsWith("Error parsing code: "));
   }
-  */
 }

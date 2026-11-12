@@ -1,57 +1,55 @@
 package net.floriankraemer.cognitive_analysis.domain;
 
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.util.List;
-import org.springframework.boot.test.context.SpringBootTest;
+import java.nio.file.Path;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+class FileFinderTest {
 
-@SpringBootTest
-public class FileFinderTest {
+  private final FileFinder fileFinder = new FileFinder();
 
-    private final FileFinder fileFinder = new FileFinder();
+  @TempDir
+  Path tempDir;
 
-    @Test
-    public void testFindJavaFiles() throws IOException {
-        // Create a temporary directory for testing
-        File tempDir = Files.createTempDirectory("testDir").toFile();
+  @Test
+  void findsJavaFilesRecursivelyAndIgnoresOtherFiles() throws IOException {
+    Path javaFile1 = Files.createFile(tempDir.resolve("Test1.java"));
+    Path javaFile2 = Files.createFile(tempDir.resolve("Test2.java"));
+    Files.createFile(tempDir.resolve("Test.txt"));
+    Path subDir = Files.createDirectory(tempDir.resolve("subDir"));
+    Path subDirJavaFile = Files.createFile(subDir.resolve("SubDirTest.java"));
+    Files.createDirectory(tempDir.resolve("Directory.java"));
 
-        // Create some test Java files and non-Java files
-        File javaFile1 = new File(tempDir, "Test1.java");
-        File javaFile2 = new File(tempDir, "Test2.java");
-        File textFile = new File(tempDir, "Test.txt");
+    assertThat(fileFinder.findJavaFiles(tempDir.toString()))
+        .extracting(java.io.File::toPath)
+        .containsExactlyInAnyOrder(javaFile1, javaFile2, subDirJavaFile);
+  }
 
-        javaFile1.createNewFile();
-        javaFile2.createNewFile();
-        textFile.createNewFile();
+  @Test
+  void returnsNothingForADirectoryWithoutJavaFiles() {
+    assertThat(fileFinder.findJavaFiles(tempDir.toString())).isEmpty();
+  }
 
-        // Create a subdirectory with a Java file
-        File subDir = new File(tempDir, "subDir");
-        subDir.mkdir();
-        File subDirJavaFile = new File(subDir, "SubDirTest.java");
-        subDirJavaFile.createNewFile();
+  @Test
+  void rejectsADirectoryThatDoesNotExist() {
+    Path missing = tempDir.resolve("missing");
 
-        // Test the findJavaFiles method
-        List<File> javaFiles = fileFinder.findJavaFiles(tempDir.getAbsolutePath());
+    assertThatThrownBy(() -> fileFinder.findJavaFiles(missing.toString()))
+        .isInstanceOf(RuntimeException.class)
+        .hasMessage("Invalid directory path: " + missing);
+  }
 
-        // Assertions
-        assertEquals(3, javaFiles.size());
-        assertTrue(javaFiles.contains(javaFile1));
-        assertTrue(javaFiles.contains(javaFile2));
-        assertTrue(javaFiles.contains(subDirJavaFile));
+  @Test
+  void rejectsAPathThatIsAFile() throws IOException {
+    Path file = Files.createFile(tempDir.resolve("Test.java"));
 
-        // Cleanup
-        javaFile1.delete();
-        javaFile2.delete();
-        textFile.delete();
-        subDirJavaFile.delete();
-        subDir.delete();
-        javaFiles.forEach(File::delete); // delete files from the list
-        tempDir.delete();
-    }
+    assertThatThrownBy(() -> fileFinder.findJavaFiles(file.toString()))
+        .isInstanceOf(RuntimeException.class)
+        .hasMessage("Invalid directory path: " + file);
+  }
 }

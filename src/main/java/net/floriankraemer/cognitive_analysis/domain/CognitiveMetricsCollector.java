@@ -19,27 +19,20 @@ import com.github.javaparser.ast.stmt.TryStmt;
 import com.github.javaparser.ast.stmt.WhileStmt;
 import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
 
-import java.util.HashMap;
+import java.io.PrintWriter;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
-import org.slf4j.Logger;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
 
-@Component
 public class CognitiveMetricsCollector {
 
-  private Map<String, CognitiveMetrics> methodMetrics = new HashMap<>();
+  private Map<String, CognitiveMetrics> methodMetrics = new LinkedHashMap<>();
   private String packageName;
 
-  Logger logger;
+  private final PrintWriter warnings;
 
-  @Autowired
-  public CognitiveMetricsCollector(
-      Logger logger
-  ) {
-    this.logger = logger;
-
+  public CognitiveMetricsCollector(final PrintWriter warnings) {
+    this.warnings = warnings;
     StaticJavaParser
         .getParserConfiguration()
         .setLanguageLevel(ParserConfiguration.LanguageLevel.CURRENT);
@@ -51,7 +44,7 @@ public class CognitiveMetricsCollector {
    * @param code The Java code to analyze.
    */
   public void analyze(final String code) {
-    methodMetrics = new HashMap<>();
+    methodMetrics = new LinkedHashMap<>();
 
     try {
       CompilationUnit compilationUnit = StaticJavaParser.parse(code);
@@ -63,7 +56,7 @@ public class CognitiveMetricsCollector {
 
       compilationUnit.accept(new ClassVisitor(), null);
     } catch (ParseProblemException e) {
-      logger.warn(String.format("Error parsing code: %s", e.getMessage()));
+      warnings.println("Error parsing code: " + e.getMessage());
     }
   }
 

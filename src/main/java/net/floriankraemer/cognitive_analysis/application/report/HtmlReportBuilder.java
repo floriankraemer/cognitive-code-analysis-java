@@ -1,11 +1,10 @@
 package net.floriankraemer.cognitive_analysis.application.report;
 
+import java.util.Locale;
 import java.util.Map;
 import net.floriankraemer.cognitive_analysis.domain.CognitiveMetrics;
 import net.floriankraemer.cognitive_analysis.domain.MetricsCollection;
-import org.springframework.stereotype.Component;
 
-@Component
 public class HtmlReportBuilder extends AbstractReportBuilder {
 
   public void build(MetricsCollection metricsCollection, String outputPath)
@@ -65,7 +64,7 @@ public class HtmlReportBuilder extends AbstractReportBuilder {
             .append("<td>").append(formatValueWithWeight(metrics.getReturnCount(), metrics.getReturnCountWeight())).append("</td>\n")
             .append("<td>").append(formatValueWithWeight(metrics.getArgumentCount(), metrics.getArgumentCountWeight())).append("</td>\n")
             .append("<td>").append(formatValueWithWeight(metrics.getTryCatchNestingLevel(), metrics.getTryCatchNestingLevelWeight())).append("</td>\n")
-            .append("<td>").append(String.format("%.3f", metrics.getCognitiveComplexity())).append("</td>\n")
+            .append("<td>").append(String.format(Locale.ROOT, "%.3f", metrics.getCognitiveComplexity())).append("</td>\n")
             .append("</tr>\n");
       }
 
@@ -80,7 +79,7 @@ public class HtmlReportBuilder extends AbstractReportBuilder {
 
   private String formatValueWithWeight(final int value, final double weight) {
     if (weight != 0.0) {
-      return value + "<br>" + String.format("%.3f", weight);
+      return value + "<br>" + String.format(Locale.ROOT, "%.3f", weight);
     }
     return String.valueOf(value);
   }

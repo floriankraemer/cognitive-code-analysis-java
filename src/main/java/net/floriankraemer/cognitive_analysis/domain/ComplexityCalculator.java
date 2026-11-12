@@ -3,9 +3,7 @@ package net.floriankraemer.cognitive_analysis.domain;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.springframework.stereotype.Component;
 
-@Component
 public class ComplexityCalculator {
 
   private final HashMap<String, MetricConfig> defaultConfig;

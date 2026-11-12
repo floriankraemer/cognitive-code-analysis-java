@@ -3,14 +3,12 @@ package net.floriankraemer.cognitive_analysis.application.report;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import net.floriankraemer.cognitive_analysis.domain.MetricsCollection;
-import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-@Component
 public class JsonReportBuilder extends AbstractReportBuilder {
 
   @Override
@@ -26,7 +24,7 @@ public class JsonReportBuilder extends AbstractReportBuilder {
 
     // Convert metrics map to a report-friendly structure
     metricsCollection.forEach((fileName, metrics) -> {
-      Map<String, Object> fileMetrics = new HashMap<>();
+      Map<String, Object> fileMetrics = new LinkedHashMap<>();
       fileMetrics.put("file", fileName);
       fileMetrics.put("metrics", new ArrayList<>(metrics.values()));
       report.add(fileMetrics);

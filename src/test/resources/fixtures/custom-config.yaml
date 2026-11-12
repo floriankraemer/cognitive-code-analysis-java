@@ -1,0 +1,6 @@
+complexityThreshold: 0.9
+metricConfigs:
+  - name: lineCount
+    enabled: false
+    threshold: 10
+    scale: 3.0
