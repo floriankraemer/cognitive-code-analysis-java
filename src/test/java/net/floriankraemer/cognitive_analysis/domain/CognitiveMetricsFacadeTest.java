@@ -129,6 +129,19 @@ class CognitiveMetricsFacadeTest {
   }
 
   @Test
+  void readsJavaAndKotlinFilesWithAByteOrderMarkAndWindowsLineEndings() throws Exception {
+    Path java = write("A.java", "\uFEFFpackage p;\r\nclass A {\r\n  void a() {\r\n  }\r\n}\r\n");
+    Path kotlin = write("K.kt", "\uFEFFpackage p\r\nclass K {\r\n    fun k() {\r\n    }\r\n}\r\n");
+
+    MetricsCollection result = facade(TestConfigs.defaults()).calculateCognitiveMetrics(List.of(tempDir.toString()));
+
+    assertThat(warnings.toString()).isEmpty();
+    assertThat(result.get(java.toString()).get("p.A::a").getLine()).isEqualTo(3);
+    assertThat(result.get(kotlin.toString()).get("p.K::k").getLine()).isEqualTo(3);
+    assertThat(result.get(kotlin.toString()).get("p.K::k").value(MetricName.LINE_COUNT)).isEqualTo(2);
+  }
+
+  @Test
   void reportsAKotlinFileThatCannotBeParsedAndContinues() throws Exception {
     Path broken = write("Broken.kt", "class Broken {\n    fun oops( {\n    }\n}\n");
     Path valid = write("Valid.kt", "class Valid { fun valid() {} }");

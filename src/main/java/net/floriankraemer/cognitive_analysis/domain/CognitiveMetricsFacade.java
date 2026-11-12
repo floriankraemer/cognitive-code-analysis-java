@@ -18,6 +18,8 @@ import net.floriankraemer.cognitive_analysis.config.CognitiveConfig;
 /** Finds the files, collects and scores their methods, and applies the exclusions of the config. */
 public class CognitiveMetricsFacade {
 
+  private static final String BYTE_ORDER_MARK = "\uFEFF";
+
   private final CognitiveConfig config;
   private final PrintWriter warnings;
   private final FileFinder fileFinder = new FileFinder();
@@ -140,9 +142,11 @@ public class CognitiveMetricsFacade {
     }
   }
 
+  /** The text without a leading byte order mark, which editors on Windows write and the parsers reject. */
   private static String decode(final Path file, final byte[] content) throws CognitiveAnalysisException {
     try {
-      return StandardCharsets.UTF_8.newDecoder().decode(ByteBuffer.wrap(content)).toString();
+      final String text = StandardCharsets.UTF_8.newDecoder().decode(ByteBuffer.wrap(content)).toString();
+      return text.startsWith(BYTE_ORDER_MARK) ? text.substring(BYTE_ORDER_MARK.length()) : text;
     } catch (CharacterCodingException e) {
       throw new CognitiveAnalysisException("Error reading file: " + file, e);
     }
