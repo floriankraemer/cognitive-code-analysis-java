@@ -6,6 +6,7 @@ import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -33,13 +34,30 @@ final class ReportSupport {
     return rows;
   }
 
-  /** The rows per fully qualified class name, classes sorted, methods in the order of the given rows. */
+  /**
+   * The rows per class, sorted by key, methods in the order of the given rows. The key is the fully
+   * qualified class name, or {@code <class>@<file>} for every file when the class occurs in several.
+   */
   static Map<String, List<Row>> byClass(final List<Row> rows) {
-    final Map<String, List<Row>> classes = new TreeMap<>();
+    final Map<String, Map<String, List<Row>>> files = new TreeMap<>();
     for (final Row row : rows) {
-      classes.computeIfAbsent(row.metrics().getClassName(), name -> new ArrayList<>()).add(row);
+      files.computeIfAbsent(row.metrics().getClassName(), name -> new LinkedHashMap<>())
+          .computeIfAbsent(row.file(), file -> new ArrayList<>()).add(row);
     }
-    return classes;
+    final Map<String, List<Row>> sections = new TreeMap<>();
+    files.forEach((className, byFile) -> {
+      if (byFile.size() == 1) {
+        sections.put(className, byFile.values().iterator().next());
+      } else {
+        byFile.forEach((file, fileRows) -> sections.put(className + "@" + file, fileRows));
+      }
+    });
+    return sections;
+  }
+
+  /** The number of distinct class names. */
+  static int classCount(final List<Row> rows) {
+    return (int) rows.stream().map(row -> row.metrics().getClassName()).distinct().count();
   }
 
   /** Only the rows with a score above the threshold when the configuration asks for it. */
@@ -58,12 +76,19 @@ final class ReportSupport {
     return LocalDateTime.now(clock).format(TIMESTAMP);
   }
 
-  /** Three decimals, half up, with a dot, whatever the default locale is. */
+  /** Three decimals, half up, with a dot, whatever the default locale is; {@code N/A} for NaN and infinity. */
   static String fixed(final double value) {
+    if (!Double.isFinite(value)) {
+      return "N/A";
+    }
     return BigDecimal.valueOf(value).setScale(DECIMALS, RoundingMode.HALF_UP).toPlainString();
   }
 
-  static double rounded(final double value) {
+  /** The value rounded to three decimals, null for NaN and infinity. */
+  static Double rounded(final double value) {
+    if (!Double.isFinite(value)) {
+      return null;
+    }
     return BigDecimal.valueOf(value).setScale(DECIMALS, RoundingMode.HALF_UP).doubleValue();
   }
 

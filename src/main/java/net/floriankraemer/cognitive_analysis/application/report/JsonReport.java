@@ -5,7 +5,6 @@ import com.fasterxml.jackson.core.util.DefaultIndenter;
 import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Clock;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,15 +33,7 @@ final class JsonReport implements Report {
   @Override
   public String render(final MetricsCollection metrics) throws CognitiveAnalysisException {
     final Map<String, Object> classes = new LinkedHashMap<>();
-    ReportSupport.byClass(ReportSupport.rows(metrics)).forEach((className, rows) -> {
-      final Map<String, List<Row>> files = new LinkedHashMap<>();
-      rows.forEach(row -> files.computeIfAbsent(row.file(), file -> new ArrayList<>()).add(row));
-      if (files.size() == 1) {
-        classes.put(className, toClass(rows));
-      } else {
-        files.forEach((file, fileRows) -> classes.put(className + "@" + file, toClass(fileRows)));
-      }
-    });
+    ReportSupport.byClass(ReportSupport.rows(metrics)).forEach((key, rows) -> classes.put(key, toClass(rows)));
     try {
       return new ObjectMapper().writer(PRINTER).writeValueAsString(classes) + "\n";
     } catch (JsonProcessingException e) {

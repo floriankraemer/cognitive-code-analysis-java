@@ -261,8 +261,8 @@ class ReportTest {
   @Test
   void markdownEscapesPipesAndBackslashes() throws Exception {
     assertThat(render(ReportType.MARKDOWN, GROUPED, awkward()))
-        .contains("* **Class:** a.B<script>alert(\"x\")</script>\\|\\\\")
-        .contains("* **File:** src/<dir>/F\\|le.java")
+        .contains("* **Class:** a.B&lt;script&gt;alert(\"x\")&lt;/script&gt;\\|\\\\")
+        .contains("* **File:** src/&lt;dir&gt;/F\\|le.java")
         .contains("| m\\|\"q\"&'s' äöü 日本 😀 |");
   }
 
@@ -316,6 +316,61 @@ class ReportTest {
         .readTree(render(ReportType.JSON, GROUPED, collection)).get("A").get("methods");
 
     assertThat(methods.fieldNames()).toIterable().containsExactly("m(int)", "m(String)");
+  }
+
+  @Test
+  void markdownEscapesAngleBracketsBackticksAndLineBreaksInCellsAndHeadings() throws Exception {
+    final MetricsCollection collection = new MetricsCollection();
+    add(collection, "dir/`F`\r\n.java", method("p.X<T>", "m(List<T>)\r\nx`y`\ry\nz", 1, 1.0, 0));
+
+    final String grouped = render(ReportType.MARKDOWN, GROUPED, collection);
+    final String single = render(ReportType.MARKDOWN, SINGLE, collection);
+
+    assertThat(grouped)
+        .contains("* **Class:** p.X&lt;T&gt;\n", "* **File:** dir/\\`F\\` .java\n")
+        .contains("| m(List&lt;T&gt;) x\\`y\\` y z |");
+    assertThat(single).contains("| p.X&lt;T&gt; | m(List&lt;T&gt;) x\\`y\\` y z |");
+    assertThat(grouped).doesNotContain("\r");
+  }
+
+  @Test
+  void markdownAndHtmlGiveEachFileOfAClassItsOwnSection() throws Exception {
+    final MetricsCollection collection = new MetricsCollection();
+    add(collection, "A.java", method("p.X", "one", 1, 1.0, 0));
+    add(collection, "B.java", method("p.X", "two", 2, 1.0, 1));
+    add(collection, "A.java", method("p.Y", "three", 3, 1.0, 2));
+
+    assertThat(render(ReportType.MARKDOWN, GROUPED, collection))
+        .contains("**Total Classes:** 2")
+        .containsSubsequence("* **Class:** p.X@A.java\n* **File:** A.java\n", "| one |",
+            "* **Class:** p.X@B.java\n* **File:** B.java\n", "| two |",
+            "* **Class:** p.Y\n* **File:** A.java\n", "| three |");
+    assertThat(render(ReportType.HTML, GROUPED, collection))
+        .contains("contains 2 classes and 3 methods")
+        .containsSubsequence("<h2 class=\"h4 mt-4\">p.X@A.java</h2>\n<p class=\"text-muted\">A.java</p>", "<td>one</td>",
+            "<h2 class=\"h4 mt-4\">p.X@B.java</h2>\n<p class=\"text-muted\">B.java</p>", "<td>two</td>",
+            "<h2 class=\"h4 mt-4\">p.Y</h2>", "<td>three</td>");
+  }
+
+  @Test
+  void nanAndInfinityNeverThrowAndShowAsNotAvailable() throws Exception {
+    final MetricsCollection collection = new MetricsCollection();
+    final CognitiveMetrics metrics = method("A", "m", 1, Double.NaN, 0);
+    metrics.setWeight(MetricName.LINE_COUNT, Double.POSITIVE_INFINITY);
+    metrics.setHalstead(new HalsteadMetrics(1, 1, Integer.MAX_VALUE, Integer.MAX_VALUE));
+    withDeltas(metrics, 0);
+    metrics.setWeight(MetricName.ARG_COUNT, Double.NEGATIVE_INFINITY);
+    add(collection, "A.java", metrics);
+
+    assertThat(render(ReportType.MARKDOWN, GROUPED, collection)).contains("N/A").doesNotContain("NaN", "Infinity");
+    assertThat(render(ReportType.HTML, GROUPED, collection)).contains("N/A").doesNotContain("NaN", "Infinity");
+    assertThat(render(ReportType.CSV, GROUPED, collection)).contains(",N/A,").doesNotContain("NaN", "Infinity");
+    final var json = new com.fasterxml.jackson.databind.ObjectMapper()
+        .readTree(render(ReportType.JSON, GROUPED, collection)).get("A").get("methods").get("m");
+    assertThat(json.get("score").isNull()).isTrue();
+    assertThat(json.get("lineCountWeight").isNull()).isTrue();
+    assertThat(json.get("argCountWeight").isNull()).isTrue();
+    assertThat(json.get("deltas").get("lineCountWeight").isNull()).isTrue();
   }
 
   @Test

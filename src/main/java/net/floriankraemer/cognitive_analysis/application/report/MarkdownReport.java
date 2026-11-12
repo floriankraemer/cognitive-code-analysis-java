@@ -28,7 +28,7 @@ final class MarkdownReport implements Report {
     final StringBuilder md = new StringBuilder("# Cognitive Metrics Report\n\n")
         .append("**Generated:** ").append(ReportSupport.timestamp(clock)).append("\n\n");
     if (config.groupByClass()) {
-      md.append("**Total Classes:** ").append(classes.size()).append("\n\n");
+      md.append("**Total Classes:** ").append(ReportSupport.classCount(rows)).append("\n\n");
     }
     if (config.showOnlyMethodsExceedingThreshold()) {
       md.append("**Note:** Only showing methods exceeding threshold of ")
@@ -117,6 +117,7 @@ final class MarkdownReport implements Report {
   }
 
   private static String escape(final String text) {
-    return text.replace("\\", "\\\\").replace("|", "\\|");
+    return text.replace("\\", "\\\\").replace("|", "\\|").replace("<", "&lt;").replace(">", "&gt;")
+        .replace("`", "\\`").replaceAll("\r\n|[\r\n]", " ");
   }
 }

@@ -2,6 +2,7 @@ package net.floriankraemer.cognitive_analysis.application.report;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -69,5 +70,37 @@ class ReportWriterTest {
         .isInstanceOf(CognitiveAnalysisException.class)
         .hasMessageStartingWith("Unable to write to file " + tempDir + ": ")
         .hasCauseInstanceOf(IOException.class);
+  }
+
+  @Test
+  void aFailedWriteLeavesAnExistingFileIntactAndNoTemporaryFileBehind() throws Exception {
+    final Path directory = Files.createDirectory(tempDir.resolve("locked"));
+    final Path file = Files.writeString(directory.resolve("report.json"), "old");
+    assertThat(directory.toFile().setWritable(false)).isTrue();
+    try {
+      assumeTrue(!Files.isWritable(directory), "directory permissions are not enforced, e.g. when running as root");
+
+      assertThatThrownBy(() -> writer.write(ReportType.JSON, file.toString(), TestConfigs.defaults(), metrics()))
+          .isInstanceOf(CognitiveAnalysisException.class)
+          .hasMessageStartingWith("Unable to write to file " + file + ": ");
+      assertThat(file).hasContent("old");
+    } finally {
+      directory.toFile().setWritable(true);
+    }
+    try (var files = Files.list(directory)) {
+      assertThat(files).containsExactly(file);
+    }
+  }
+
+  @Test
+  void replacesAnExistingFileAndLeavesNothingElseBehind() throws Exception {
+    final Path file = Files.writeString(tempDir.resolve("report.csv"), "old");
+
+    writer.write(ReportType.CSV, file.toString(), TestConfigs.defaults(), metrics());
+
+    assertThat(file).content().startsWith("Class,Method,File,Line");
+    try (var files = Files.list(tempDir)) {
+      assertThat(files).containsExactly(file);
+    }
   }
 }

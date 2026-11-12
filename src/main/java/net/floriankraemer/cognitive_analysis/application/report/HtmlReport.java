@@ -41,7 +41,7 @@ final class HtmlReport implements Report {
         .append("<style>td { white-space: nowrap; } .num { text-align: right; font-variant-numeric: tabular-nums; }</style>\n")
         .append("</head>\n<body>\n<div class=\"container-fluid py-4\">\n")
         .append("<h1 class=\"mb-3\">").append(escape(title)).append("</h1>\n")
-        .append("<p>This report contains ").append(classes.size()).append(classes.size() == 1 ? " class" : " classes")
+        .append("<p>This report contains ").append(ReportSupport.classCount(rows)).append(ReportSupport.classCount(rows) == 1 ? " class" : " classes")
         .append(" and ").append(rows.size()).append(rows.size() == 1 ? " method" : " methods").append(".</p>\n");
     if (config.showOnlyMethodsExceedingThreshold()) {
       html.append("<p class=\"text-muted\">Only showing methods with a score above the threshold of ")

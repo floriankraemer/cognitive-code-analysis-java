@@ -5,6 +5,8 @@ Both must be given together.
 The type is `json`, `csv`, `html` or `markdown`, in any letter case.
 The directory of the file must exist, and the file is always written as UTF-8.
 Numbers use a dot and three decimals, whatever the locale is.
+A value that is not a finite number is `N/A` in the text formats and `null` in JSON.
+The file is written to a temporary file next to it and moved into place, so a failed write leaves an existing report intact.
 
 | Setting | json | csv | html | markdown |
 | --- | --- | --- | --- | --- |
@@ -47,4 +49,5 @@ Weight changes against a baseline are badges, red for an increase and green for 
 ## Markdown
 
 Tables per class, or one table of all methods.
-`|` and `\` are escaped, and weight changes are shown as `↑ 0.500` and `↓ 0.500`.
+In the grouped form a class that occurs in several files gets one section per file, titled `<class>@<file>`, as in the JSON keys.
+`|`, `\`, backticks, `<` and `>` are escaped, line breaks become spaces, and weight changes are shown as `↑ 0.500` and `↓ 0.500`.
