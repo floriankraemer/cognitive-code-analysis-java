@@ -7,16 +7,16 @@ import java.util.List;
  * Renders rows of (possibly multi-line) cells as a box-drawing table.
  * Column widths follow the widest line of each column.
  */
-final class TextTable {
+public final class TextTable {
 
   /** Columns from this index on are centered; earlier ones are left-aligned. */
   private final int firstCenteredColumn;
 
-  TextTable(final int firstCenteredColumn) {
+  public TextTable(final int firstCenteredColumn) {
     this.firstCenteredColumn = firstCenteredColumn;
   }
 
-  String render(final List<String> header, final List<List<String>> rows) {
+  public String render(final List<String> header, final List<List<String>> rows) {
     final List<List<String>> all = new ArrayList<>();
     all.add(header);
     all.addAll(rows);

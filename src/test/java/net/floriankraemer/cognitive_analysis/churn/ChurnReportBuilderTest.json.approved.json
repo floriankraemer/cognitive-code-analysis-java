@@ -1,0 +1,32 @@
+{
+  "createdAt" : "2023-10-01 12:00:00",
+  "classes" : {
+    "Phauthentic.Business.Cognitive.CognitiveMetrics" : {
+      "file" : "src/Business/Cognitive/CognitiveMetrics.java",
+      "score" : 2.042,
+      "timesChanged" : 6,
+      "churn" : 12.252,
+      "coverage" : null,
+      "riskChurn" : null,
+      "riskLevel" : null
+    },
+    "Phauthentic.Command.Presentation.CognitiveMetricTextRenderer" : {
+      "file" : "src/Command/Presentation/CognitiveMetricTextRenderer.java",
+      "score" : 0.806,
+      "timesChanged" : 10,
+      "churn" : 8.06,
+      "coverage" : null,
+      "riskChurn" : null,
+      "riskLevel" : null
+    },
+    "Phauthentic.Business.MetricsFacade" : {
+      "file" : "src/Business/MetricsFacade.java",
+      "score" : 0.693,
+      "timesChanged" : 8,
+      "churn" : 5.544,
+      "coverage" : null,
+      "riskChurn" : null,
+      "riskLevel" : null
+    }
+  }
+}

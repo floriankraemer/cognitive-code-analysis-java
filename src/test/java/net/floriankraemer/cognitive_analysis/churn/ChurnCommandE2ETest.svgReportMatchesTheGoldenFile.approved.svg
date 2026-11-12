@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1200" height="800" xmlns="http://www.w3.org/2000/svg">
+    <style>
+        text { pointer-events: none; font-family: Arial, sans-serif; }
+        rect:hover { stroke: #000; stroke-width: 2; }
+    </style>
+    <rect x="0" y="0" width="1200" height="800" fill="#f8f9fa"/>
+    <g>
+        <text x="20" y="30" font-size="28" fill="#333">Churn Treemap</text>
+    </g>
+    <g>
+        <g><rect x="2.00" y="2.00" width="987.50" height="796.00" fill="rgb(255,0,80)" stroke="#222" stroke-width="1"/><title>churn.Busy&#10;Churn: 6.591&#10;Score: 2.197</title><text x="6.00" y="20.00" font-size="13" fill="#000">churn.Busy</text></g>
+<g><rect x="993.50" y="2.00" width="204.50" height="796.00" fill="rgb(0,180,80)" stroke="#222" stroke-width="1"/><title>churn.Light&#10;Churn: 1.386&#10;Score: 0.693</title><text x="997.50" y="20.00" font-size="13" fill="#000">churn.Light</text></g>
+    </g>
+</svg>
