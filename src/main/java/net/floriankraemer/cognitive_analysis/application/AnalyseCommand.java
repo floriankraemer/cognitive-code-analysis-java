@@ -108,7 +108,7 @@ public class AnalyseCommand implements Callable<Integer> {
 
   @Option(
       names = {"-g", "--generate-baseline"},
-      description = "Write the metrics to .jcca/baseline/baseline-<timestamp>.json after the analysis."
+      description = "Write a new baseline file into the baseline directory after the analysis."
   )
   boolean generateBaseline;
 

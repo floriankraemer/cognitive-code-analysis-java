@@ -350,7 +350,9 @@ class AnalyseCommandE2ETest {
         .contains("<path>")
         .contains("--config")
         .contains("--report-type")
-        .contains("--report-file");
+        .contains("--report-file")
+        .contains("-g, --generate-baseline")
+        .contains("Write a new baseline file into the baseline");
   }
 
   @Test
