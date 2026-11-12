@@ -27,6 +27,7 @@ public class CognitiveMetrics {
   private double cognitiveComplexity;
   private CyclomaticComplexity cyclomatic = new CyclomaticVisitor().result();
   private HalsteadMetrics halstead = new HalsteadMetrics(0, 0, 0, 0);
+  private Understandability understandability = Understandability.NONE;
 
   /**
    * @param className the fully qualified class name, nested classes separated by dots
@@ -124,5 +125,14 @@ public class CognitiveMetrics {
 
   public void setHalstead(final HalsteadMetrics halstead) {
     this.halstead = halstead;
+  }
+
+  /** The understandability (Sonar cognitive complexity), 0 until set. */
+  public Understandability getUnderstandability() {
+    return understandability;
+  }
+
+  public void setUnderstandability(final Understandability understandability) {
+    this.understandability = understandability;
   }
 }

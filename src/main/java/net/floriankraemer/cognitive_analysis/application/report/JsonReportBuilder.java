@@ -50,6 +50,8 @@ public class JsonReportBuilder extends AbstractReportBuilder {
     method.put("halsteadVolume", metrics.getHalstead().volume());
     method.put("halsteadDifficulty", metrics.getHalstead().difficulty());
     method.put("halsteadEffort", metrics.getHalstead().effort());
+    method.put("understandability", metrics.getUnderstandability().complexity());
+    method.put("understandabilityRiskLevel", metrics.getUnderstandability().riskLevel());
     return method;
   }
 

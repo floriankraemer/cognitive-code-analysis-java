@@ -34,7 +34,7 @@ import net.floriankraemer.cognitive_analysis.config.CognitiveConfig;
 public final class MetricsCache {
 
   /** Bump when the payload or the serialized metrics change, so older entries are read as misses. */
-  public static final int CACHE_FORMAT_VERSION = 1;
+  public static final int CACHE_FORMAT_VERSION = 2;
 
   /** Keeps the insertion order of the methods, so a cache hit prints the same as a fresh analysis. */
   private static final ObjectMapper PAYLOAD_MAPPER = JsonMapper.builder().build();

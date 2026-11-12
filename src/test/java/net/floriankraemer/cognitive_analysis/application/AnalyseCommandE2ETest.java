@@ -387,6 +387,22 @@ class AnalyseCommandE2ETest {
   }
 
   @Test
+  void writesTheUnderstandabilityOfAMethodToTheJsonReport() throws Exception {
+    Path report = tempDir.resolve("report.json");
+
+    int exitCode = run("analyse", "src/test/resources/fixtures/understandability/WhitePaper.java",
+        "-r", "json", "-f", report.toString());
+
+    assertThat(exitCode).isZero();
+    var methods = new com.fasterxml.jackson.databind.ObjectMapper().readTree(report.toFile()).get(0).get("metrics");
+    assertThat(methods.get(0).get("methodName").asText()).isEqualTo("sumOfPrimes");
+    assertThat(methods.get(0).get("understandability").asInt()).isEqualTo(7);
+    assertThat(methods.get(0).get("understandabilityRiskLevel").asText()).isEqualTo("medium");
+    assertThat(methods.get(1).get("understandability").asInt()).isEqualTo(1);
+    assertThat(methods.get(1).get("understandabilityRiskLevel").asText()).isEqualTo("low");
+  }
+
+  @Test
   void failsOnAnInvalidReportType() {
     Path report = tempDir.resolve("report.xml");
 

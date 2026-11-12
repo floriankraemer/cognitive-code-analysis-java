@@ -75,4 +75,12 @@ class Operations {
     list.forEach(System.out::println);
     list.stream().map(String::length);
   }
+
+  void methodReferenceOnAnExpression(List<String> list) {
+    list.forEach(list.get(0)::equals);
+  }
+
+  Object qualifiedCreation(Operations outer) {
+    return outer.new Holder();
+  }
 }
