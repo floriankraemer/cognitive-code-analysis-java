@@ -8,7 +8,7 @@ package net.floriankraemer.cognitive_analysis.report.spi;
 public interface CognitiveReporter {
 
   /**
-   * @return the complete report; it is written to the report file as UTF-8
+   * @return the complete report, never null; it is written to the report file as UTF-8
    * @throws RuntimeException to fail the run; the message is shown to the user
    */
   String render(CognitiveReportInput input);

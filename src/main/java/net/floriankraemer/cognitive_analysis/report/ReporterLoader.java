@@ -1,6 +1,10 @@
 package net.floriankraemer.cognitive_analysis.report;
 
 import java.lang.reflect.InvocationTargetException;
+import java.util.Collection;
+import java.util.List;
+import java.util.Locale;
+import java.util.function.Supplier;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -34,16 +38,69 @@ public final class ReporterLoader {
     if (!type.isAssignableFrom(loaded)) {
       throw new CognitiveAnalysisException("Reporter " + className + " must implement " + type.getName());
     }
+    final Thread thread = Thread.currentThread();
+    final ClassLoader previous = thread.getContextClassLoader();
+    thread.setContextClassLoader(loaded.getClassLoader());
     try {
       return type.cast(loaded.getConstructor().newInstance());
     } catch (NoSuchMethodException e) {
       throw new CognitiveAnalysisException(
           "Reporter " + className + " must have a public constructor without parameters", e);
-    } catch (InvocationTargetException e) {
-      throw failed(className, e.getCause());
     } catch (ReflectiveOperationException | LinkageError e) {
       throw failed(className, e);
+    } finally {
+      thread.setContextClassLoader(previous);
     }
+  }
+
+  /**
+   * Runs a reporter with its own class loader as the context class loader, so that {@code ServiceLoader} and
+   * similar lookups find the classes of its jar.
+   *
+   * @param key the key of the reporter, for the messages
+   * @throws CognitiveAnalysisException when the reporter throws or returns null
+   */
+  public static String render(final String key, final Object reporter, final Supplier<String> render)
+      throws CognitiveAnalysisException {
+    final Thread thread = Thread.currentThread();
+    final ClassLoader previous = thread.getContextClassLoader();
+    thread.setContextClassLoader(reporter.getClass().getClassLoader());
+    final String content;
+    try {
+      content = render.get();
+    } catch (RuntimeException | LinkageError e) {
+      throw new CognitiveAnalysisException("Reporter " + key + " failed: " + describe(e), e);
+    } finally {
+      thread.setContextClassLoader(previous);
+    }
+    if (content == null) {
+      throw new CognitiveAnalysisException("Reporter " + key + " returned no output (null).");
+    }
+    return content;
+  }
+
+  /**
+   * The custom keys of a command must not equal a built-in type of it, in any letter case.
+   *
+   * @param builtInNames the command names of the built-in types, in lower case
+   */
+  public static void requireNoBuiltInKeys(final Collection<String> keys, final List<String> builtInNames)
+      throws CognitiveAnalysisException {
+    for (final String key : keys.stream().sorted().toList()) {
+      if (builtInNames.contains(key.toLowerCase(Locale.ROOT))) {
+        throw new CognitiveAnalysisException("Custom reporter key '" + key + "' conflicts with a built-in report type");
+      }
+    }
+  }
+
+  /** The cause behind a wrapper, as its message or, without one, its class name. */
+  static String describe(final Throwable error) {
+    Throwable cause = error;
+    while ((cause instanceof ExceptionInInitializerError || cause instanceof InvocationTargetException)
+        && cause.getCause() != null) {
+      cause = cause.getCause();
+    }
+    return Objects.requireNonNullElse(cause.getMessage(), cause.getClass().getName());
   }
 
   private static Path jarPath(final String jar, final CognitiveConfig config) {
@@ -68,7 +125,7 @@ public final class ReporterLoader {
       loader = urlLoader(jar, parent);
     }
     try {
-      return Class.forName(className, true, loader);
+      return Class.forName(className, false, loader);
     } catch (ClassNotFoundException e) {
       throw new CognitiveAnalysisException("Reporter class not found: " + className, e);
     } catch (LinkageError e) {
@@ -85,7 +142,7 @@ public final class ReporterLoader {
   }
 
   private static CognitiveAnalysisException failed(final String className, final Throwable cause) {
-    final String reason = Objects.requireNonNullElse(cause.getMessage(), cause.getClass().getName());
-    return new CognitiveAnalysisException("Reporter " + className + " could not be created: " + reason, cause);
+    return new CognitiveAnalysisException(
+        "Reporter " + className + " could not be created: " + describe(cause), cause);
   }
 }

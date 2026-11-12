@@ -21,7 +21,7 @@ public interface ChurnReporter {
 
 `render` returns the complete report.
 It is written to the report file as UTF-8.
-A `RuntimeException` fails the run with exit status 1, and the message is shown as `Reporter <key> failed: <message>`.
+A `RuntimeException` or a linkage error such as a `NoClassDefFoundError` fails the run with exit status 1, and the message is shown as `Reporter <key> failed: <message>`.
 No file is written in that case.
 
 `CognitiveReportInput` has:
@@ -41,6 +41,7 @@ Each entry has `className`, `file`, `score`, `timesChanged` and `churn`, and `co
 - It implements `CognitiveReporter` for `analyse`, or `ChurnReporter` for `churn`.
 - It is a public, non-abstract class with a public constructor without parameters.
   A new instance is created for each run.
+- `render` must not return `null`; that fails the run with `Reporter <key> returned no output (null).`
 - It may use any library you put into the jar or the class path of the application.
   The jar is loaded by its own class loader, whose parent is the class loader of the application, so the SPI types are shared.
 
@@ -121,12 +122,15 @@ Each key has a `class` and an optional `jar`.
 
 - A relative `jar` is resolved against the directory of the configuration file, not against the working directory.
   An absolute path is used as it is.
+  The path is literal: `~` and environment variables are not expanded.
+- The jar must be compiled for Java 21 or newer, the version the application runs on.
 - Without a `jar`, the class must be on the class path of the application.
 - The key must not be the name of a built-in report type of the same command, in any letter case.
-  The configuration is rejected with `Custom reporter key '<key>' conflicts with a built-in report type`.
+  The run is rejected with `Custom reporter key '<key>' conflicts with a built-in report type`.
 - Built-in types are matched first and in any letter case.
   A custom key is matched exactly.
 - The shape of the section is validated when the configuration is loaded.
+  The collision with a built-in type is checked when you select a reporter of that command.
   Only the reporter that you select with `-r` is loaded, and it is loaded before the analysis starts, so a broken reporter fails fast.
 
 ## Errors
@@ -141,4 +145,5 @@ Each error is printed to standard error and the exit status is 1.
 | There is no public constructor without parameters | `Reporter <class> must have a public constructor without parameters` |
 | The constructor or a static initializer fails | `Reporter <class> could not be created: <cause>` |
 | `render` throws | `Reporter <key> failed: <cause>` |
+| `render` returns `null` | `Reporter <key> returned no output (null).` |
 | The type is neither built-in nor a custom key | `Invalid report type '<type>'. Expected one of: <built-in types>, <custom keys>.` |

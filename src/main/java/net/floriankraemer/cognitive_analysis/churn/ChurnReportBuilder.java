@@ -16,7 +16,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import net.floriankraemer.cognitive_analysis.CognitiveAnalysisException;
 import net.floriankraemer.cognitive_analysis.config.CognitiveConfig;
@@ -55,6 +54,7 @@ public final class ChurnReportBuilder {
    * A custom reporter is loaded here, so a broken one fails before the churn is calculated.
    */
   public Renderer resolve(final String name, final CognitiveConfig config) throws CognitiveAnalysisException {
+    ReporterLoader.requireNoBuiltInKeys(config.customReporters().churn().keySet(), ChurnReportType.commandNames());
     final Optional<ChurnReportType> builtIn = ChurnReportType.find(name);
     if (builtIn.isPresent()) {
       return metrics -> render(builtIn.get(), metrics);
@@ -67,13 +67,7 @@ public final class ChurnReportBuilder {
           "Invalid report type '" + name + "'. Expected one of: " + String.join(", ", names) + ".");
     }
     final ChurnReporter reporter = ReporterLoader.load(settings, config, ChurnReporter.class);
-    return metrics -> {
-      try {
-        return reporter.render(input(metrics));
-      } catch (RuntimeException e) {
-        throw new CognitiveAnalysisException("Reporter " + name + " failed: " + describe(e), e);
-      }
-    };
+    return metrics -> ReporterLoader.render(name, reporter, () -> reporter.render(input(metrics)));
   }
 
   private static ChurnReportInput input(final List<ChurnMetrics> metrics) {
@@ -88,10 +82,6 @@ public final class ChurnReportBuilder {
             metric.riskChurn(),
             metric.riskLevel() == null ? null : metric.riskLevel().name()))
         .toList());
-  }
-
-  private static String describe(final RuntimeException e) {
-    return Objects.requireNonNullElse(e.getMessage(), e.getClass().getName());
   }
 
   /** Writes the report as UTF-8; the directory of the file must exist. */

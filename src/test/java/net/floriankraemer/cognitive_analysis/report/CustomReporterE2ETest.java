@@ -134,20 +134,22 @@ class CustomReporterE2ETest {
   }
 
   @Test
-  void rejectsAKeyThatIsABuiltInTypeWhenTheConfigIsLoaded() throws Exception {
+  void rejectsAKeyThatIsABuiltInTypeWhenAReporterIsSelected() throws Exception {
     final Path config = config("    cognitive:\n      JSON: {class: acme.Lines}\n");
 
-    assertThat(run("analyse", SAMPLE, "-c", config.toString())).isEqualTo(1);
+    assertThat(run("analyse", SAMPLE, "-c", config.toString(), "-r", "json", "-f", tempDir.resolve("r").toString()))
+        .isEqualTo(1);
 
     assertThat(err.toString())
         .isEqualTo("Custom reporter key 'JSON' conflicts with a built-in report type" + System.lineSeparator());
   }
 
   @Test
-  void rejectsAChurnKeyThatIsABuiltInTypeWhenTheConfigIsLoaded() throws Exception {
+  void rejectsAChurnKeyThatIsABuiltInTypeWhenAReporterIsSelected() throws Exception {
     final Path config = config("    churn:\n      svg: {class: acme.Lines}\n");
 
-    assertThat(run("churn", CHURN_FIXTURES, "-c", config.toString())).isEqualTo(1);
+    assertThat(run("churn", CHURN_FIXTURES, "-c", config.toString(), "-r", "json", "-f", tempDir.resolve("r").toString()))
+        .isEqualTo(1);
 
     assertThat(err.toString())
         .isEqualTo("Custom reporter key 'svg' conflicts with a built-in report type" + System.lineSeparator());
@@ -191,5 +193,66 @@ class CustomReporterE2ETest {
     out.getBuffer().setLength(0);
     assertThat(run("churn", "--help")).isZero();
     assertThat(out.toString().replaceAll("\\s+", " ")).contains("customReporters.churn");
+  }
+
+  @Test
+  void aReporterThatReturnsNullFailsTheRun() throws Exception {
+    ReporterJars.build(tempDir.resolve("conf"), "nul.jar", "acme.Nul", """
+        package acme;
+        import net.floriankraemer.cognitive_analysis.report.spi.*;
+        public class Nul implements CognitiveReporter {
+          public String render(CognitiveReportInput input) { return null; }
+        }
+        """);
+    final Path config = config("    cognitive:\n      nul: {class: acme.Nul, jar: nul.jar}\n");
+    final Path report = tempDir.resolve("r");
+
+    assertThat(run("analyse", SAMPLE, "-c", config.toString(), "-r", "nul", "-f", report.toString())).isEqualTo(1);
+
+    assertThat(err.toString()).isEqualTo("Reporter nul returned no output (null)." + System.lineSeparator());
+    assertThat(report).doesNotExist();
+  }
+
+  @Test
+  void aLinkageErrorInTheReporterFailsTheRun() throws Exception {
+    ReporterJars.build(tempDir.resolve("conf"), "link.jar", "acme.Link", """
+        package acme;
+        import net.floriankraemer.cognitive_analysis.report.spi.*;
+        public class Link implements CognitiveReporter {
+          public String render(CognitiveReportInput input) { throw new NoClassDefFoundError("acme/Missing"); }
+        }
+        """);
+    final Path config = config("    cognitive:\n      link: {class: acme.Link, jar: link.jar}\n");
+
+    assertThat(run("analyse", SAMPLE, "-c", config.toString(), "-r", "link", "-f", tempDir.resolve("r").toString()))
+        .isEqualTo(1);
+
+    assertThat(err.toString()).isEqualTo("Reporter link failed: acme/Missing" + System.lineSeparator());
+  }
+
+  @Test
+  void aReporterFindsServicesOfItsJarThroughTheContextClassLoader() throws Exception {
+    final Path jar = ReporterJars.build(tempDir.resolve("conf"), "svc.jar", "acme.Svc", """
+        package acme;
+        import net.floriankraemer.cognitive_analysis.report.spi.*;
+        public class Svc implements CognitiveReporter {
+          public interface Greeter { String greet(); }
+          public static class Hello implements Greeter { public String greet() { return "hello"; } }
+          public String render(CognitiveReportInput input) {
+            StringBuilder out = new StringBuilder();
+            for (Greeter g : java.util.ServiceLoader.load(Greeter.class)) out.append(g.greet());
+            return out.toString();
+          }
+        }
+        """);
+    ReporterJars.addEntry(jar, "META-INF/services/acme.Svc$Greeter", "acme.Svc$Hello\n");
+    final Path config = config("    cognitive:\n      svc: {class: acme.Svc, jar: svc.jar}\n");
+    final Path report = tempDir.resolve("r");
+    final ClassLoader before = Thread.currentThread().getContextClassLoader();
+
+    assertThat(run("analyse", SAMPLE, "-c", config.toString(), "-r", "svc", "-f", report.toString())).isZero();
+
+    assertThat(Files.readString(report)).isEqualTo("hello");
+    assertThat(Thread.currentThread().getContextClassLoader()).isSameAs(before);
   }
 }

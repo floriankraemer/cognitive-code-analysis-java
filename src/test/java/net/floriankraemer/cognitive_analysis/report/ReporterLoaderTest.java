@@ -171,7 +171,7 @@ class ReporterLoaderTest {
             new ReporterSettings(Throwing.class.getName(), null), configFile(), CognitiveReporter.class))
         .isInstanceOf(CognitiveAnalysisException.class)
         .hasMessage("Reporter " + Throwing.class.getName() + " could not be created: no database")
-        .hasCauseInstanceOf(IllegalStateException.class);
+        .hasRootCauseInstanceOf(IllegalStateException.class);
   }
 
   @Test
@@ -210,6 +210,33 @@ class ReporterLoaderTest {
     assertThatThrownBy(() -> ReporterLoader.load(
             new ReporterSettings("acme.Broken", jar.toString()), configFile(), CognitiveReporter.class))
         .isInstanceOf(CognitiveAnalysisException.class)
-        .hasMessageStartingWith("Reporter acme.Broken could not be created");
+        .hasMessage("Reporter acme.Broken could not be created: boom");
+  }
+
+  @Test
+  void keepsTheContextClassLoaderOfTheCaller() throws Exception {
+    final ClassLoader before = Thread.currentThread().getContextClassLoader();
+    final Path jar = ReporterJars.build(tempDir, "lines.jar", "acme.Lines", ReporterJars.COGNITIVE_SOURCE);
+
+    ReporterLoader.load(new ReporterSettings("acme.Lines", jar.toString()), configFile(), CognitiveReporter.class);
+
+    assertThat(Thread.currentThread().getContextClassLoader()).isSameAs(before);
+  }
+
+  @Test
+  void rejectsCustomKeysThatEqualABuiltInTypeInAnyCase() throws Exception {
+    assertThatThrownBy(() -> ReporterLoader.requireNoBuiltInKeys(List.of("zz", "Json"), List.of("json", "csv")))
+        .isInstanceOf(CognitiveAnalysisException.class)
+        .hasMessage("Custom reporter key 'Json' conflicts with a built-in report type");
+    ReporterLoader.requireNoBuiltInKeys(List.of("mine"), List.of("json", "csv"));
+  }
+
+  @Test
+  void describesTheCauseBehindWrappers() {
+    assertThat(ReporterLoader.describe(new ExceptionInInitializerError(new IllegalStateException("boom"))))
+        .isEqualTo("boom");
+    assertThat(ReporterLoader.describe(new java.lang.reflect.InvocationTargetException(new IllegalStateException())))
+        .isEqualTo("java.lang.IllegalStateException");
+    assertThat(ReporterLoader.describe(new ExceptionInInitializerError())).isEqualTo("java.lang.ExceptionInInitializerError");
   }
 }

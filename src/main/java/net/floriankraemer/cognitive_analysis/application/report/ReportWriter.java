@@ -33,6 +33,7 @@ public final class ReportWriter {
    * A custom reporter is loaded here, so a broken one fails before the analysis runs.
    */
   public Report resolve(final String name, final CognitiveConfig config) throws CognitiveAnalysisException {
+    ReporterLoader.requireNoBuiltInKeys(config.customReporters().cognitive().keySet(), ReportType.commandNames());
     final Optional<ReportType> builtIn = ReportType.find(name);
     if (builtIn.isPresent()) {
       return builtIn.get().create(config, clock);
@@ -45,14 +46,7 @@ public final class ReportWriter {
           "Invalid report type '" + name + "'. Expected one of: " + String.join(", ", names) + ".");
     }
     final CognitiveReporter reporter = ReporterLoader.load(settings, config, CognitiveReporter.class);
-    return methods -> {
-      try {
-        return reporter.render(ReporterInputs.of(methods, config));
-      } catch (RuntimeException e) {
-        throw new CognitiveAnalysisException(
-            "Reporter " + name + " failed: " + Objects.requireNonNullElse(e.getMessage(), e.getClass().getName()), e);
-      }
-    };
+    return methods -> ReporterLoader.render(name, reporter, () -> reporter.render(ReporterInputs.of(methods, config)));
   }
 
   public void write(

@@ -7,7 +7,6 @@ import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -16,8 +15,6 @@ import java.util.regex.PatternSyntaxException;
 import java.util.stream.Collectors;
 import net.floriankraemer.cognitive_analysis.CognitiveAnalysisException;
 import net.floriankraemer.cognitive_analysis.config.CognitiveConfig.CacheSettings;
-import net.floriankraemer.cognitive_analysis.application.report.ReportType;
-import net.floriankraemer.cognitive_analysis.churn.ChurnReportType;
 import net.floriankraemer.cognitive_analysis.config.CognitiveConfig.CustomReporters;
 import net.floriankraemer.cognitive_analysis.config.CognitiveConfig.MetricSettings;
 import net.floriankraemer.cognitive_analysis.config.CognitiveConfig.ReporterSettings;
@@ -110,12 +107,11 @@ final class ConfigParser {
     requireObject(node, path);
     checkKeys(node, path, Set.of("cognitive", "churn"));
     return new CustomReporters(
-        reporters(child(node, path, "cognitive"), path + ".cognitive", ReportType.commandNames()),
-        reporters(child(node, path, "churn"), path + ".churn", ChurnReportType.commandNames()));
+        reporters(child(node, path, "cognitive"), path + ".cognitive"),
+        reporters(child(node, path, "churn"), path + ".churn"));
   }
 
-  private static Map<String, ReporterSettings> reporters(
-      final JsonNode node, final String path, final List<String> builtInNames)
+  private static Map<String, ReporterSettings> reporters(final JsonNode node, final String path)
       throws CognitiveAnalysisException {
     requireObject(node, path);
     final Map<String, ReporterSettings> result = new LinkedHashMap<>();
@@ -131,9 +127,6 @@ final class ConfigParser {
       final JsonNode jar = reporter.get("jar");
       if (jar != null && !jar.isNull() && !jar.isTextual()) {
         throw invalid(reporterPath + ".jar", "must be a string or null");
-      }
-      if (builtInNames.contains(key.toLowerCase(Locale.ROOT))) {
-        throw new CognitiveAnalysisException("Custom reporter key '" + key + "' conflicts with a built-in report type");
       }
       result.put(key, new ReporterSettings(className.asText(), jar == null || jar.isNull() ? null : jar.asText()));
     }

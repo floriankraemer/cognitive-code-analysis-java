@@ -97,4 +97,22 @@ public final class ReporterJars {
       throw new IllegalStateException(e);
     }
   }
+
+  /** Adds a text entry to an existing jar. */
+  public static void addEntry(final Path jar, final String name, final String content) throws IOException {
+    final Path copy = jar.resolveSibling(jar.getFileName() + ".tmp");
+    try (java.util.jar.JarFile in = new java.util.jar.JarFile(jar.toFile());
+        JarOutputStream out = new JarOutputStream(Files.newOutputStream(copy))) {
+      for (final var entries = in.entries(); entries.hasMoreElements();) {
+        final JarEntry entry = entries.nextElement();
+        out.putNextEntry(new JarEntry(entry.getName()));
+        in.getInputStream(entry).transferTo(out);
+        out.closeEntry();
+      }
+      out.putNextEntry(new JarEntry(name));
+      out.write(content.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+      out.closeEntry();
+    }
+    Files.move(copy, jar, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+  }
 }
