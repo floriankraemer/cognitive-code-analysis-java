@@ -60,12 +60,35 @@ class CognitiveMetricsCollectorTest {
         fixtures.cognitive.Units.StaticNested.Deeper::inDeeper @38 lines=2 args=0 returns=0 vars=0 props=0 ifs=0 nesting=0 elses=0
         fixtures.cognitive.Units.Inner::Inner @44 lines=2 args=0 returns=0 vars=0 props=0 ifs=0 nesting=0 elses=0
         fixtures.cognitive.Units.Color::code @60 lines=3 args=0 returns=1 vars=0 props=0 ifs=0 nesting=0 elses=0
-        fixtures.cognitive.Units.Point::Point(int,int) @66 lines=5 args=2 returns=0 vars=0 props=0 ifs=1 nesting=1 elses=0
+        fixtures.cognitive.Units.Point::Point(int,int) @66 lines=5 args=0 returns=0 vars=0 props=0 ifs=1 nesting=1 elses=0
         fixtures.cognitive.Units.Point::Point(int) @72 lines=3 args=1 returns=0 vars=0 props=0 ifs=0 nesting=0 elses=0
         fixtures.cognitive.Units.Point::sum @76 lines=3 args=0 returns=1 vars=1 props=2 ifs=0 nesting=0 elses=0
         fixtures.cognitive.Units.Shape::describe @84 lines=3 args=0 returns=1 vars=0 props=0 ifs=0 nesting=0 elses=0
         fixtures.cognitive.Units.Shape::unit @88 lines=3 args=0 returns=1 vars=0 props=0 ifs=0 nesting=0 elses=0
         fixtures.cognitive.Units.Shape::helper @92 lines=2 args=0 returns=0 vars=0 props=0 ifs=0 nesting=0 elses=0
+        """);
+  }
+
+  @Test
+  void countsNoArgumentsForACompactRecordConstructorButAllForAnExplicitCanonicalOne() throws Exception {
+    String code = """
+        record Compact(int a, int b, int c) {
+          Compact {
+            a = Math.max(a, 0);
+          }
+        }
+
+        record Canonical(int a, int b) {
+          Canonical(int a, int b) {
+            this.a = Math.max(a, 0);
+            this.b = b;
+          }
+        }
+        """;
+
+    assertThat(render(collector.collect(code))).isEqualTo("""
+        Compact::Compact @2 lines=3 args=0 returns=0 vars=0 props=0 ifs=0 nesting=0 elses=0
+        Canonical::Canonical @8 lines=4 args=2 returns=0 vars=1 props=2 ifs=0 nesting=0 elses=0
         """);
   }
 

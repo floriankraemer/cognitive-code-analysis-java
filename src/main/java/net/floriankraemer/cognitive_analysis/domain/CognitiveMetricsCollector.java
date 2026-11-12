@@ -182,11 +182,16 @@ public class CognitiveMetricsCollector {
     };
   }
 
+  /** A compact record constructor declares no parameters, its record components are implicit. */
+  private static int declaredParameterCount(final Unit unit) {
+    return unit.declaration() instanceof CompactConstructorDeclaration ? 0 : unit.parameters().size();
+  }
+
   private static CognitiveMetrics measure(final String className, final String methodName, final Unit unit) {
     final Range range = unit.declaration().getRange().orElseThrow();
     final CognitiveMetrics metrics = new CognitiveMetrics(className, methodName, range.begin.line);
     metrics.setValue(MetricName.LINE_COUNT, range.end.line - range.begin.line + 1);
-    metrics.setValue(MetricName.ARG_COUNT, unit.parameters().size());
+    metrics.setValue(MetricName.ARG_COUNT, declaredParameterCount(unit));
 
     final MethodBodyVisitor visitor = new MethodBodyVisitor(
         unit.parameters().stream().map(Parameter::getNameAsString).collect(toSet()));
