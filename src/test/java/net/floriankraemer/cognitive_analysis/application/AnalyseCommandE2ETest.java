@@ -290,7 +290,9 @@ class AnalyseCommandE2ETest {
     assertThat(Files.readString(report))
         .startsWith("[")
         .contains("\"className\" : \"test.testcode.ClassToAnalyze\"")
-        .contains("\"methodName\" : \"simpleMethod\"");
+        .contains("\"methodName\" : \"simpleMethod\"")
+        .contains("\"cyclomaticComplexity\" : ", "\"cyclomaticRiskLevel\" : \"", "\"halsteadVolume\" : ",
+            "\"halsteadDifficulty\" : ", "\"halsteadEffort\" : ");
   }
 
   @Test
