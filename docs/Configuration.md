@@ -15,6 +15,32 @@ The file is chosen in this order:
 java -jar cognitive-analysis.jar analyse <path-to-folder> --config <path-to-config-file>
 ```
 
+## Creating a config file
+
+`init` writes a config file with the bundled defaults, so you can start from a complete, documented file.
+
+```bash
+java -jar cognitive-analysis.jar init
+```
+
+In an interactive console, `init` asks for the settings below.
+Each question is preceded by a one-line explanation, and an empty answer keeps the default in brackets.
+
+- `scoreThreshold` (default `0.5`) must be a number greater than 0.
+- The `show*` questions and `groupByClass` accept `y`, `yes`, `true`, `n`, `no` or `false`, in any letter case.
+
+An invalid answer is reported, and the question is asked again.
+The answers are written into the bundled defaults, so the file contains every setting.
+
+Options:
+
+- `--path`, `-p` sets the file to create.
+  The default is `./jcca.yaml`, and missing parent directories are created.
+- `--silent` skips the questions and writes the defaults.
+  Questions are also skipped when standard input is not a console, such as when input is piped.
+- `--force`, `-f` overwrites an existing file.
+  Without it, `init` refuses to replace the file and exits with status 1.
+
 ## Merge rules
 
 - Mappings are merged key by key.
