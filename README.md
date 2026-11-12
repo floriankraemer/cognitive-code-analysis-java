@@ -110,6 +110,7 @@ Run `java -jar target/cognitive-analysis.jar --help` for all options.
     * [Example](#example)
 
 * [Churn](./docs/Churn.md)
+* [Custom Reporters](./docs/Custom-Reporters.md)
 
 * [Halstead Complexity Analysis](./docs/Halstead-Complexity-Analysis.md)
 

@@ -5,19 +5,26 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.math.BigDecimal;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import net.floriankraemer.cognitive_analysis.CognitiveAnalysisException;
+import net.floriankraemer.cognitive_analysis.application.report.AtomicFileWriter;
+import net.floriankraemer.cognitive_analysis.config.CognitiveConfig;
+import net.floriankraemer.cognitive_analysis.config.CognitiveConfig.ReporterSettings;
 import net.floriankraemer.cognitive_analysis.churn.TreemapMath.Item;
 import net.floriankraemer.cognitive_analysis.churn.TreemapMath.Rect;
+import net.floriankraemer.cognitive_analysis.report.ReporterLoader;
+import net.floriankraemer.cognitive_analysis.report.spi.ChurnReportInput;
+import net.floriankraemer.cognitive_analysis.report.spi.ChurnReporter;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
 
@@ -36,20 +43,62 @@ public final class ChurnReportBuilder {
     this.clock = clock;
   }
 
+  /** A report format: a built-in one or a custom reporter. */
+  @FunctionalInterface
+  public interface Renderer {
+    String render(List<ChurnMetrics> metrics) throws CognitiveAnalysisException;
+  }
+
+  /**
+   * Finds the renderer of a report type: a built-in type in any letter case, else the custom reporter of that key.
+   * A custom reporter is loaded here, so a broken one fails before the churn is calculated.
+   */
+  public Renderer resolve(final String name, final CognitiveConfig config) throws CognitiveAnalysisException {
+    ReporterLoader.requireNoBuiltInKeys(config.customReporters().churn().keySet(), ChurnReportType.commandNames());
+    final Optional<ChurnReportType> builtIn = ChurnReportType.find(name);
+    if (builtIn.isPresent()) {
+      return metrics -> render(builtIn.get(), metrics);
+    }
+    final ReporterSettings settings = config.customReporters().churn().get(name);
+    if (settings == null) {
+      final List<String> names = new ArrayList<>(ChurnReportType.commandNames());
+      names.addAll(config.customReporters().churn().keySet().stream().sorted().toList());
+      throw new CognitiveAnalysisException(
+          "Invalid report type '" + name + "'. Expected one of: " + String.join(", ", names) + ".");
+    }
+    final ChurnReporter reporter = ReporterLoader.load(settings, config, ChurnReporter.class);
+    return metrics -> ReporterLoader.render(name, reporter, () -> reporter.render(input(metrics)));
+  }
+
+  private static ChurnReportInput input(final List<ChurnMetrics> metrics) {
+    return new ChurnReportInput(metrics.stream()
+        .map(metric -> new ChurnReportInput.Entry(
+            metric.className(),
+            metric.file(),
+            metric.score(),
+            metric.timesChanged(),
+            metric.churn(),
+            metric.coverage(),
+            metric.riskChurn(),
+            metric.riskLevel() == null ? null : metric.riskLevel().name()))
+        .toList());
+  }
+
   /** Writes the report as UTF-8; the directory of the file must exist. */
   public void build(final ChurnReportType type, final String file, final List<ChurnMetrics> metrics)
+      throws CognitiveAnalysisException {
+    build(list -> render(type, list), file, metrics);
+  }
+
+  public void build(final Renderer renderer, final String file, final List<ChurnMetrics> metrics)
       throws CognitiveAnalysisException {
     final Path path = Path.of(file);
     final Path directory = path.getParent();
     if (directory != null && !Files.isDirectory(directory)) {
       throw new CognitiveAnalysisException("Directory " + directory + " does not exist");
     }
-    final String content = render(type, metrics);
-    try {
-      Files.writeString(path, content, StandardCharsets.UTF_8);
-    } catch (IOException e) {
-      throw new CognitiveAnalysisException("Failed to write the report to disk: " + file, e);
-    }
+    final String content = renderer.render(metrics);
+    AtomicFileWriter.write(path, content);
   }
 
   String render(final ChurnReportType type, final List<ChurnMetrics> metrics) throws CognitiveAnalysisException {

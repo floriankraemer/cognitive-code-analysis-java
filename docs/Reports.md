@@ -3,6 +3,7 @@
 `analyse` writes a report with `--report-type` (`-r`) and `--report-file` (`-f`).
 Both must be given together.
 The type is one of `json`, `csv`, `html`, `markdown`, `checkstyle`, `junit`, `sarif`, `gitlab-codequality` or `github-actions`, in any letter case.
+To write a format of your own, see [Custom Reporters](./Custom-Reporters.md).
 The directory of the file must exist, and the file is always written as UTF-8.
 Numbers use a dot and three decimals, whatever the locale is.
 A value that is not a finite number is `N/A` in the text formats and `null` in JSON.

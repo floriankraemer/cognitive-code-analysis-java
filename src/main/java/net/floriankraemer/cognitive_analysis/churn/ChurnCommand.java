@@ -17,7 +17,6 @@ import net.floriankraemer.cognitive_analysis.config.ConfigLoader;
 import net.floriankraemer.cognitive_analysis.domain.CognitiveMetricsFacade;
 import net.floriankraemer.cognitive_analysis.domain.MetricsCollection;
 import picocli.CommandLine.Command;
-import picocli.CommandLine.ITypeConverter;
 import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
@@ -33,14 +32,6 @@ public class ChurnCommand implements Callable<Integer> {
 
   private static final String SUPPORTED_VCS = "git";
   private static final Duration GIT_TIMEOUT = Duration.ofSeconds(60);
-
-  /** Accepts the report type in any letter case. */
-  static final class ReportTypeConverter implements ITypeConverter<ChurnReportType> {
-    @Override
-    public ChurnReportType convert(final String value) {
-      return ChurnReportType.parse(value);
-    }
-  }
 
   @Spec
   CommandSpec spec;
@@ -67,10 +58,10 @@ public class ChurnCommand implements Callable<Integer> {
 
   @Option(
       names = {"-r", "--report-type"},
-      converter = ReportTypeConverter.class,
-      description = "Report type: json, csv, html, markdown, svg-treemap or svg. Requires --report-file."
+      description = "Report type: json, csv, html, markdown, svg-treemap or svg, or a key of"
+          + " customReporters.churn in the configuration. Requires --report-file."
   )
-  ChurnReportType reportType;
+  String reportType;
 
   @Option(names = {"-f", "--report-file"}, description = "File the report is written to. Requires --report-type.")
   String reportFile;
@@ -102,13 +93,15 @@ public class ChurnCommand implements Callable<Integer> {
     try {
       final CognitiveConfig config =
           new ConfigLoader(Path.of("")).load(configFile == null ? null : Path.of(configFile));
+      final ChurnReportBuilder builder = new ChurnReportBuilder(clock);
+      final ChurnReportBuilder.Renderer renderer = reportType == null ? null : builder.resolve(reportType, config);
       final MetricsCollection metrics = new CognitiveMetricsFacade(config, err, Path.of("")).calculateCognitiveMetrics(paths());
       final List<ChurnMetrics> churn =
           ChurnCalculator.calculate(metrics, new GitChangeCounter(gitExecutable, sinceDate, GIT_TIMEOUT));
 
       final PrintWriter out = spec.commandLine().getOut();
       if (reportType != null) {
-        new ChurnReportBuilder(clock).build(reportType, reportFile, churn);
+        builder.build(renderer, reportFile, churn);
         out.println("Report generated at: " + reportFile);
       } else {
         out.println(renderTable(churn));
