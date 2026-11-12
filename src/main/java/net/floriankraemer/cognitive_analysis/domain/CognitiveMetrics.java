@@ -36,39 +36,45 @@ public class CognitiveMetrics {
   private boolean coverageProvided;
 
   /**
+   * Also restores a state written by Jackson: the identity comes from the creator, the rest from the
+   * annotated restore methods below.
+   *
    * @param className the fully qualified class name, nested classes separated by dots
    * @param methodName the method name, with the parameter types when the method is overloaded
    * @param line the line the declaration starts on
    */
-  public CognitiveMetrics(final String className, final String methodName, final int line) {
-    this(className, methodName, line, Map.of(), Map.of(), Map.of(), Map.of(), 0.0);
-  }
-
-  /** Restores a state written by Jackson, see the annotated fields. */
   @JsonCreator
-  CognitiveMetrics(
+  public CognitiveMetrics(
       @JsonProperty("className") final String className,
       @JsonProperty("methodName") final String methodName,
-      @JsonProperty("line") final int line,
-      @JsonProperty("values") final Map<MetricName, Integer> values,
-      @JsonProperty("weights") final Map<MetricName, Double> weights,
-      @JsonProperty("deltas") final Map<MetricName, Delta> deltas,
-      @JsonProperty("otherDeltas") final Map<DeltaMetric, Delta> otherDeltas,
-      @JsonProperty("cognitiveComplexity") final double cognitiveComplexity) {
+      @JsonProperty("line") final int line) {
     this.className = className;
     this.methodName = methodName;
     this.line = line;
     this.values = new EnumMap<>(MetricName.class);
-    this.values.putAll(values);
     this.weights = new EnumMap<>(MetricName.class);
-    this.weights.putAll(weights);
     this.deltas = new EnumMap<>(MetricName.class);
-    this.deltas.putAll(deltas);
     this.otherDeltas = new EnumMap<>(DeltaMetric.class);
-    if (otherDeltas != null) {
-      this.otherDeltas.putAll(otherDeltas);
-    }
-    this.cognitiveComplexity = cognitiveComplexity;
+  }
+
+  @JsonProperty("values")
+  private void restoreValues(final Map<MetricName, Integer> restored) {
+    values.putAll(restored);
+  }
+
+  @JsonProperty("weights")
+  private void restoreWeights(final Map<MetricName, Double> restored) {
+    weights.putAll(restored);
+  }
+
+  @JsonProperty("deltas")
+  private void restoreDeltas(final Map<MetricName, Delta> restored) {
+    deltas.putAll(restored);
+  }
+
+  @JsonProperty("otherDeltas")
+  private void restoreOtherDeltas(final Map<DeltaMetric, Delta> restored) {
+    otherDeltas.putAll(restored);
   }
 
   public String getClassName() {

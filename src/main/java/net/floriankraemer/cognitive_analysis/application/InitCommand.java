@@ -64,31 +64,10 @@ public class InitCommand implements Callable<Integer> {
 
   @Override
   public Integer call() {
-    final PrintWriter out = spec.commandLine().getOut();
     final PrintWriter err = spec.commandLine().getErr();
     try {
-      if (path.isBlank()) {
-        throw new CognitiveAnalysisException("Invalid path: path must not be empty.");
-      }
-      final Path target = Path.of(path);
-      if (Files.isDirectory(target)) {
-        throw new FileSystemException(path, null, "it is a directory");
-      }
-      if (Files.exists(target) && !force) {
-        err.println(alreadyExists());
-        return 1;
-      }
-      final Settings defaults = Settings.fromConfig(ConfigLoader.loadBundledDefaults());
-      final Settings settings = asksQuestions()
-          ? new InitPrompter(input, out, err, defaults).ask()
-          : defaults;
-      ConfigInitializer.write(target, settings, force);
-      out.println("Created config at: " + path);
+      create(spec.commandLine().getOut(), err);
       return 0;
-    } catch (FileAlreadyExistsException e) {
-      // The file was created while the questions were answered.
-      err.println(alreadyExists());
-      return 1;
     } catch (CognitiveAnalysisException e) {
       err.println(e.getMessage());
       return 1;
@@ -99,6 +78,36 @@ public class InitCommand implements Callable<Integer> {
       err.println("Invalid path: " + e.getReason() + ".");
       return 1;
     }
+  }
+
+  private void create(final PrintWriter out, final PrintWriter err) throws CognitiveAnalysisException, IOException {
+    final Path target = target();
+    final Settings defaults = Settings.fromConfig(ConfigLoader.loadBundledDefaults());
+    final Settings settings = asksQuestions()
+        ? new InitPrompter(input, out, err, defaults).ask()
+        : defaults;
+    try {
+      ConfigInitializer.write(target, settings, force);
+    } catch (FileAlreadyExistsException e) {
+      // The file was created while the questions were answered.
+      throw new CognitiveAnalysisException(alreadyExists());
+    }
+    out.println("Created config at: " + path);
+  }
+
+  /** @return the file to create, which does not exist yet unless --force is given */
+  private Path target() throws CognitiveAnalysisException, FileSystemException {
+    if (path.isBlank()) {
+      throw new CognitiveAnalysisException("Invalid path: path must not be empty.");
+    }
+    final Path target = Path.of(path);
+    if (Files.isDirectory(target)) {
+      throw new FileSystemException(path, null, "it is a directory");
+    }
+    if (Files.exists(target) && !force) {
+      throw new CognitiveAnalysisException(alreadyExists());
+    }
+    return target;
   }
 
   private String alreadyExists() {
