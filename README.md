@@ -29,7 +29,7 @@ java -jar target/cognitive-analysis.jar analyse src/main/java,tools/Generator.ja
 Directories are searched recursively for `.java` files, skipping hidden directories.
 A file that cannot be parsed is reported and skipped, and the analysis goes on.
 
-Write an HTML, CSV or JSON report instead:
+Write a JSON, CSV, HTML or Markdown report instead, see [Reports](./docs/Reports.md):
 
 ```bash
 java -jar target/cognitive-analysis.jar analyse src/main/java --report-type html --report-file report.html

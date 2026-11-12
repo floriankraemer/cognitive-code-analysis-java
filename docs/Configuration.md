@@ -53,7 +53,8 @@ Options:
 ## Settings
 
 `metrics`, `excludeFilePatterns`, `excludePatterns` and `cache` affect the analysis today.
-The other settings (`scoreThreshold`, `show*`, `groupByClass`, `customReporters`) are parsed and validated, and are applied from a later release.
+`scoreThreshold`, `show*` and `groupByClass` shape the HTML and Markdown reports, see [Reports](./Reports.md).
+`customReporters` is parsed and validated, and is applied from a later release.
 
 ```yaml
 cognitive:
