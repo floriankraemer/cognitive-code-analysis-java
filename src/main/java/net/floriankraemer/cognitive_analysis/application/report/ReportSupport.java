@@ -1,5 +1,8 @@
 package net.floriankraemer.cognitive_analysis.application.report;
 
+import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.toList;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.util.DefaultIndenter;
 import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
@@ -14,7 +17,6 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -63,13 +65,10 @@ final class ReportSupport {
    * qualified class name, or {@code <class>@<file>} for every file when the class occurs in several.
    */
   static Map<String, List<Row>> byClass(final List<Row> rows) {
-    final Map<String, Map<String, List<Row>>> files = new TreeMap<>();
-    for (final Row row : rows) {
-      files.computeIfAbsent(row.metrics().getClassName(), name -> new LinkedHashMap<>())
-          .computeIfAbsent(row.file(), file -> new ArrayList<>()).add(row);
-    }
     final Map<String, List<Row>> sections = new TreeMap<>();
-    files.forEach((className, byFile) -> {
+    rows.stream().collect(groupingBy(
+        row -> row.metrics().getClassName(), TreeMap::new, groupingBy(Row::file, LinkedHashMap::new, toList())))
+        .forEach((className, byFile) -> {
       if (byFile.size() == 1) {
         sections.put(className, byFile.values().iterator().next());
       } else {

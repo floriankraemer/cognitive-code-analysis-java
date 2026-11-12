@@ -13,8 +13,6 @@ import java.util.Locale;
 import java.util.stream.Stream;
 import net.floriankraemer.cognitive_analysis.App;
 import org.approvaltests.Approvals;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import picocli.CommandLine;

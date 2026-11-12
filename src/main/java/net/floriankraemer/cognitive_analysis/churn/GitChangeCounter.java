@@ -25,37 +25,43 @@ public final class GitChangeCounter implements ChangeCounter {
 
   @Override
   public int count(final Path file) throws CognitiveAnalysisException {
-    final Path absolute = file.toAbsolutePath().normalize();
-    final Path directory = absolute.getParent();
-    final ProcessBuilder builder = new ProcessBuilder(
-        executable, "-C", directory.toString(), "rev-list", "--since=" + since + " 00:00:00", "--no-merges", "--count", "HEAD",
-        "--", absolute.toString());
-    builder.environment().put("LC_ALL", "C"); // stable messages, so that "not a git repository" is recognisable
-
-    final Process process;
-    try {
-      process = builder.start();
-    } catch (IOException e) {
-      throw new CognitiveAnalysisException("git executable not found", e);
-    }
-
-    final CompletableFuture<String> stdout = CompletableFuture.supplyAsync(() -> readAll(process.getInputStream()));
-    final CompletableFuture<String> stderr = CompletableFuture.supplyAsync(() -> readAll(process.getErrorStream()));
-    final int exitCode = waitFor(process);
-
-    if (exitCode != 0) {
-      final String message = stderr.join().trim();
-      if (message.contains("not a git repository")) {
-        throw new CognitiveAnalysisException("Not a git repository: " + directory);
-      }
-      throw new CognitiveAnalysisException("git failed with exit code " + exitCode + ": " + message);
-    }
-    final String output = stdout.join().trim();
+    final String output = revListCount(file.toAbsolutePath().normalize());
     try {
       return Integer.parseInt(output);
     } catch (NumberFormatException e) {
       throw new CognitiveAnalysisException("Unexpected git output: " + output, e);
     }
+  }
+
+  /** @return what git prints for the file, trimmed */
+  private String revListCount(final Path file) throws CognitiveAnalysisException {
+    final Process process = start(file);
+    final CompletableFuture<String> stdout = CompletableFuture.supplyAsync(() -> readAll(process.getInputStream()));
+    final CompletableFuture<String> stderr = CompletableFuture.supplyAsync(() -> readAll(process.getErrorStream()));
+    final int exitCode = waitFor(process);
+    if (exitCode != 0) {
+      throw failure(exitCode, stderr.join().trim(), file.getParent());
+    }
+    return stdout.join().trim();
+  }
+
+  private Process start(final Path file) throws CognitiveAnalysisException {
+    final ProcessBuilder builder = new ProcessBuilder(
+        executable, "-C", file.getParent().toString(), "rev-list", "--since=" + since + " 00:00:00", "--no-merges",
+        "--count", "HEAD", "--", file.toString());
+    builder.environment().put("LC_ALL", "C"); // stable messages, so that "not a git repository" is recognisable
+    try {
+      return builder.start();
+    } catch (IOException e) {
+      throw new CognitiveAnalysisException("git executable not found", e);
+    }
+  }
+
+  private static CognitiveAnalysisException failure(final int exitCode, final String message, final Path directory) {
+    if (message.contains("not a git repository")) {
+      return new CognitiveAnalysisException("Not a git repository: " + directory);
+    }
+    return new CognitiveAnalysisException("git failed with exit code " + exitCode + ": " + message);
   }
 
   private int waitFor(final Process process) throws CognitiveAnalysisException {

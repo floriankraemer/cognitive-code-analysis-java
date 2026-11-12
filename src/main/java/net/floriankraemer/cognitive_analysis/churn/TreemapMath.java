@@ -54,40 +54,38 @@ final class TreemapMath {
   /** Slice-and-dice layout, starting with a vertical cut, alternating the orientation per level. */
   static List<Rect> layout(final List<Item> items, final double width, final double height) {
     final List<Rect> rects = new ArrayList<>();
-    layout(items, 0, 0, width, height, true, rects);
+    layout(items, new Area(0, 0, width, height), true, rects);
     return rects;
   }
 
   private static void layout(
-      final List<Item> items,
-      final double x,
-      final double y,
-      final double width,
-      final double height,
-      final boolean vertical,
-      final List<Rect> rects) {
+      final List<Item> items, final Area area, final boolean vertical, final List<Rect> rects) {
     if (items.isEmpty()) {
       return;
     }
     if (items.size() == 1) {
-      rects.add(new Rect(x, y, width, height, items.get(0)));
+      rects.add(new Rect(area.x(), area.y(), area.width(), area.height(), items.get(0)));
       return;
     }
 
     final double sum = sum(items);
     final int split = findSplitIndex(items, sum);
     final List<Item> first = items.subList(0, split);
-    final List<Item> second = items.subList(split, items.size());
-    final double share = sum(first) / sum;
+    final List<Area> parts = area.cut(sum(first) / sum, vertical);
+    layout(first, parts.get(0), !vertical, rects);
+    layout(items.subList(split, items.size()), parts.get(1), !vertical, rects);
+  }
 
-    if (vertical) {
-      final double firstWidth = width * share;
-      layout(first, x, y, firstWidth, height, false, rects);
-      layout(second, x + firstWidth, y, width - firstWidth, height, false, rects);
-    } else {
+  private record Area(double x, double y, double width, double height) {
+
+    /** Cuts the area in two, the first part taking the share of the width (vertical cut) or the height. */
+    List<Area> cut(final double share, final boolean vertical) {
+      if (vertical) {
+        final double firstWidth = width * share;
+        return List.of(new Area(x, y, firstWidth, height), new Area(x + firstWidth, y, width - firstWidth, height));
+      }
       final double firstHeight = height * share;
-      layout(first, x, y, width, firstHeight, true, rects);
-      layout(second, x, y + firstHeight, width, height - firstHeight, true, rects);
+      return List.of(new Area(x, y, width, firstHeight), new Area(x, y + firstHeight, width, height - firstHeight));
     }
   }
 

@@ -155,25 +155,33 @@ public final class ChurnReportBuilder {
     final StringWriter out = new StringWriter();
     final CSVFormat format = CSVFormat.DEFAULT.builder().setRecordSeparator("\n").get();
     try (CSVPrinter printer = new CSVPrinter(out, format)) {
-      final List<String> header = new ArrayList<>(List.of("Class", "File", "Score", "Churn", "Times Changed"));
-      if (withCoverage) {
-        header.addAll(List.of("Risk Churn", "Coverage", "Risk Level"));
-      }
-      printer.printRecord(header);
+      printer.printRecord(csvHeader(withCoverage));
       for (final ChurnMetrics metric : metrics) {
-        final List<Object> record = new ArrayList<>(List.of(
-            metric.className(), metric.file(), plain(metric.score()), plain(metric.churn()), metric.timesChanged()));
-        if (withCoverage) {
-          record.addAll(List.of(
-              optional(metric.riskChurn()), optional(metric.coverage()),
-              metric.riskLevel() == null ? "" : metric.riskLevel().name()));
-        }
-        printer.printRecord(record);
+        printer.printRecord(csvRecord(metric, withCoverage));
       }
     } catch (IOException e) {
       throw new CognitiveAnalysisException("Failed to build the CSV report", e);
     }
     return out.toString();
+  }
+
+  private static List<String> csvHeader(final boolean withCoverage) {
+    final List<String> header = new ArrayList<>(List.of("Class", "File", "Score", "Churn", "Times Changed"));
+    if (withCoverage) {
+      header.addAll(List.of("Risk Churn", "Coverage", "Risk Level"));
+    }
+    return header;
+  }
+
+  private static List<Object> csvRecord(final ChurnMetrics metric, final boolean withCoverage) {
+    final List<Object> record = new ArrayList<>(List.of(
+        metric.className(), metric.file(), plain(metric.score()), plain(metric.churn()), metric.timesChanged()));
+    if (withCoverage) {
+      record.addAll(List.of(
+          optional(metric.riskChurn()), optional(metric.coverage()),
+          metric.riskLevel() == null ? "" : metric.riskLevel().name()));
+    }
+    return record;
   }
 
   private String html(final List<ChurnMetrics> metrics) {

@@ -3,6 +3,7 @@ package net.floriankraemer.cognitive_analysis.coverage;
 import java.nio.file.Path;
 import java.util.EnumMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import net.floriankraemer.cognitive_analysis.CognitiveAnalysisException;
 import picocli.CommandLine.Option;
@@ -31,16 +32,7 @@ public final class CoverageOptions {
    * @throws CognitiveAnalysisException when several formats are given, or the file is missing or invalid
    */
   public Optional<CoverageData> load() throws CognitiveAnalysisException {
-    final Map<CoverageFormat, String> given = new EnumMap<>(CoverageFormat.class);
-    if (jacoco != null) {
-      given.put(CoverageFormat.JACOCO, jacoco);
-    }
-    if (cobertura != null) {
-      given.put(CoverageFormat.COBERTURA, cobertura);
-    }
-    if (clover != null) {
-      given.put(CoverageFormat.CLOVER, clover);
-    }
+    final Map<CoverageFormat, String> given = given();
     if (given.size() > 1) {
       throw new CognitiveAnalysisException("Only one coverage format can be specified at a time.");
     }
@@ -49,5 +41,14 @@ public final class CoverageOptions {
     }
     final Map.Entry<CoverageFormat, String> only = given.entrySet().iterator().next();
     return Optional.of(only.getKey().read(Path.of(only.getValue())));
+  }
+
+  private Map<CoverageFormat, String> given() {
+    final Map<CoverageFormat, String> given = new EnumMap<>(CoverageFormat.class);
+    given.put(CoverageFormat.JACOCO, jacoco);
+    given.put(CoverageFormat.COBERTURA, cobertura);
+    given.put(CoverageFormat.CLOVER, clover);
+    given.values().removeIf(Objects::isNull);
+    return given;
   }
 }

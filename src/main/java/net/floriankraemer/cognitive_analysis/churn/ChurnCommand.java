@@ -81,46 +81,60 @@ public class ChurnCommand implements Callable<Integer> {
   @Override
   public Integer call() {
     final PrintWriter err = spec.commandLine().getErr();
-
-    if ((reportType == null) != (reportFile == null)) {
-      err.println("Both report type and file must be provided.");
-      return 1;
-    }
-    if (!SUPPORTED_VCS.equals(vcs)) {
-      err.println("Unknown VCS type: " + vcs + ". Supported: " + SUPPORTED_VCS);
-      return 1;
-    }
-    final LocalDate sinceDate;
-    try {
-      sinceDate = LocalDate.parse(since);
-    } catch (DateTimeParseException e) {
-      err.println("Invalid --since date '" + since + "'. Expected format: YYYY-MM-DD.");
+    final String invalidOption = invalidOption();
+    if (invalidOption != null) {
+      err.println(invalidOption);
       return 1;
     }
 
     try {
-      final Optional<CoverageData> coverageData = coverage.load();
-      final CognitiveConfig config =
-          new ConfigLoader(Path.of("")).load(configFile == null ? null : Path.of(configFile));
-      final ChurnReportBuilder builder = new ChurnReportBuilder(clock, coverageData.isPresent());
-      final ChurnReportBuilder.Renderer renderer = reportType == null ? null : builder.resolve(reportType, config);
-      final MetricsCollection metrics = new CognitiveMetricsFacade(config, err, Path.of("")).calculateCognitiveMetrics(paths());
-      coverageData.flatMap(data -> data.matchWarning(coverage.file(), metrics.methods())).ifPresent(err::println);
-      final List<ChurnMetrics> churn =
-          ChurnCalculator.calculate(metrics, new GitChangeCounter(gitExecutable, sinceDate, GIT_TIMEOUT), coverageData);
-
-      final PrintWriter out = spec.commandLine().getOut();
-      if (reportType != null) {
-        builder.build(renderer, reportFile, churn);
-        out.println("Report generated at: " + reportFile);
-      } else {
-        out.println(renderTable(churn, coverageData.isPresent()));
-      }
+      run(err);
       return 0;
     } catch (CognitiveAnalysisException | RuntimeException e) {
       err.println(e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName());
       return 1;
     }
+  }
+
+  /** @return what is wrong with the options, or null when they are valid */
+  private String invalidOption() {
+    if ((reportType == null) != (reportFile == null)) {
+      return "Both report type and file must be provided.";
+    }
+    if (!SUPPORTED_VCS.equals(vcs)) {
+      return "Unknown VCS type: " + vcs + ". Supported: " + SUPPORTED_VCS;
+    }
+    try {
+      LocalDate.parse(since);
+      return null;
+    } catch (DateTimeParseException e) {
+      return "Invalid --since date '" + since + "'. Expected format: YYYY-MM-DD.";
+    }
+  }
+
+  private void run(final PrintWriter err) throws CognitiveAnalysisException {
+    final Optional<CoverageData> coverageData = coverage.load();
+    final CognitiveConfig config =
+        new ConfigLoader(Path.of("")).load(configFile == null ? null : Path.of(configFile));
+    final ChurnReportBuilder builder = new ChurnReportBuilder(clock, coverageData.isPresent());
+    final ChurnReportBuilder.Renderer renderer = reportType == null ? null : builder.resolve(reportType, config);
+    final List<ChurnMetrics> churn = calculateChurn(config, coverageData, err);
+    if (renderer != null) {
+      builder.build(renderer, reportFile, churn);
+      spec.commandLine().getOut().println("Report generated at: " + reportFile);
+    } else {
+      spec.commandLine().getOut().println(renderTable(churn, coverageData.isPresent()));
+    }
+  }
+
+  private List<ChurnMetrics> calculateChurn(
+      final CognitiveConfig config, final Optional<CoverageData> coverageData, final PrintWriter err)
+      throws CognitiveAnalysisException {
+    final MetricsCollection metrics =
+        new CognitiveMetricsFacade(config, err, Path.of("")).calculateCognitiveMetrics(paths());
+    coverageData.flatMap(data -> data.matchWarning(coverage.file(), metrics.methods())).ifPresent(err::println);
+    final GitChangeCounter changes = new GitChangeCounter(gitExecutable, LocalDate.parse(since), GIT_TIMEOUT);
+    return ChurnCalculator.calculate(metrics, changes, coverageData);
   }
 
   private List<String> paths() throws CognitiveAnalysisException {

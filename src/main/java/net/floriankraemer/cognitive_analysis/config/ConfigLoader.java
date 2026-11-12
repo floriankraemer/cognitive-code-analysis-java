@@ -58,14 +58,17 @@ public class ConfigLoader {
   }
 
   private Optional<Path> resolveSource(final Path explicitFile) throws CognitiveAnalysisException {
-    if (explicitFile != null) {
-      if (!Files.isRegularFile(workingDirectory.resolve(explicitFile))) {
-        throw new CognitiveAnalysisException("Config file not found: " + explicitFile);
-      }
-      return Optional.of(explicitFile);
+    if (explicitFile == null) {
+      return Optional.of(Path.of(USER_FILE_NAME)).filter(this::isRegularFile);
     }
-    final Path discovered = Path.of(USER_FILE_NAME);
-    return Files.isRegularFile(workingDirectory.resolve(discovered)) ? Optional.of(discovered) : Optional.empty();
+    if (!isRegularFile(explicitFile)) {
+      throw new CognitiveAnalysisException("Config file not found: " + explicitFile);
+    }
+    return Optional.of(explicitFile);
+  }
+
+  private boolean isRegularFile(final Path file) {
+    return Files.isRegularFile(workingDirectory.resolve(file));
   }
 
   private static JsonNode defaults() {
@@ -77,14 +80,24 @@ public class ConfigLoader {
   }
 
   private JsonNode readUserFile(final Path file) throws CognitiveAnalysisException {
-    final JsonNode user;
+    final JsonNode user = readSingleDocument(file);
+    if (user == null || !user.path(ROOT).isObject()) {
+      throw new CognitiveAnalysisException("Configuration must contain a \"cognitive\" section.");
+    }
+    rejectUnknownKeys(user);
+    return user;
+  }
+
+  /** @return the document, or null when the file is empty */
+  private JsonNode readSingleDocument(final Path file) throws CognitiveAnalysisException {
     try {
       final MappingIterator<JsonNode> documents =
           YAML.readerFor(JsonNode.class).readValues(Files.readString(workingDirectory.resolve(file)));
-      user = documents.hasNext() ? documents.next() : null;
+      final JsonNode user = documents.hasNext() ? documents.next() : null;
       if (documents.hasNext()) {
         throw new CognitiveAnalysisException("Config file " + file + " must contain a single YAML document.");
       }
+      return user;
     } catch (JsonProcessingException e) {
       throw invalidYaml(file, e);
     } catch (RuntimeException e) {
@@ -96,16 +109,15 @@ public class ConfigLoader {
     } catch (IOException e) {
       throw new CognitiveAnalysisException("Cannot read config file " + file + ": " + e.getMessage(), e);
     }
-    if (user == null || !user.path(ROOT).isObject()) {
-      throw new CognitiveAnalysisException("Configuration must contain a \"cognitive\" section.");
-    }
+  }
+
+  private static void rejectUnknownKeys(final JsonNode user) throws CognitiveAnalysisException {
     for (final Iterator<String> keys = user.fieldNames(); keys.hasNext();) {
       final String key = keys.next();
       if (!ROOT.equals(key)) {
         throw new CognitiveAnalysisException("Unknown configuration key \"" + key + "\".");
       }
     }
-    return user;
   }
 
   private static CognitiveAnalysisException invalidYaml(final Path file, final JsonProcessingException e) {

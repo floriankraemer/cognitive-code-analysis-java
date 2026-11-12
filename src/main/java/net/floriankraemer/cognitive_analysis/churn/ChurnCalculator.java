@@ -52,8 +52,15 @@ public final class ChurnCalculator {
   public static List<ChurnMetrics> calculate(
       final MetricsCollection metrics, final ChangeCounter counter, final Optional<CoverageData> coverage)
       throws CognitiveAnalysisException {
-    final Map<String, Totals> classes = new LinkedHashMap<>();
+    final List<ChurnMetrics> result = new ArrayList<>();
+    totalsPerClass(metrics, counter).forEach((className, totals) -> result.add(churnOf(className, totals, coverage)));
+    result.sort(Comparator.comparingDouble(ChurnMetrics::churn).reversed().thenComparing(ChurnMetrics::className));
+    return result;
+  }
 
+  private static Map<String, Totals> totalsPerClass(final MetricsCollection metrics, final ChangeCounter counter)
+      throws CognitiveAnalysisException {
+    final Map<String, Totals> classes = new LinkedHashMap<>();
     for (final Map.Entry<String, Map<String, CognitiveMetrics>> fileEntry : metrics.entrySet()) {
       final String file = fileEntry.getKey();
       final int timesChanged = counter.count(Path.of(file));
@@ -63,24 +70,23 @@ public final class ChurnCalculator {
         totals.timesChanged = Math.max(totals.timesChanged, timesChanged);
       }
     }
+    return classes;
+  }
 
-    final List<ChurnMetrics> result = new ArrayList<>();
-    classes.forEach((className, totals) -> {
-      final double score = round(totals.score);
-      final double churn = churn(totals.timesChanged, score);
-      final Double classCoverage = coverage.flatMap(data -> data.classCoverage(className)).orElse(null);
-      result.add(new ChurnMetrics(
-          className,
-          totals.file,
-          score,
-          totals.timesChanged,
-          churn,
-          classCoverage,
-          classCoverage == null ? null : riskChurn(totals.timesChanged, score, classCoverage),
-          classCoverage == null ? null : riskLevel(churn, classCoverage)));
-    });
-    result.sort(Comparator.comparingDouble(ChurnMetrics::churn).reversed().thenComparing(ChurnMetrics::className));
-    return result;
+  private static ChurnMetrics churnOf(
+      final String className, final Totals totals, final Optional<CoverageData> coverage) {
+    final double score = round(totals.score);
+    final double churn = churn(totals.timesChanged, score);
+    final Double classCoverage = coverage.flatMap(data -> data.classCoverage(className)).orElse(null);
+    return new ChurnMetrics(
+        className,
+        totals.file,
+        score,
+        totals.timesChanged,
+        churn,
+        classCoverage,
+        classCoverage == null ? null : riskChurn(totals.timesChanged, score, classCoverage),
+        classCoverage == null ? null : riskLevel(churn, classCoverage));
   }
 
   public static double churn(final int timesChanged, final double score) {

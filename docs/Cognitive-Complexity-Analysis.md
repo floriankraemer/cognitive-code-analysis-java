@@ -49,7 +49,7 @@ Anonymous and local classes are left out, both as units of their own and from th
 
 - **Argument Count**:
   - **Description**: The number of parameters of the method.
-    A compact record constructor has the record components as its parameters.
+    A compact record constructor declares no parameters, so it counts 0; its record components are implicit and are not variables of its body.
   - **Purpose**: High argument counts can indicate that a method is doing too much or is highly dependent on external inputs, which may be a sign that the method needs refactoring.
 
 - **Return Count**:

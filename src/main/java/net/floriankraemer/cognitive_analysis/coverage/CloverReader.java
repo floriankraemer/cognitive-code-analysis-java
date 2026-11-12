@@ -56,38 +56,42 @@ final class CloverReader {
   private static List<MethodCoverage> methods(final List<Element> lines, final String className) {
     final String simpleName = className.substring(className.lastIndexOf('.') + 1);
     final List<MethodCoverage> methods = new ArrayList<>();
-    Element method = null;
-    int statements = 0;
-    int covered = 0;
+    Pending pending = null;
     for (final Element line : lines) {
       final String type = line.getAttribute("type");
       if (type.equals("method")) {
-        addMethod(methods, method, simpleName, statements, covered);
-        method = line;
-        statements = 0;
-        covered = 0;
-      } else if (type.equals("stmt") && method != null) {
-        statements++;
-        covered += count(line, "count") > 0 ? 1 : 0;
+        addMethod(methods, pending, simpleName);
+        pending = new Pending(line);
+      } else if (type.equals("stmt") && pending != null) {
+        pending.statements++;
+        pending.covered += count(line, "count") > 0 ? 1 : 0;
       }
     }
-    addMethod(methods, method, simpleName, statements, covered);
+    addMethod(methods, pending, simpleName);
     return methods;
   }
 
+  /** A method whose statements are being counted. */
+  private static final class Pending {
+    final Element method;
+    int statements;
+    int covered;
+
+    Pending(final Element method) {
+      this.method = method;
+    }
+  }
+
   /** A method without statements is as covered as it is called. */
-  private static void addMethod(
-      final List<MethodCoverage> methods,
-      final Element method,
-      final String className,
-      final int statements,
-      final int covered) {
-    if (method == null) {
+  private static void addMethod(final List<MethodCoverage> methods, final Pending pending, final String className) {
+    if (pending == null) {
       return;
     }
-    final double rate = statements > 0 ? (double) covered / statements : count(method, "count") > 0 ? 1.0 : 0.0;
-    final String name = methodName(method);
-    methods.add(new MethodCoverage(name.equals(className) ? "<init>" : name, (int) count(method, "num"), rate));
+    final double rate = pending.statements > 0
+        ? (double) pending.covered / pending.statements
+        : count(pending.method, "count") > 0 ? 1.0 : 0.0;
+    final String name = methodName(pending.method);
+    methods.add(new MethodCoverage(name.equals(className) ? "<init>" : name, (int) count(pending.method, "num"), rate));
   }
 
   /** The {@code name} of Clover for PHP, or the {@code signature} of OpenClover, {@code run(int)}, without parameters. */

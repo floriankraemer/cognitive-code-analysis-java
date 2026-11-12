@@ -2,8 +2,10 @@ package net.floriankraemer.cognitive_analysis.application.report;
 
 import java.time.Clock;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import net.floriankraemer.cognitive_analysis.application.report.ReportSupport.Row;
 import net.floriankraemer.cognitive_analysis.config.CognitiveConfig;
 import net.floriankraemer.cognitive_analysis.config.MetricName;
@@ -60,66 +62,50 @@ final class MarkdownReport implements Report {
     }
   }
 
+  private record Column(String header, Function<CognitiveMetrics, String> cell) {}
+
   private void appendTable(
       final StringBuilder md, final boolean withClass, final List<Row> rows, final boolean withCoverage) {
-    final List<String> header = new ArrayList<>();
-    if (withClass) {
-      header.add("Class");
-    }
-    header.add("Method");
-    if (config.showDetailedCognitiveMetrics()) {
-      for (final MetricName name : MetricName.values()) {
-        header.add(ReportSupport.shortLabel(name));
-      }
-    }
-    header.add("Cognitive Complexity");
-    if (config.showHalsteadComplexity()) {
-      header.addAll(List.of("Halstead Volume", "Halstead Difficulty", "Halstead Effort"));
-    }
-    if (config.showCyclomaticComplexity()) {
-      header.add("Cyclomatic Complexity");
-    }
-    if (config.showUnderstandability()) {
-      header.add("Understandability");
-    }
-    if (withCoverage) {
-      header.add(withClass ? "Coverage" : "Line Coverage");
-    }
-    appendRow(md, header);
-    appendRow(md, header.stream().map(column -> "---").toList());
+    final List<Column> columns = columns(withClass, withCoverage);
+    appendRow(md, columns.stream().map(Column::header).toList());
+    appendRow(md, columns.stream().map(column -> "---").toList());
     for (final Row row : rows) {
-      appendRow(md, cells(withClass, withCoverage, row.metrics()));
+      appendRow(md, columns.stream().map(column -> column.cell().apply(row.metrics())).toList());
     }
   }
 
-  private List<String> cells(final boolean withClass, final boolean withCoverage, final CognitiveMetrics metrics) {
-    final List<String> cells = new ArrayList<>();
-    if (withClass) {
-      cells.add(escape(metrics.getClassName()));
-    }
-    cells.add(escape(metrics.getMethodName()));
-    if (config.showDetailedCognitiveMetrics()) {
-      for (final MetricName name : MetricName.values()) {
-        cells.add(ReportSupport.countWithWeight(metrics, name));
-      }
-    }
-    cells.add(ReportSupport.fixed(metrics.getCognitiveComplexity()));
-    if (config.showHalsteadComplexity()) {
-      cells.add(ReportSupport.fixed(metrics.getHalstead().volume()));
-      cells.add(ReportSupport.fixed(metrics.getHalstead().difficulty()));
-      cells.add(ReportSupport.fixed(metrics.getHalstead().effort()));
-    }
-    if (config.showCyclomaticComplexity()) {
-      cells.add(ReportSupport.withRisk(metrics.getCyclomatic().complexity(), metrics.getCyclomatic().riskLevel()));
-    }
-    if (config.showUnderstandability()) {
-      cells.add(ReportSupport.withRisk(
-          metrics.getUnderstandability().complexity(), metrics.getUnderstandability().riskLevel()));
-    }
-    if (withCoverage) {
-      cells.add(CoverageData.percent(metrics.coverage().orElse(null)));
-    }
-    return cells;
+  private List<Column> columns(final boolean withClass, final boolean withCoverage) {
+    final List<Column> columns = new ArrayList<>();
+    columns.addAll(when(withClass, List.of(new Column("Class", metrics -> escape(metrics.getClassName())))));
+    columns.add(new Column("Method", metrics -> escape(metrics.getMethodName())));
+    columns.addAll(when(config.showDetailedCognitiveMetrics(), detailColumns()));
+    columns.add(new Column("Cognitive Complexity", metrics -> ReportSupport.fixed(metrics.getCognitiveComplexity())));
+    columns.addAll(when(config.showHalsteadComplexity(), halsteadColumns()));
+    columns.addAll(when(config.showCyclomaticComplexity(), List.of(new Column("Cyclomatic Complexity",
+        metrics -> ReportSupport.withRisk(metrics.getCyclomatic().complexity(), metrics.getCyclomatic().riskLevel())))));
+    columns.addAll(when(config.showUnderstandability(), List.of(new Column("Understandability",
+        metrics -> ReportSupport.withRisk(
+            metrics.getUnderstandability().complexity(), metrics.getUnderstandability().riskLevel())))));
+    columns.addAll(when(withCoverage, List.of(new Column(withClass ? "Coverage" : "Line Coverage",
+        metrics -> CoverageData.percent(metrics.coverage().orElse(null))))));
+    return columns;
+  }
+
+  private static List<Column> detailColumns() {
+    return Arrays.stream(MetricName.values())
+        .map(name -> new Column(ReportSupport.shortLabel(name), metrics -> ReportSupport.countWithWeight(metrics, name)))
+        .toList();
+  }
+
+  private static List<Column> halsteadColumns() {
+    return List.of(
+        new Column("Halstead Volume", metrics -> ReportSupport.fixed(metrics.getHalstead().volume())),
+        new Column("Halstead Difficulty", metrics -> ReportSupport.fixed(metrics.getHalstead().difficulty())),
+        new Column("Halstead Effort", metrics -> ReportSupport.fixed(metrics.getHalstead().effort())));
+  }
+
+  private static List<Column> when(final boolean enabled, final List<Column> columns) {
+    return enabled ? columns : List.of();
   }
 
   private static void appendRow(final StringBuilder md, final List<String> cells) {

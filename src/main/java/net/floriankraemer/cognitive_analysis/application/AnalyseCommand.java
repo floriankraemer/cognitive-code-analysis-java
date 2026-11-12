@@ -138,21 +138,62 @@ public class AnalyseCommand implements Callable<Integer> {
     }
 
     try {
-      final ExecutionSummary summary = new ExecutionSummary(ticker);
-      final MetricsSorter sorter = new MetricsSorter(sortBy, sortOrder);
-      final PrintWriter out = spec.commandLine().getOut();
+      new Run(progress, err).execute();
+      return 0;
+    } catch (CognitiveAnalysisException | RuntimeException e) {
+      err.println(describe(e));
+      return 1;
+    }
+  }
 
+  /** What the run reads before it touches the sources. */
+  private record Inputs(
+      CognitiveConfig config,
+      ConsoleRenderer console,
+      Report report,
+      Baseline baseline,
+      Optional<CoverageData> coverageData) {}
+
+  /** One run of the command, one method per stage. */
+  private final class Run {
+
+    private final ExecutionSummary summary = new ExecutionSummary(ticker);
+    private final PrintWriter out = spec.commandLine().getOut();
+    private final ReportWriter reportWriter = new ReportWriter(clock);
+    private final List<String> warnings = new ArrayList<>();
+    private final MetricsSorter sorter;
+    private final ProgressIndicator progress;
+    private final PrintWriter err;
+
+    Run(final ProgressIndicator progress, final PrintWriter err) throws CognitiveAnalysisException {
+      this.sorter = new MetricsSorter(sortBy, sortOrder);
+      this.progress = progress;
+      this.err = err;
+    }
+
+    void execute() throws CognitiveAnalysisException {
+      final Inputs inputs = readInputs();
+      final CognitiveMetricsFacade facade = new CognitiveMetricsFacade(inputs.config(), err, workingDirectory);
+      final MetricsCollection analysed = analyse(facade, inputs.console());
+      final List<ScoredMethod> methods = rank(analysed, inputs);
+      output(inputs, methods);
+      if (debug) {
+        summary.print(out, facade.statistics().asMap());
+      }
+    }
+
+    private Inputs readInputs() throws CognitiveAnalysisException {
       final CognitiveConfig config =
           new ConfigLoader(workingDirectory).load(configFile == null ? null : Path.of(configFile));
-      final ConsoleRenderer console = new ConsoleRenderer(config, ansi);
-      final ReportWriter reportWriter = new ReportWriter(clock);
       final Report report = reportType == null ? null : reportWriter.resolve(reportType, config);
-      final List<String> warnings = new ArrayList<>();
       final Baseline baseline = loadBaseline(config, warnings);
       final Optional<CoverageData> coverageData = coverage.load();
       summary.endStage("config");
+      return new Inputs(config, new ConsoleRenderer(config, ansi), report, baseline, coverageData);
+    }
 
-      final CognitiveMetricsFacade facade = new CognitiveMetricsFacade(config, err, workingDirectory);
+    private MetricsCollection analyse(final CognitiveMetricsFacade facade, final ConsoleRenderer console)
+        throws CognitiveAnalysisException {
       final List<Path> files = facade.findFiles(paths());
       console.renderHeader(out, workingDirectory);
       out.println("Found " + files.size() + " files. Starting analysis.");
@@ -162,58 +203,59 @@ public class AnalyseCommand implements Callable<Integer> {
       final MetricsCollection analysed = facade.analyse(files, file -> progress.advance());
       progress.clear();
       summary.endStage("analysis");
+      return analysed;
+    }
+
+    private List<ScoredMethod> rank(final MetricsCollection analysed, final Inputs inputs) {
       // Coverage is applied to the analysed metrics, never to what the cache stores.
-      coverageData.ifPresent(data -> {
+      inputs.coverageData().ifPresent(data -> {
         data.applyTo(analysed.methods());
         data.matchWarning(coverage.file(), analysed.methods()).ifPresent(warnings::add);
       });
-
       final List<ScoredMethod> methods = sorter.sort(analysed.methods());
-      if (baseline != null) {
-        BaselineApplier.apply(baseline, methods);
+      if (inputs.baseline() != null) {
+        BaselineApplier.apply(inputs.baseline(), methods);
       }
       warnings.forEach(warning -> out.println(ansi.string("@|yellow " + warning + "|@")));
       summary.endStage("sorting");
+      return methods;
+    }
 
-      if (reportType != null) {
-        reportWriter.write(report, reportFile, methods);
+    private void output(final Inputs inputs, final List<ScoredMethod> methods) throws CognitiveAnalysisException {
+      if (inputs.report() != null) {
+        reportWriter.write(inputs.report(), reportFile, methods);
         out.println("Report generated at: " + reportFile);
       } else {
-        console.renderMethods(out, methods);
+        inputs.console().renderMethods(out, methods);
         out.println();
         out.println("Cognitive metrics calculated for " + path);
       }
       if (generateBaseline) {
-        out.println("Baseline file generated: " + new BaselineFiles(clock).generate(workingDirectory, config, methods));
+        out.println("Baseline file generated: "
+            + new BaselineFiles(clock).generate(workingDirectory, inputs.config(), methods));
       }
       summary.endStage("output");
-
-      if (debug) {
-        summary.print(out, facade.statistics().asMap());
-      }
-      return 0;
-    } catch (CognitiveAnalysisException | RuntimeException e) {
-      err.println(describe(e));
-      return 1;
     }
   }
 
   /** The baseline of -b, else the newest generated one (noted in the warnings); null when there is none. */
   private Baseline loadBaseline(final CognitiveConfig config, final List<String> warnings)
       throws CognitiveAnalysisException {
-    Path file = baselineFile == null ? null : Path.of(baselineFile);
-    if (file == null) {
-      file = BaselineFiles.latest(workingDirectory).orElse(null);
-      if (file != null) {
-        warnings.add("Auto-detected latest baseline file: " + file.getFileName());
-      }
-    }
+    final Path file = baselineFile == null ? latestBaseline(warnings) : Path.of(baselineFile);
     if (file == null) {
       return null;
     }
     final Baseline baseline = BaselineReader.read(file);
     baseline.configWarning(config).ifPresent(warnings::add);
     return baseline;
+  }
+
+  private Path latestBaseline(final List<String> warnings) throws CognitiveAnalysisException {
+    final Path latest = BaselineFiles.latest(workingDirectory).orElse(null);
+    if (latest != null) {
+      warnings.add("Auto-detected latest baseline file: " + latest.getFileName());
+    }
+    return latest;
   }
 
   /** The comma-separated entries of the path argument, trimmed; blank entries are ignored. */

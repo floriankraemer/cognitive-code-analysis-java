@@ -115,7 +115,7 @@ class UnderstandabilityTest {
 
   @Test
   void totalIsTheSumOfStructuralHybridFundamentalAndNesting() {
-    final Understandability understandability = Understandability.of(2, 3, 4, 5, 1);
+    final Understandability understandability = Understandability.of(new Understandability.Increments(2, 3, 4, 5, 1));
 
     assertThat(understandability.complexity()).isEqualTo(14);
     assertThat(understandability.breakdown()).containsExactly(

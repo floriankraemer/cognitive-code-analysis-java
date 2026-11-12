@@ -1,9 +1,11 @@
 package net.floriankraemer.cognitive_analysis.application.report;
 
+import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.toList;
+
 import java.time.Clock;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import net.floriankraemer.cognitive_analysis.CognitiveAnalysisException;
 import net.floriankraemer.cognitive_analysis.application.report.ReportSupport.Row;
 import net.floriankraemer.cognitive_analysis.config.CognitiveConfig;
@@ -34,18 +36,17 @@ final class CheckstyleReport implements Report {
     root.setAttribute("version", VERSION);
     document.appendChild(root);
 
-    final Map<String, Element> files = new LinkedHashMap<>();
-    for (final Row row : ReportSupport.violations(ReportSupport.rows(metrics), config)) {
-      final String path = ReportSupport.path(row.file());
-      final Element file = files.computeIfAbsent(path, name -> {
-        final Element element = document.createElement("file");
-        element.setAttribute("name", name);
-        root.appendChild(element);
-        return element;
-      });
-      file.appendChild(error(document, row));
-    }
+    ReportSupport.violations(ReportSupport.rows(metrics), config).stream()
+        .collect(groupingBy(row -> ReportSupport.path(row.file()), LinkedHashMap::new, toList()))
+        .forEach((path, rows) -> root.appendChild(fileElement(document, path, rows)));
     return ReportSupport.toXml(document);
+  }
+
+  private Element fileElement(final Document document, final String path, final List<Row> rows) {
+    final Element file = document.createElement("file");
+    file.setAttribute("name", path);
+    rows.forEach(row -> file.appendChild(error(document, row)));
+    return file;
   }
 
   private Element error(final Document document, final Row row) {
