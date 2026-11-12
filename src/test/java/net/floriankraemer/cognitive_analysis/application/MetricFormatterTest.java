@@ -104,4 +104,14 @@ class MetricFormatterTest {
     assertThat(colors.withDelta("5", Optional.of(new Delta(1, 2)))).startsWith("5\n" + RED + "Δ +1");
     assertThat(colors.withDelta("5", Optional.of(new Delta(2, 1)))).startsWith("5\n" + GREEN + "Δ -1");
   }
+
+  @Test
+  void rendersNotAvailableInsteadOfFailingOnNonFiniteValues() {
+    assertThat(plain.weighted(3, Double.NaN)).isEqualTo("3 (N/A)");
+    assertThat(plain.weighted(3, Double.POSITIVE_INFINITY)).isEqualTo("3 (N/A)");
+    assertThat(plain.withDelta("5", Optional.of(new Delta(1, Double.POSITIVE_INFINITY)))).isEqualTo("5\nΔ N/A");
+    assertThat(plain.withDelta("5", Optional.of(new Delta(Double.NaN, 1)))).isEqualTo("5\nΔ N/A");
+    assertThat(plain.withDelta("5", Optional.of(new Delta(Double.NaN, Double.NaN)))).isEqualTo("5\nΔ N/A");
+    assertThat(colors.withDelta("5", Optional.of(new Delta(1, Double.NEGATIVE_INFINITY)))).isEqualTo("5\nΔ N/A");
+  }
 }

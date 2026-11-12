@@ -83,6 +83,7 @@ class BaselineE2ETest {
   private final StringWriter err = new StringWriter();
   private Ansi ansi = Ansi.OFF;
   private Instant now = Instant.parse("2025-03-04T05:06:07Z");
+  private ZoneOffset zone = ZoneOffset.UTC;
 
   @BeforeEach
   void writeSources() throws IOException {
@@ -102,7 +103,7 @@ class BaselineE2ETest {
     final AnalyseCommand command = (AnalyseCommand) commandLine.getSubcommands().get("analyse").getCommand();
     command.ansi = ansi;
     command.terminalWriter = () -> null;
-    command.clock = Clock.fixed(now, ZoneOffset.UTC);
+    command.clock = Clock.fixed(now, zone);
     command.workingDirectory = tempDir;
     commandLine.setOut(new PrintWriter(out, true));
     commandLine.setErr(new PrintWriter(err, true));
@@ -182,15 +183,41 @@ class BaselineE2ETest {
   }
 
   @Test
-  void theNewFileOfTheSameSecondReplacesTheOldOne() throws Exception {
+  void aFileOfTheSameSecondIsNeverReplacedAndTheNextOneGetsASuffix() throws Exception {
+    run("-g");
+    final String first = Files.readString(baseline("2025-03-04_05-06-07"));
+    write("src/Service.java", GROWN);
+
+    assertThat(run("-g")).isZero();
+    assertThat(output()).contains("Baseline file generated: .jcca/baseline/baseline-2025-03-04_05-06-07-1.json");
+    assertThat(run("-g")).isZero();
+    assertThat(output()).contains("Baseline file generated: .jcca/baseline/baseline-2025-03-04_05-06-07-2.json");
+
+    assertThat(Files.readString(baseline("2025-03-04_05-06-07"))).isEqualTo(first);
+    assertThat(Files.readString(baseline("2025-03-04_05-06-07-1"))).contains("\"argCount\" : 2");
+  }
+
+  @Test
+  void theSuffixedFileIsTheNewestOfItsSecond() throws Exception {
     run("-g");
     write("src/Service.java", GROWN);
     run("-g");
+    write("src/Service.java", SIMPLE);
 
-    try (var files = Files.list(tempDir.resolve(".jcca/baseline"))) {
-      assertThat(files).hasSize(1);
-    }
-    assertThat(Files.readString(baseline("2025-03-04_05-06-07"))).contains("\"argCount\" : 2");
+    run();
+
+    assertThat(output()).contains("Auto-detected latest baseline file: baseline-2025-03-04_05-06-07-1.json").contains("Δ -");
+  }
+
+  @Test
+  void fileNameAndCreatedAtUseUtcWhateverTheZoneOfTheClock() throws Exception {
+    zone = ZoneOffset.ofHours(5);
+
+    assertThat(run("-g")).isZero();
+
+    assertThat(output()).contains("baseline-2025-03-04_05-06-07.json");
+    assertThat(MAPPER.readTree(baseline("2025-03-04_05-06-07").toFile()).get("createdAt").asText())
+        .isEqualTo("2025-03-04 05:06:07");
   }
 
   // --- applying ---
@@ -421,7 +448,7 @@ class BaselineE2ETest {
     assertThat(run("-b", tempDir.resolve("invalid.json").toString())).isEqualTo(1);
 
     assertThat(err.toString())
-        .contains("Invalid baseline file format: 'createdAt' must be a string, ")
+        .contains("Invalid baseline file format in " + tempDir.resolve("invalid.json") + ": 'createdAt' must be a string, ")
         .contains("class 'a.A' method 'm': 'lineCount' must be a non-negative integer, ")
         .contains("class 'a.A' method 'm': missing required field 'argCount'")
         .contains("class 'a.A' method 'm': missing required field 'elseCountWeight'");

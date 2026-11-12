@@ -7,10 +7,10 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.attribute.FileTime;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.EnumMap;
 import java.util.List;
@@ -39,10 +39,8 @@ class BaselineFilesTest {
     return Files.createDirectories(tempDir.resolve(".jcca/baseline"));
   }
 
-  private Path touch(final String name, final long modifiedMillis) throws IOException {
-    final Path file = Files.writeString(directory().resolve(name), "{}");
-    Files.setLastModifiedTime(file, FileTime.fromMillis(modifiedMillis));
-    return file;
+  private Path touch(final String name) throws IOException {
+    return Files.writeString(directory().resolve(name), "{}");
   }
 
   // --- latest ---
@@ -68,57 +66,83 @@ class BaselineFilesTest {
   }
 
   @Test
-  void ignoresFilesThatAreNoBaselines() throws Exception {
-    touch("notes.json", 1);
-    touch("baseline-2025-01-01_00-00-00.txt", 1);
-    touch("other-2025-01-01_00-00-00.json", 1);
+  void ignoresNamesThatAreNoBaselines() throws Exception {
+    touch("notes.json");
+    touch("baseline-2025-01-01_00-00-00.txt");
+    touch("other-2025-01-01_00-00-00.json");
+    touch("baseline-manual.json");
+    touch("baseline-2025-01-01_00-00-00-x.json");
 
     assertThat(BaselineFiles.latest(tempDir)).isEmpty();
   }
 
   @Test
-  void picksTheNewestTimestampInTheNameWhateverTheModificationTimes() throws Exception {
-    touch("baseline-2025-01-01_10-00-00.json", 9_000);
-    final Path newest = touch("baseline-2025-01-02_09-00-00.json", 1_000);
-    touch("baseline-2024-12-31_23-59-59.json", 8_000);
+  void ignoresNamesWithAnImpossibleDateOrSuffix() throws Exception {
+    touch("baseline-2025-13-01_00-00-00.json");
+    touch("baseline-2025-02-30_00-00-00.json");
+    touch("baseline-2025-01-01_25-00-00.json");
+    touch("baseline-2025-01-01_00-60-00.json");
+    touch("baseline-2025-01-01_00-00-00-99999999999.json");
+    final Path valid = touch("baseline-2020-01-01_00-00-00.json");
+
+    assertThat(BaselineFiles.latest(tempDir)).contains(valid);
+  }
+
+  @Test
+  void ignoresDirectoriesThatLookLikeBaselines() throws Exception {
+    Files.createDirectories(directory().resolve("baseline-2030-01-01_00-00-00.json"));
+    final Path file = touch("baseline-2020-01-01_00-00-00.json");
+
+    assertThat(BaselineFiles.latest(tempDir)).contains(file);
+  }
+
+  @Test
+  void picksTheNewestTimestampInTheName() throws Exception {
+    touch("baseline-2025-01-01_10-00-00.json");
+    final Path newest = touch("baseline-2025-01-02_09-00-00.json");
+    touch("baseline-2024-12-31_23-59-59.json");
 
     assertThat(BaselineFiles.latest(tempDir)).contains(newest);
   }
 
   @Test
   void comparesTheTimestampsToTheSecond() throws Exception {
-    touch("baseline-2025-01-01_10-00-00.json", 1);
-    final Path newest = touch("baseline-2025-01-01_10-00-01.json", 1);
+    touch("baseline-2025-01-01_10-00-00.json");
+    final Path newest = touch("baseline-2025-01-01_10-00-01.json");
 
     assertThat(BaselineFiles.latest(tempDir)).contains(newest);
   }
 
   @Test
-  void aNameWithoutTimestampLosesAgainstOneWithTimestamp() throws Exception {
-    touch("baseline-manual.json", 9_000);
-    final Path stamped = touch("baseline-2020-01-01_00-00-00.json", 1_000);
+  void theSuffixNumberIsComparedAsANumberAfterTheTimestamp() throws Exception {
+    touch("baseline-2025-01-01_10-00-00.json");
+    touch("baseline-2025-01-01_10-00-00-2.json");
+    final Path newest = touch("baseline-2025-01-01_10-00-00-10.json");
+    touch("baseline-2025-01-01_09-59-59-99.json");
 
-    assertThat(BaselineFiles.latest(tempDir)).contains(stamped);
+    assertThat(BaselineFiles.latest(tempDir)).contains(newest);
   }
 
   @Test
-  void namesWithoutTimestampAreOrderedByModificationTime() throws Exception {
-    touch("baseline-a.json", 1_000);
-    final Path newer = touch("baseline-b.json", 2_000);
-    touch("baseline-c.json", 500);
+  void aNewerTimestampBeatsAnOlderOneWithASuffix() throws Exception {
+    touch("baseline-2025-01-01_10-00-00-5.json");
+    final Path newest = touch("baseline-2025-01-01_10-00-01.json");
 
-    assertThat(BaselineFiles.latest(tempDir)).contains(newer);
+    assertThat(BaselineFiles.latest(tempDir)).contains(newest);
   }
 
   @Test
-  void equalTimestampsAndModificationTimesAreOrderedByName() {
-    final FileTime time = FileTime.fromMillis(1_000);
-    final BaselineFiles.Candidate x = new BaselineFiles.Candidate(Path.of("baseline-x.json"), "", time);
-    final BaselineFiles.Candidate y = new BaselineFiles.Candidate(Path.of("baseline-y.json"), "", time);
+  void ordersCandidatesByTimestampThenSuffix() {
+    final LocalDateTime time = LocalDateTime.parse("2025-01-01T10:00:00");
+    final BaselineFiles.Candidate plain = new BaselineFiles.Candidate(Path.of("a"), time, 0);
+    final BaselineFiles.Candidate suffixed = new BaselineFiles.Candidate(Path.of("b"), time, 1);
+    final BaselineFiles.Candidate later = new BaselineFiles.Candidate(Path.of("c"), time.plusSeconds(1), 0);
 
-    assertThat(BaselineFiles.NEWEST_LAST.compare(x, y)).isNegative();
-    assertThat(BaselineFiles.NEWEST_LAST.compare(y, x)).isPositive();
-    assertThat(BaselineFiles.NEWEST_LAST.compare(x, x)).isZero();
+    assertThat(BaselineFiles.NEWEST_LAST.compare(plain, suffixed)).isNegative();
+    assertThat(BaselineFiles.NEWEST_LAST.compare(suffixed, plain)).isPositive();
+    assertThat(BaselineFiles.NEWEST_LAST.compare(suffixed, later)).isNegative();
+    assertThat(BaselineFiles.NEWEST_LAST.compare(later, suffixed)).isPositive();
+    assertThat(BaselineFiles.NEWEST_LAST.compare(plain, plain)).isZero();
   }
 
   @Test
@@ -137,14 +161,6 @@ class BaselineFilesTest {
     }
   }
 
-  private static Map<MetricName, Double> zeroWeights() {
-    final Map<MetricName, Double> weights = new EnumMap<>(MetricName.class);
-    for (final MetricName name : MetricName.values()) {
-      weights.put(name, 0.0);
-    }
-    return weights;
-  }
-
   // --- generate ---
 
   private static List<ScoredMethod> methods() {
@@ -153,6 +169,14 @@ class BaselineFilesTest {
     metrics.setWeight(MetricName.IF_COUNT, 1.23456);
     metrics.setCognitiveComplexity(1.235);
     return List.of(new ScoredMethod("src/A.java", "a.A::go", metrics));
+  }
+
+  private static Map<MetricName, Double> zeroWeights() {
+    final Map<MetricName, Double> weights = new EnumMap<>(MetricName.class);
+    for (final MetricName name : MetricName.values()) {
+      weights.put(name, 0.0);
+    }
+    return weights;
   }
 
   @Test
@@ -166,6 +190,32 @@ class BaselineFilesTest {
             + Baseline.configHashOf(TestConfigs.defaults()) + "\",\n  \"metrics\" : {\n    \"a.A\" : {")
         .contains("\"ifCountWeight\" : 1.235")
         .endsWith("}\n");
+  }
+
+  @Test
+  void usesUtcForTheNameAndTheCreationTime() throws Exception {
+    final Clock plusFive = CLOCK.withZone(ZoneOffset.ofHours(5));
+
+    final Path relative = new BaselineFiles(plusFive).generate(tempDir, TestConfigs.defaults(), methods());
+
+    assertThat(relative.getFileName()).hasToString("baseline-2025-03-04_05-06-07.json");
+    assertThat(Files.readString(tempDir.resolve(relative))).contains("\"createdAt\" : \"2025-03-04 05:06:07\"");
+  }
+
+  @Test
+  void neverReplacesAnExistingFileAndCountsTheSuffixUp() throws Exception {
+    final Path first = tempDir.resolve(new BaselineFiles(CLOCK).generate(tempDir, TestConfigs.defaults(), methods()));
+    final String content = Files.readString(first);
+    Files.writeString(first, "keep me");
+
+    final Path second = new BaselineFiles(CLOCK).generate(tempDir, TestConfigs.defaults(), methods());
+    final Path third = new BaselineFiles(CLOCK).generate(tempDir, TestConfigs.defaults(), methods());
+
+    assertThat(Files.readString(first)).isEqualTo("keep me");
+    assertThat(second.getFileName()).hasToString("baseline-2025-03-04_05-06-07-1.json");
+    assertThat(third.getFileName()).hasToString("baseline-2025-03-04_05-06-07-2.json");
+    assertThat(Files.readString(tempDir.resolve(second))).isEqualTo(content);
+    assertThat(BaselineFiles.latest(tempDir)).contains(tempDir.resolve(third));
   }
 
   @Test
@@ -210,7 +260,8 @@ class BaselineFilesTest {
     final CognitiveMetrics alone = new CognitiveMetrics("b.B", "go", 1);
     final BaselineMethod before = new BaselineMethod(zeroWeights(), Map.of());
     final Baseline baseline = new Baseline(
-        Optional.empty(), Map.of("a.A@x/A.java", Map.of("go", before), "b.B", Map.of("go", before)));
+        Optional.empty(),
+        Map.of("a.A@x/A.java", Map.of("go", before), "a.A@z/A.java", Map.of("go", before), "b.B", Map.of("go", before)));
 
     BaselineApplier.apply(baseline, List.of(
         new ScoredMethod("x/A.java", "a.A::go", first),

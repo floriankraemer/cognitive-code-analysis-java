@@ -3,10 +3,12 @@ package net.floriankraemer.cognitive_analysis.application.report;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.attribute.FileTime;
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.time.format.ResolverStyle;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -21,14 +23,19 @@ import net.floriankraemer.cognitive_analysis.config.CognitiveConfig;
 import net.floriankraemer.cognitive_analysis.domain.Baseline;
 import net.floriankraemer.cognitive_analysis.domain.ScoredMethod;
 
-/** Finds and writes the baseline files in {@code .jcca/baseline} below the working directory. */
+/**
+ * Finds and writes the baseline files in {@code .jcca/baseline} below the working directory. File names and
+ * the {@code createdAt} of a file use UTC, so a change of time zone or daylight saving time cannot reorder them.
+ */
 public final class BaselineFiles {
 
   static final Path DIRECTORY = Path.of(".jcca", "baseline");
 
+  private static final String TIMESTAMP_PATTERN = "uuuu-MM-dd_HH-mm-ss";
   private static final DateTimeFormatter FILE_TIMESTAMP =
-      DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss", Locale.ROOT);
-  private static final Pattern FILE_NAME = Pattern.compile("baseline-(\\d{4}-\\d{2}-\\d{2}_\\d{2}-\\d{2}-\\d{2})\\.json");
+      DateTimeFormatter.ofPattern(TIMESTAMP_PATTERN, Locale.ROOT).withResolverStyle(ResolverStyle.STRICT);
+  private static final Pattern FILE_NAME =
+      Pattern.compile("baseline-(\\d{4}-\\d{2}-\\d{2}_\\d{2}-\\d{2}-\\d{2})(?:-(\\d+))?\\.json");
 
   private final Clock clock;
 
@@ -36,16 +43,15 @@ public final class BaselineFiles {
     this.clock = clock;
   }
 
-  /** A candidate file; the timestamp of the name comes first, then the modification time. */
-  record Candidate(Path file, String timestamp, FileTime modified) {}
+  /** A baseline file: the timestamp of its name, then the number of the suffix {@code -N} (0 without). */
+  record Candidate(Path file, LocalDateTime timestamp, int suffix) {}
 
-  static final Comparator<Candidate> NEWEST_LAST = Comparator.comparing(Candidate::timestamp)
-      .thenComparing(Candidate::modified)
-      .thenComparing(candidate -> candidate.file().getFileName().toString());
+  static final Comparator<Candidate> NEWEST_LAST =
+      Comparator.comparing(Candidate::timestamp).thenComparingInt(Candidate::suffix);
 
   /**
-   * The newest {@code baseline-*.json}, by the timestamp in its name, then by modification time.
-   * A name without a timestamp is older than every name with one.
+   * The newest regular file {@code baseline-<timestamp>[-<n>].json}, by the timestamp in its name, then by
+   * the suffix. Other names, including those with an impossible date, are not baselines.
    *
    * @return empty when the directory does not exist or holds no baseline
    */
@@ -56,9 +62,8 @@ public final class BaselineFiles {
     }
     try (Stream<Path> entries = Files.list(directory)) {
       return entries
-          .filter(file -> file.getFileName().toString().startsWith("baseline-")
-              && file.getFileName().toString().endsWith(".json"))
-          .map(BaselineFiles::candidate)
+          .filter(Files::isRegularFile)
+          .flatMap(file -> candidate(file).stream())
           .max(NEWEST_LAST)
           .map(Candidate::file);
     } catch (IOException e) {
@@ -66,38 +71,47 @@ public final class BaselineFiles {
     }
   }
 
-  private static Candidate candidate(final Path file) {
+  private static Optional<Candidate> candidate(final Path file) {
     final Matcher name = FILE_NAME.matcher(file.getFileName().toString());
-    FileTime modified;
-    try {
-      modified = Files.getLastModifiedTime(file);
-    } catch (IOException e) {
-      modified = FileTime.fromMillis(0);
+    if (!name.matches()) {
+      return Optional.empty();
     }
-    return new Candidate(file, name.matches() ? name.group(1) : "", modified);
+    try {
+      final int suffix = name.group(2) == null ? 0 : Integer.parseInt(name.group(2));
+      return Optional.of(new Candidate(file, LocalDateTime.parse(name.group(1), FILE_TIMESTAMP), suffix));
+    } catch (DateTimeParseException | NumberFormatException e) {
+      return Optional.empty();
+    }
   }
 
   /**
-   * Writes the current metrics as a baseline of format 2.0, without any deltas of an applied baseline.
+   * Writes the current metrics as a baseline of format 2.0, without any deltas of an applied baseline. An
+   * existing file is never replaced: when the name is taken, {@code -1}, {@code -2}, ... is appended.
    *
    * @return the path of the new file, relative to the working directory
    */
   public Path generate(final Path workingDirectory, final CognitiveConfig config, final List<ScoredMethod> methods)
       throws CognitiveAnalysisException {
+    final LocalDateTime now = LocalDateTime.now(clock.withZone(ZoneOffset.UTC));
     final Map<String, Object> file = new LinkedHashMap<>();
     file.put("version", "2.0");
-    file.put("createdAt", ReportSupport.timestamp(clock));
+    file.put("createdAt", ReportSupport.timestamp(clock.withZone(ZoneOffset.UTC)));
     file.put("configHash", Baseline.configHashOf(config));
     file.put("metrics", JsonReport.body(methods, false));
+    final String content = JsonReport.toJson(file);
 
-    final Path relative = DIRECTORY.resolve("baseline-" + LocalDateTime.now(clock).format(FILE_TIMESTAMP) + ".json");
-    final Path target = workingDirectory.resolve(relative);
+    final String stem = "baseline-" + now.format(FILE_TIMESTAMP);
+    final Path directory = workingDirectory.resolve(DIRECTORY);
     try {
-      Files.createDirectories(target.getParent());
+      Files.createDirectories(directory);
     } catch (IOException e) {
-      throw new CognitiveAnalysisException("Unable to create directory " + target.getParent() + ": " + e.getMessage(), e);
+      throw new CognitiveAnalysisException("Unable to create directory " + directory + ": " + e.getMessage(), e);
     }
-    AtomicFileWriter.write(target, JsonReport.toJson(file));
-    return relative;
+    for (int suffix = 0; ; suffix++) {
+      final Path relative = DIRECTORY.resolve(stem + (suffix == 0 ? "" : "-" + suffix) + ".json");
+      if (AtomicFileWriter.writeNew(workingDirectory.resolve(relative), content)) {
+        return relative;
+      }
+    }
   }
 }

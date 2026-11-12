@@ -92,8 +92,8 @@ class BaselineReaderTest {
 
   @Test
   void acceptsAnEmptyBaseline() throws Exception {
-    assertThat(parse(v2("{}")).methods()).isEmpty();
-    assertThat(parse("{}").methods()).isEmpty();
+    assertThat(parse(v2("{}")).method("a.A", "go")).isEmpty();
+    assertThat(parse("{}").method("a.A", "go")).isEmpty();
   }
 
   @Test
@@ -111,7 +111,7 @@ class BaselineReaderTest {
   @CsvSource({"lineCount", "elseCount", "lineCountWeight", "elseCountWeight"})
   void rejectsAMissingRequiredField(final String field) {
     assertThat(errorOf(legacy(method(f -> f.remove(field)))))
-        .isEqualTo("Invalid baseline file format: class 'a.A' method 'go': missing required field '" + field + "'");
+        .isEqualTo("Invalid baseline file format in baseline.json: class 'a.A' method 'go': missing required field '" + field + "'");
   }
 
   @ParameterizedTest
@@ -119,26 +119,26 @@ class BaselineReaderTest {
       "lineCount|-1|a non-negative integer",
       "argCount|1.5|a non-negative integer",
       "returnCount|\"1\"|a non-negative integer",
-      "ifCountWeight|-0.1|a non-negative number",
-      "elseCountWeight|\"x\"|a non-negative number",
+      "ifCountWeight|-0.1|a finite non-negative number",
+      "elseCountWeight|\"x\"|a finite non-negative number",
       "line|0|an integer of at least 1",
       "line|1.5|an integer of at least 1",
-      "score|-1|a non-negative number",
-      "halsteadDifficulty|\"x\"|a non-negative number",
-      "halsteadEffort|-2|a non-negative number",
-      "cyclomaticComplexity|-1|a non-negative number",
-      "understandability|true|a non-negative number"
+      "score|-1|a finite non-negative number",
+      "halsteadDifficulty|\"x\"|a finite non-negative number",
+      "halsteadEffort|-2|a finite non-negative number",
+      "cyclomaticComplexity|-1|a finite non-negative number",
+      "understandability|true|a finite non-negative number"
   })
   void rejectsAnInvalidValue(final String field, final String value, final String expected) {
     assertThat(errorOf(legacy(method(f -> f.put(field, value)))))
-        .isEqualTo("Invalid baseline file format: class 'a.A' method 'go': '" + field + "' must be " + expected);
+        .isEqualTo("Invalid baseline file format in baseline.json: class 'a.A' method 'go': '" + field + "' must be " + expected);
   }
 
   @ParameterizedTest
   @CsvSource({"cyclomaticRiskLevel", "understandabilityRiskLevel"})
   void rejectsARiskLevelThatIsNoString(final String field) {
     assertThat(errorOf(legacy(method(f -> f.put(field, "3")))))
-        .isEqualTo("Invalid baseline file format: class 'a.A' method 'go': '" + field + "' must be a string");
+        .isEqualTo("Invalid baseline file format in baseline.json: class 'a.A' method 'go': '" + field + "' must be a string");
   }
 
   @Test
@@ -159,23 +159,23 @@ class BaselineReaderTest {
   @Test
   void rejectsMalformedMetadata() {
     assertThat(errorOf("{\"version\":\"1.0\",\"createdAt\":\"x\",\"configHash\":\"h\",\"metrics\":{}}"))
-        .isEqualTo("Invalid baseline file format: unsupported version \"1.0\", expected \"2.0\"");
+        .isEqualTo("Invalid baseline file format in baseline.json: unsupported version \"1.0\", expected \"2.0\"");
     assertThat(errorOf("{\"version\":2,\"createdAt\":\"x\",\"configHash\":\"h\",\"metrics\":{}}"))
         .contains("unsupported version 2");
     assertThat(errorOf("{\"version\":\"2.0\",\"configHash\":\"h\",\"metrics\":{}}"))
-        .isEqualTo("Invalid baseline file format: 'createdAt' must be a string");
+        .isEqualTo("Invalid baseline file format in baseline.json: 'createdAt' must be a string");
     assertThat(errorOf("{\"version\":\"2.0\",\"createdAt\":\"x\",\"configHash\":5,\"metrics\":{}}"))
-        .isEqualTo("Invalid baseline file format: 'configHash' must be a string");
+        .isEqualTo("Invalid baseline file format in baseline.json: 'configHash' must be a string");
     assertThat(errorOf("{\"version\":\"2.0\",\"createdAt\":\"x\",\"configHash\":\"h\"}"))
-        .isEqualTo("Invalid baseline file format: 'metrics' must be an object");
+        .isEqualTo("Invalid baseline file format in baseline.json: 'metrics' must be an object");
     assertThat(errorOf("{\"version\":\"2.0\",\"createdAt\":\"x\",\"configHash\":\"h\",\"metrics\":[]}"))
-        .isEqualTo("Invalid baseline file format: 'metrics' must be an object");
+        .isEqualTo("Invalid baseline file format in baseline.json: 'metrics' must be an object");
   }
 
   @Test
   void rejectsAnyOtherTopLevelShape() {
     for (final String json : new String[] {"[]", "3", "\"text\"", "null", "true"}) {
-      assertThat(errorOf(json)).isEqualTo("Invalid baseline file format: the top level must be a JSON object");
+      assertThat(errorOf(json)).isEqualTo("Invalid baseline file format in baseline.json: the top level must be a JSON object");
     }
   }
 
@@ -188,11 +188,11 @@ class BaselineReaderTest {
         }) + ",\"stop\":" + method(f -> f.put("score", "-3")) + "}},"
         + "\"b.B\":5}}";
 
-    assertThat(errorOf(json)).isEqualTo("Invalid baseline file format: "
+    assertThat(errorOf(json)).isEqualTo("Invalid baseline file format in baseline.json: "
         + "'createdAt' must be a string, 'configHash' must be a string, "
         + "class 'a.A' method 'go': missing required field 'lineCount', "
-        + "class 'a.A' method 'go': 'argCountWeight' must be a non-negative number, "
-        + "class 'a.A' method 'stop': 'score' must be a non-negative number, "
+        + "class 'a.A' method 'go': 'argCountWeight' must be a finite non-negative number, "
+        + "class 'a.A' method 'stop': 'score' must be a finite non-negative number, "
         + "class 'b.B': must be an object with a 'methods' object");
   }
 
@@ -208,7 +208,7 @@ class BaselineReaderTest {
 
   @Test
   void rejectsAnEmptyFile() {
-    assertThat(errorOf("")).isEqualTo("Invalid baseline file format: the top level must be a JSON object");
+    assertThat(errorOf("")).isEqualTo("Invalid baseline file format in baseline.json: the top level must be a JSON object");
   }
 
   @Test
@@ -247,5 +247,20 @@ class BaselineReaderTest {
   void theReasonOfAnIoErrorIsItsMessageOrItsTypeWithoutOne() {
     assertThat(BaselineReader.reason(new java.io.IOException("disk gone"))).isEqualTo("disk gone");
     assertThat(BaselineReader.reason(new java.io.IOException())).isEqualTo("IOException");
+  }
+
+  @ParameterizedTest
+  @CsvSource({"score", "halsteadVolume", "halsteadDifficulty", "halsteadEffort", "cyclomaticComplexity",
+      "understandability", "ifCountWeight", "lineCountWeight"})
+  void rejectsNumbersThatAreNotFinite(final String field) {
+    assertThat(errorOf(legacy(method(f -> f.put(field, "1e999")))))
+        .isEqualTo("Invalid baseline file format in baseline.json: class 'a.A' method 'go': '" + field
+            + "' must be a finite non-negative number");
+  }
+
+  @Test
+  void namesTheFileInAFormatError() {
+    assertThatThrownBy(() -> BaselineReader.parse("[]", Path.of("dir/b.json")))
+        .hasMessage("Invalid baseline file format in dir/b.json: the top level must be a JSON object");
   }
 }

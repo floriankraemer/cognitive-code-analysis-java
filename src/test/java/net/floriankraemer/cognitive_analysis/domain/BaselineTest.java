@@ -125,4 +125,54 @@ class BaselineTest {
         "Warning: Baseline config hash (old) does not match current config hash (" + current
             + "). Metrics comparison may not be accurate.");
   }
+
+  private static Baseline baselineOf(final String... classKeys) {
+    final Map<String, Map<String, BaselineMethod>> classes = new java.util.LinkedHashMap<>();
+    for (final String key : classKeys) {
+      classes.put(key, Map.of("go", baselineMethod(key.length(), Map.of())));
+    }
+    return new Baseline(Optional.empty(), classes);
+  }
+
+  @Test
+  void aClassThatBecameDuplicateMatchesTheSingleBaselineClassByItsName() {
+    final Baseline baseline = baselineOf("a.A");
+
+    assertThat(baseline.method("a.A@x/A.java", "go")).isPresent();
+    assertThat(baseline.method("a.A@y/A.java", "go")).isPresent();
+    assertThat(baseline.method("a.A@x/A.java", "stop")).isEmpty();
+  }
+
+  @Test
+  void aClassThatStoppedBeingDuplicateMatchesWhenOneBaselineClassHasItsName() {
+    assertThat(baselineOf("a.A@x/A.java").method("a.A", "go")).isPresent();
+    assertThat(baselineOf("a.A@x/A.java").method("a.A@z/A.java", "go")).isPresent();
+  }
+
+  @Test
+  void aClassNameOfSeveralBaselineClassesIsAmbiguous() {
+    final Baseline baseline = baselineOf("a.A@x/A.java", "a.A@y/A.java");
+
+    assertThat(baseline.method("a.A", "go")).isEmpty();
+    assertThat(baseline.method("a.A@z/A.java", "go")).isEmpty();
+  }
+
+  @Test
+  void theExactKeyWinsOverTheClassName() {
+    final Baseline baseline = baselineOf("a.A@x/A.java", "a.A@y/A.java");
+
+    assertThat(baseline.method("a.A@y/A.java", "go").orElseThrow().weight(MetricName.IF_COUNT))
+        .isEqualTo("a.A@y/A.java".length());
+  }
+
+  @Test
+  void anExactClassWithoutTheMethodDoesNotFallBack() {
+    assertThat(baselineOf("a.A", "a.A@x/A.java").method("a.A", "stop")).isEmpty();
+  }
+
+  @Test
+  void differentClassNamesNeverMatch() {
+    assertThat(baselineOf("a.A").method("a.B@x/B.java", "go")).isEmpty();
+    assertThat(baselineOf("a.A").method("a.AB", "go")).isEmpty();
+  }
 }

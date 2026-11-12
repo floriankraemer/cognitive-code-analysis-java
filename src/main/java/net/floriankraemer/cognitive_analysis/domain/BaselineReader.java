@@ -54,7 +54,7 @@ public final class BaselineReader {
     }
     final List<String> errors = new ArrayList<>();
     if (root == null || !root.isObject()) {
-      throw invalid(List.of("the top level must be a JSON object"));
+      throw invalid(file, List.of("the top level must be a JSON object"));
     }
     final boolean versioned = root.has("version");
     final JsonNode metrics = versioned ? root.get("metrics") : root;
@@ -66,7 +66,7 @@ public final class BaselineReader {
       metrics.fields().forEachRemaining(entry -> validateClass(entry.getKey(), entry.getValue(), errors));
     }
     if (!errors.isEmpty()) {
-      throw invalid(errors);
+      throw invalid(file, errors);
     }
     final Optional<String> hash = versioned ? Optional.of(root.get("configHash").asText()) : Optional.empty();
     return new Baseline(hash, build(metrics));
@@ -154,7 +154,7 @@ public final class BaselineReader {
     if (value == null || value.isNull()) {
       errors.add(where + ": missing required field '" + key + "'");
     } else if (!isNonNegative(value, integer)) {
-      errors.add(where + ": '" + key + "' must be a non-negative " + (integer ? "integer" : "number"));
+      errors.add(where + ": '" + key + "' must be a " + (integer ? "non-negative integer" : "finite non-negative number"));
     }
   }
 
@@ -166,13 +166,13 @@ public final class BaselineReader {
     final boolean line = "line".equals(key);
     final JsonNode value = node.get(key);
     if (!isNonNegative(value, line) || (line && value.asLong() < 1)) {
-      errors.add(where + ": '" + key + "' must be " + (line ? "an integer of at least 1" : "a non-negative number"));
+      errors.add(where + ": '" + key + "' must be " + (line ? "an integer of at least 1" : "a finite non-negative number"));
     }
   }
 
   private static boolean isNonNegative(final JsonNode value, final boolean integer) {
     final boolean number = integer ? value.isIntegralNumber() : value.isNumber();
-    return number && value.asDouble() >= 0;
+    return number && Double.isFinite(value.asDouble()) && value.asDouble() >= 0;
   }
 
   private static void requireText(final JsonNode node, final String key, final List<String> errors) {
@@ -181,8 +181,8 @@ public final class BaselineReader {
     }
   }
 
-  private static CognitiveAnalysisException invalid(final List<String> errors) {
-    return new CognitiveAnalysisException("Invalid baseline file format: " + String.join(", ", errors));
+  private static CognitiveAnalysisException invalid(final Path file, final List<String> errors) {
+    return new CognitiveAnalysisException("Invalid baseline file format in " + file + ": " + String.join(", ", errors));
   }
 
   static String reason(final IOException e) {
