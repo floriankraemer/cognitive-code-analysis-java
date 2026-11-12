@@ -5,7 +5,7 @@
     "tool" : {
       "driver" : {
         "name" : "cognitive-analysis",
-        "version" : "0.0.1-SNAPSHOT",
+        "version" : "<version>",
         "informationUri" : "https://github.com/floriankraemer/cognitive-code-analysis-java",
         "rules" : [ {
           "id" : "cognitive-complexity",

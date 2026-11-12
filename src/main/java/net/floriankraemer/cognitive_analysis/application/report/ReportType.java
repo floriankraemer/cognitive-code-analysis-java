@@ -2,8 +2,8 @@ package net.floriankraemer.cognitive_analysis.application.report;
 
 import java.time.Clock;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Locale;
-import java.util.stream.Collectors;
 import net.floriankraemer.cognitive_analysis.config.CognitiveConfig;
 
 /** The report formats of the analyse command. The command name of each is its constant in lower case with dashes. */
@@ -48,8 +48,13 @@ public enum ReportType {
             "Invalid report type '" + value + "'. Expected one of: " + names() + "."));
   }
 
-  /** The command names, comma separated, for help and error messages. */
+  /** The command names in declaration order, for help and error messages. */
+  public static List<String> commandNames() {
+    return Arrays.stream(values()).map(ReportType::commandName).toList();
+  }
+
+  /** The command names, comma separated, for error messages. */
   public static String names() {
-    return Arrays.stream(values()).map(ReportType::commandName).collect(Collectors.joining(", "));
+    return String.join(", ", commandNames());
   }
 }

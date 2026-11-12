@@ -49,7 +49,7 @@ class ReportE2ETest {
   }
 
   private static String normalized(final Path report) throws Exception {
-    return Files.readString(report).replace("\r\n", "\n").replaceAll(TIMESTAMP, "<timestamp>");
+    return ReportGoldens.maskVersion(Files.readString(report).replace("\r\n", "\n").replaceAll(TIMESTAMP, "<timestamp>"));
   }
 
   @Test
@@ -150,6 +150,17 @@ class ReportE2ETest {
     assertThat(err.toString()).contains("Invalid report type 'xml'. Expected one of: json, csv, html, markdown,"
         + " checkstyle, junit, sarif, gitlab-codequality, github-actions.");
     assertThat(report).doesNotExist();
+  }
+
+  @Test
+  void theHelpOfTheAnalyseCommandListsEveryReportTypeOfTheEnum() {
+    final CommandLine commandLine = new CommandLine(new App());
+    commandLine.setOut(new PrintWriter(out, true));
+
+    commandLine.execute("analyse", "--help");
+
+    assertThat(out.toString().replaceAll("\\s+", " "))
+        .contains("Report type: " + String.join(", ", ReportType.commandNames()) + ". Requires --report-file.");
   }
 
   @Test

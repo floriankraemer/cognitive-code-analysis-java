@@ -93,7 +93,7 @@ class ReportTest {
   private static void approve(
       final ReportType type, final String yaml, final MetricsCollection metrics, final String extension)
       throws Exception {
-    Approvals.verify(render(type, yaml, metrics), new Options().forFile().withExtension(extension));
+    Approvals.verify(ReportGoldens.maskVersion(render(type, yaml, metrics)), new Options().forFile().withExtension(extension));
   }
 
   @Test
