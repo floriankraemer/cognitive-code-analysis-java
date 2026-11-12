@@ -3,6 +3,7 @@ package net.floriankraemer.cognitive_analysis.application;
 import java.io.PrintWriter;
 import java.nio.file.Path;
 import java.time.Clock;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
@@ -10,11 +11,15 @@ import java.util.concurrent.Callable;
 import java.util.function.Supplier;
 import java.util.function.LongSupplier;
 import net.floriankraemer.cognitive_analysis.CognitiveAnalysisException;
+import net.floriankraemer.cognitive_analysis.application.report.BaselineApplier;
+import net.floriankraemer.cognitive_analysis.application.report.BaselineFiles;
 import net.floriankraemer.cognitive_analysis.application.report.Report;
 import net.floriankraemer.cognitive_analysis.application.report.ReportType;
 import net.floriankraemer.cognitive_analysis.application.report.ReportWriter;
 import net.floriankraemer.cognitive_analysis.config.CognitiveConfig;
 import net.floriankraemer.cognitive_analysis.config.ConfigLoader;
+import net.floriankraemer.cognitive_analysis.domain.Baseline;
+import net.floriankraemer.cognitive_analysis.domain.BaselineReader;
 import net.floriankraemer.cognitive_analysis.domain.CognitiveMetricsFacade;
 import net.floriankraemer.cognitive_analysis.domain.MetricsCollection;
 import net.floriankraemer.cognitive_analysis.domain.MetricsSorter;
@@ -90,16 +95,30 @@ public class AnalyseCommand implements Callable<Integer> {
   )
   String sortOrder;
 
+  @Option(
+      names = {"-b", "--baseline"},
+      paramLabel = "<file>",
+      description = "Baseline file to compare against. Default: the newest .jcca/baseline/baseline-*.json."
+  )
+  String baselineFile;
+
+  @Option(
+      names = {"-g", "--generate-baseline"},
+      description = "Write the metrics to .jcca/baseline/baseline-<timestamp>.json after the analysis."
+  )
+  boolean generateBaseline;
+
   @Option(names = "--debug", description = "Print the time of each stage and statistics after the run.")
   boolean debug;
 
   /** Replaceable by tests: the clock of the stage timings, the colors and the terminal check. */
   LongSupplier ticker = System::nanoTime;
   Ansi ansi = Ansi.AUTO;
+  Clock clock = Clock.systemDefaultZone();
+  /** The base of the configuration file, the cache and the baselines. */
+  Path workingDirectory = Path.of("");
   /** The terminal the progress goes to, or null when the process is not interactive. */
   Supplier<PrintWriter> terminalWriter = () -> Terminal.isAttached() ? System.console().writer() : null;
-
-  private final ReportWriter reportWriter = new ReportWriter(Clock.systemDefaultZone());
 
   @Override
   public Integer call() {
@@ -117,14 +136,17 @@ public class AnalyseCommand implements Callable<Integer> {
       final PrintWriter out = spec.commandLine().getOut();
 
       final CognitiveConfig config =
-          new ConfigLoader(Path.of("")).load(configFile == null ? null : Path.of(configFile));
+          new ConfigLoader(workingDirectory).load(configFile == null ? null : Path.of(configFile));
       final ConsoleRenderer console = new ConsoleRenderer(config, ansi);
+      final ReportWriter reportWriter = new ReportWriter(clock);
       final Report report = reportType == null ? null : reportWriter.resolve(reportType, config);
+      final List<String> warnings = new ArrayList<>();
+      final Baseline baseline = loadBaseline(config, warnings);
       summary.endStage("config");
 
-      final CognitiveMetricsFacade facade = new CognitiveMetricsFacade(config, err, Path.of(""));
+      final CognitiveMetricsFacade facade = new CognitiveMetricsFacade(config, err, workingDirectory);
       final List<Path> files = facade.findFiles(paths());
-      console.renderHeader(out, Path.of(""));
+      console.renderHeader(out, workingDirectory);
       out.println("Found " + files.size() + " files. Starting analysis.");
       summary.endStage("discovery");
 
@@ -134,6 +156,10 @@ public class AnalyseCommand implements Callable<Integer> {
       summary.endStage("analysis");
 
       final List<ScoredMethod> methods = sorter.sort(analysed.methods());
+      if (baseline != null) {
+        BaselineApplier.apply(baseline, methods);
+      }
+      warnings.forEach(warning -> out.println(ansi.string("@|yellow " + warning + "|@")));
       summary.endStage("sorting");
 
       if (reportType != null) {
@@ -143,6 +169,9 @@ public class AnalyseCommand implements Callable<Integer> {
         console.renderMethods(out, methods);
         out.println();
         out.println("Cognitive metrics calculated for " + path);
+      }
+      if (generateBaseline) {
+        out.println("Baseline file generated: " + new BaselineFiles(clock).generate(workingDirectory, config, methods));
       }
       summary.endStage("output");
 
@@ -154,6 +183,24 @@ public class AnalyseCommand implements Callable<Integer> {
       err.println(describe(e));
       return 1;
     }
+  }
+
+  /** The baseline of -b, else the newest generated one (noted in the warnings); null when there is none. */
+  private Baseline loadBaseline(final CognitiveConfig config, final List<String> warnings)
+      throws CognitiveAnalysisException {
+    Path file = baselineFile == null ? null : Path.of(baselineFile);
+    if (file == null) {
+      file = BaselineFiles.latest(workingDirectory).orElse(null);
+      if (file != null) {
+        warnings.add("Auto-detected latest baseline file: " + file.getFileName());
+      }
+    }
+    if (file == null) {
+      return null;
+    }
+    final Baseline baseline = BaselineReader.read(file);
+    baseline.configWarning(config).ifPresent(warnings::add);
+    return baseline;
   }
 
   /** The comma-separated entries of the path argument, trimmed; blank entries are ignored. */

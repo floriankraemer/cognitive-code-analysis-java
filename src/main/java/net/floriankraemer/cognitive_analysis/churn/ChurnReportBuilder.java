@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.math.BigDecimal;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Clock;
@@ -18,6 +17,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import net.floriankraemer.cognitive_analysis.CognitiveAnalysisException;
+import net.floriankraemer.cognitive_analysis.application.report.AtomicFileWriter;
 import net.floriankraemer.cognitive_analysis.config.CognitiveConfig;
 import net.floriankraemer.cognitive_analysis.config.CognitiveConfig.ReporterSettings;
 import net.floriankraemer.cognitive_analysis.churn.TreemapMath.Item;
@@ -98,11 +98,7 @@ public final class ChurnReportBuilder {
       throw new CognitiveAnalysisException("Directory " + directory + " does not exist");
     }
     final String content = renderer.render(metrics);
-    try {
-      Files.writeString(path, content, StandardCharsets.UTF_8);
-    } catch (IOException e) {
-      throw new CognitiveAnalysisException("Failed to write the report to disk: " + file, e);
-    }
+    AtomicFileWriter.write(path, content);
   }
 
   String render(final ChurnReportType type, final List<ChurnMetrics> metrics) throws CognitiveAnalysisException {

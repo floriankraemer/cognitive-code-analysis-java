@@ -56,7 +56,11 @@ class ReporterInputsTest {
   @Test
   void carriesTheWeightDeltaAgainstTheBaseline() {
     final CognitiveMetrics current = metrics(2.0);
-    current.calculateDeltas(metrics(0.5));
+    final Map<MetricName, Double> weights = new java.util.EnumMap<>(MetricName.class);
+    for (final MetricName name : MetricName.values()) {
+      weights.put(name, name == MetricName.ARG_COUNT ? 0.5 : 0.0);
+    }
+    current.applyBaseline(new net.floriankraemer.cognitive_analysis.domain.BaselineMethod(weights, Map.of()));
 
     final CognitiveReportInput input = ReporterInputs.of(
         List.of(new ScoredMethod("src/B.java", "a.B::run", current)), TestConfigs.defaults());

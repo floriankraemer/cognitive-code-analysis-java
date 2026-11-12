@@ -41,6 +41,7 @@
 		<javaparser.version>3.28.2</javaparser.version>
 		<commons-csv.version>1.14.1</commons-csv.version>
 		<approvaltests.version>24.8.0</approvaltests.version>
+		<json-schema-validator.version>1.5.6</json-schema-validator.version>
 	</properties>
 
 	<dependencyManagement>
@@ -95,6 +96,12 @@
 			<groupId>org.assertj</groupId>
 			<artifactId>assertj-core</artifactId>
 			<version>${assertj.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.networknt</groupId>
+			<artifactId>json-schema-validator</artifactId>
+			<version>${json-schema-validator.version}</version>
 			<scope>test</scope>
 		</dependency>
 		<dependency>

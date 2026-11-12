@@ -7,6 +7,7 @@ import java.util.function.Function;
 import net.floriankraemer.cognitive_analysis.config.CognitiveConfig;
 import net.floriankraemer.cognitive_analysis.config.MetricName;
 import net.floriankraemer.cognitive_analysis.domain.CognitiveMetrics;
+import net.floriankraemer.cognitive_analysis.domain.DeltaMetric;
 import picocli.CommandLine.Help.Ansi;
 
 /** Builds the method table: one row per method, the columns selected by the {@code show*} settings. */
@@ -62,25 +63,32 @@ public class ResultTableBuilder {
     if (config.showDetailedCognitiveMetrics()) {
       for (final MetricName name : MetricName.values()) {
         columns.add(new Column(
-            DETAIL_HEADERS.get(name), metrics -> formatter.weighted(metrics.value(name), metrics.weight(name))));
+            DETAIL_HEADERS.get(name), metrics -> formatter.withDelta(
+                formatter.weighted(metrics.value(name), metrics.weight(name)), metrics.delta(name))));
       }
     }
-    columns.add(new Column("Cognitive\nComplexity", metrics -> formatter.score(metrics.getCognitiveComplexity())));
+    columns.add(new Column("Cognitive\nComplexity", metrics -> formatter.withDelta(
+        formatter.score(metrics.getCognitiveComplexity()), metrics.otherDelta(DeltaMetric.SCORE))));
     if (config.showHalsteadComplexity()) {
-      columns.add(new Column("Halstead\nVolume", metrics -> formatter.halsteadVolume(metrics.getHalstead().volume())));
-      columns.add(new Column(
-          "Halstead\nDifficulty", metrics -> formatter.halsteadDifficulty(metrics.getHalstead().difficulty())));
-      columns.add(new Column("Halstead\nEffort", metrics -> formatter.halsteadEffort(metrics.getHalstead().effort())));
+      columns.add(new Column("Halstead\nVolume", metrics -> formatter.withDelta(
+          formatter.halsteadVolume(metrics.getHalstead().volume()), metrics.otherDelta(DeltaMetric.HALSTEAD_VOLUME))));
+      columns.add(new Column("Halstead\nDifficulty", metrics -> formatter.withDelta(
+          formatter.halsteadDifficulty(metrics.getHalstead().difficulty()),
+          metrics.otherDelta(DeltaMetric.HALSTEAD_DIFFICULTY))));
+      columns.add(new Column("Halstead\nEffort", metrics -> formatter.withDelta(
+          formatter.halsteadEffort(metrics.getHalstead().effort()), metrics.otherDelta(DeltaMetric.HALSTEAD_EFFORT))));
     }
     if (config.showCyclomaticComplexity()) {
-      columns.add(new Column("Cyclomatic\nComplexity", metrics ->
-          formatter.withRisk(metrics.getCyclomatic().complexity(), metrics.getCyclomatic().riskLevel())));
+      columns.add(new Column("Cyclomatic\nComplexity", metrics -> formatter.withDelta(
+          formatter.withRisk(metrics.getCyclomatic().complexity(), metrics.getCyclomatic().riskLevel()),
+          metrics.otherDelta(DeltaMetric.CYCLOMATIC))));
     }
     if (config.showUnderstandability()) {
-      columns.add(new Column("Understandability", metrics ->
-          formatter.withRisk(metrics.getUnderstandability().complexity(), metrics.getUnderstandability().riskLevel())));
+      columns.add(new Column("Understandability", metrics -> formatter.withDelta(
+          formatter.withRisk(metrics.getUnderstandability().complexity(), metrics.getUnderstandability().riskLevel()),
+          metrics.otherDelta(DeltaMetric.UNDERSTANDABILITY))));
     }
-    // Hook: the baseline delta columns and the coverage column are appended here, after the metric columns.
+    // Hook: the coverage column is appended here, after the metric columns.
     return columns;
   }
 }

@@ -133,4 +133,12 @@ class TreemapMathTest {
     assertThat(rect.width()).isCloseTo(width, within(0.01));
     assertThat(rect.height()).isCloseTo(height, within(0.01));
   }
+
+  @Test
+  void layoutStillSplitsWhenTheChurnIsNotANumber() {
+    final List<Rect> rects =
+        TreemapMath.layout(List.of(new Item("a", Double.NaN, 1), new Item("b", Double.NaN, 1)), 100, 100);
+
+    assertThat(rects).extracting(rect -> rect.item().className()).containsExactly("a", "b");
+  }
 }

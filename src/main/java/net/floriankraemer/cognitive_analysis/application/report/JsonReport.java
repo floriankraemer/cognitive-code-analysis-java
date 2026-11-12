@@ -9,6 +9,7 @@ import net.floriankraemer.cognitive_analysis.application.report.ReportSupport.Ro
 import net.floriankraemer.cognitive_analysis.config.CognitiveConfig;
 import net.floriankraemer.cognitive_analysis.config.MetricName;
 import net.floriankraemer.cognitive_analysis.domain.CognitiveMetrics;
+import net.floriankraemer.cognitive_analysis.domain.DeltaMetric;
 import net.floriankraemer.cognitive_analysis.domain.ScoredMethod;
 
 /**
@@ -25,21 +26,27 @@ final class JsonReport implements Report {
 
   @Override
   public String render(final List<ScoredMethod> metrics) throws CognitiveAnalysisException {
-    final Map<String, Object> classes = new LinkedHashMap<>();
-    ReportSupport.byClass(ReportSupport.rows(metrics)).forEach((key, rows) -> classes.put(key, toClass(rows)));
-    return ReportSupport.toJson(classes) + "\n";
+    return ReportSupport.toJson(body(metrics, true)) + "\n";
   }
 
-  private static Map<String, Object> toClass(final List<Row> rows) {
+  /** The classes with their methods; the deltas against a baseline only when asked for. */
+  static Map<String, Object> body(final List<ScoredMethod> metrics, final boolean withDeltas) {
+    final Map<String, Object> classes = new LinkedHashMap<>();
+    ReportSupport.byClass(ReportSupport.rows(metrics))
+        .forEach((key, rows) -> classes.put(key, toClass(rows, withDeltas)));
+    return classes;
+  }
+
+  private static Map<String, Object> toClass(final List<Row> rows, final boolean withDeltas) {
     final Map<String, Object> methods = new LinkedHashMap<>();
-    rows.forEach(row -> methods.put(row.metrics().getMethodName(), toMethod(row)));
+    rows.forEach(row -> methods.put(row.metrics().getMethodName(), toMethod(row, withDeltas)));
     final Map<String, Object> entry = new LinkedHashMap<>();
     entry.put("file", rows.get(0).file());
     entry.put("methods", methods);
     return entry;
   }
 
-  private static Map<String, Object> toMethod(final Row row) {
+  private static Map<String, Object> toMethod(final Row row, final boolean withDeltas) {
     final CognitiveMetrics metrics = row.metrics();
     final Map<String, Object> method = new LinkedHashMap<>();
     method.put("class", metrics.getClassName());
@@ -62,7 +69,10 @@ final class JsonReport implements Report {
     for (final MetricName name : MetricName.values()) {
       metrics.delta(name).ifPresent(delta -> deltas.put(name.key() + "Weight", ReportSupport.rounded(delta.getValue())));
     }
-    if (!deltas.isEmpty()) {
+    for (final DeltaMetric metric : DeltaMetric.values()) {
+      metrics.otherDelta(metric).ifPresent(delta -> deltas.put(metric.key(), ReportSupport.rounded(delta.getValue())));
+    }
+    if (withDeltas && !deltas.isEmpty()) {
       method.put("deltas", deltas);
     }
     return method;

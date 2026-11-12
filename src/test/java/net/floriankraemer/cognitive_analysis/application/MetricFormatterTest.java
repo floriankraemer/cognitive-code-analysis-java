@@ -3,6 +3,8 @@ package net.floriankraemer.cognitive_analysis.application;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Locale;
+import java.util.Optional;
+import net.floriankraemer.cognitive_analysis.domain.Delta;
 import org.junit.jupiter.api.Test;
 import picocli.CommandLine.Help.Ansi;
 
@@ -81,5 +83,35 @@ class MetricFormatterTest {
     assertThat(plain.score(9)).isEqualTo("9.000");
     assertThat(plain.withRisk(20, "very_high")).isEqualTo("20 (very_high)");
     assertThat(plain.halsteadVolume(5000)).isEqualTo("5000.00");
+  }
+
+  @Test
+  void addsTheChangeInASecondLineWithoutADoubleMinus() {
+    assertThat(plain.withDelta("5", Optional.of(new Delta(1, 3.5)))).isEqualTo("5\nΔ +2.5");
+    assertThat(plain.withDelta("5", Optional.of(new Delta(3.5, 1)))).isEqualTo("5\nΔ -2.5");
+    assertThat(plain.withDelta("5", Optional.of(new Delta(-1, -3)))).isEqualTo("5\nΔ -2");
+    assertThat(plain.withDelta("5", Optional.of(new Delta(0, 0.0004)))).isEqualTo("5\nΔ +0");
+  }
+
+  @Test
+  void leavesTheCellAloneWithoutAChange() {
+    assertThat(plain.withDelta("5", Optional.empty())).isEqualTo("5");
+    assertThat(plain.withDelta("5", Optional.of(new Delta(2, 2)))).isEqualTo("5");
+  }
+
+  @Test
+  void paintsIncreasesRedAndDecreasesGreen() {
+    assertThat(colors.withDelta("5", Optional.of(new Delta(1, 2)))).startsWith("5\n" + RED + "Δ +1");
+    assertThat(colors.withDelta("5", Optional.of(new Delta(2, 1)))).startsWith("5\n" + GREEN + "Δ -1");
+  }
+
+  @Test
+  void rendersNotAvailableInsteadOfFailingOnNonFiniteValues() {
+    assertThat(plain.weighted(3, Double.NaN)).isEqualTo("3 (N/A)");
+    assertThat(plain.weighted(3, Double.POSITIVE_INFINITY)).isEqualTo("3 (N/A)");
+    assertThat(plain.withDelta("5", Optional.of(new Delta(1, Double.POSITIVE_INFINITY)))).isEqualTo("5\nΔ N/A");
+    assertThat(plain.withDelta("5", Optional.of(new Delta(Double.NaN, 1)))).isEqualTo("5\nΔ N/A");
+    assertThat(plain.withDelta("5", Optional.of(new Delta(Double.NaN, Double.NaN)))).isEqualTo("5\nΔ N/A");
+    assertThat(colors.withDelta("5", Optional.of(new Delta(1, Double.NEGATIVE_INFINITY)))).isEqualTo("5\nΔ N/A");
   }
 }

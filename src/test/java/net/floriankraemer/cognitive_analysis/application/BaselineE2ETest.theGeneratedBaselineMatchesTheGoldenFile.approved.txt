@@ -1,0 +1,42 @@
+{
+  "version" : "2.0",
+  "createdAt" : "2025-03-04 05:06:07",
+  "configHash" : "6fc162b29dd9e2470de3813c51113b1a1bd90a18517b7d6a3037e49064dde2ab",
+  "metrics" : {
+    "demo.Service" : {
+      "file" : "<tmp>/src/Service.java",
+      "methods" : {
+        "run" : {
+          "class" : "demo.Service",
+          "method" : "run",
+          "file" : "<tmp>/src/Service.java",
+          "line" : 4,
+          "lineCount" : 3,
+          "lineCountWeight" : 0.113,
+          "argCount" : 1,
+          "argCountWeight" : 0.693,
+          "returnCount" : 0,
+          "returnCountWeight" : 0.0,
+          "variableCount" : 0,
+          "variableCountWeight" : 0.0,
+          "propertyCallCount" : 0,
+          "propertyCallCountWeight" : 0.0,
+          "ifCount" : 0,
+          "ifCountWeight" : 0.0,
+          "ifNestingLevel" : 0,
+          "ifNestingLevelWeight" : 0.0,
+          "elseCount" : 0,
+          "elseCountWeight" : 0.0,
+          "score" : 0.806,
+          "cyclomaticComplexity" : 1,
+          "cyclomaticRiskLevel" : "low",
+          "halsteadVolume" : 8.0,
+          "halsteadDifficulty" : 0.5,
+          "halsteadEffort" : 4.0,
+          "understandability" : 0,
+          "understandabilityRiskLevel" : "low"
+        }
+      }
+    }
+  }
+}
