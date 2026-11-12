@@ -38,9 +38,13 @@ Weights, score and Halstead values are rounded to three decimals.
 When the same class name occurs in more than one file, for example in the default package, every occurrence is keyed `<class>@<file>`, with the file as shown in the reports, so nothing is lost.
 Overloaded methods have distinct keys, as their parameter types are part of the name.
 
+The coverage column is added to the CSV, HTML and Markdown reports, and to JSON, when a coverage option is given, see [Coverage](./Coverage.md).
+The weight deltas are added when a baseline is in use, see [Baseline](./Baseline.md#deltas).
+
 ## CSV
 
 One header row, then one row per method in the order of the analysis.
+The columns are `Class`, `Method`, `File`, `Line` and `Score`, followed by the metric columns, the cyclomatic complexity, the Halstead values and the understandability.
 Per metric there are the columns `<Metric> Count`, `<Metric> Weight` and `<Metric> Weight Delta`, the last one empty without a baseline.
 
 ## HTML
@@ -98,4 +102,5 @@ The level is `error` or `warning` as in the other issue formats.
 The message is escaped as the runner expects, so `%`, carriage returns and line feeds are encoded, and the file property also encodes `,` and `:`.
 The file is empty when there is no violation, and otherwise ends with a line break.
 
-Use the output of the `github-actions` format in a step that writes to the workflow log, so GitHub turns each line into an annotation.
+Print the file in a later workflow step, so that GitHub turns each line into an annotation.
+See [CI](./CI.md#github-actions) for a complete workflow.
