@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.FileAlreadyExistsException;
+import java.nio.file.FileSystemException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -31,14 +32,40 @@ public final class AtomicFileWriter {
    * @return false when the file already exists
    */
   public static boolean writeNew(final Path path, final String content) throws CognitiveAnalysisException {
+    return writeNew(path, content, Files::createLink);
+  }
+
+  /** Makes {@code link} another name of the existing file; {@link Files#createLink} in production. */
+  interface LinkOperation {
+    void link(Path link, Path existing) throws IOException;
+  }
+
+  static boolean writeNew(final Path path, final String content, final LinkOperation linkOperation)
+      throws CognitiveAnalysisException {
     try {
-      // A hard link fails when the target exists, which a rename does not.
-      stage(path, content, temporary -> Files.createLink(path, temporary));
+      stage(path, content, temporary -> publishNew(path, temporary, linkOperation));
       return true;
     } catch (FileAlreadyExistsException e) {
       return false;
     } catch (IOException e) {
       throw failed(path, e);
+    }
+  }
+
+  /**
+   * A hard link fails when the target exists, which a rename does not. Where hard links are not supported,
+   * a move without REPLACE_EXISTING also fails when the target exists.
+   */
+  private static void publishNew(final Path path, final Path temporary, final LinkOperation linkOperation)
+      throws IOException {
+    try {
+      linkOperation.link(path, temporary);
+    } catch (FileAlreadyExistsException e) {
+      throw e;
+    } catch (UnsupportedOperationException | FileSystemException e) {
+      // ponytail: this check-then-rename is not atomic, so a file created by another process between the
+      // check and the rename can be replaced. The window is tiny and only exists without hard link support.
+      Files.move(temporary, path);
     }
   }
 
