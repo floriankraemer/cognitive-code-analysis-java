@@ -20,6 +20,8 @@ import org.jetbrains.kotlin.psi.KtValueArgumentName;
  * <p>ponytail: like for Java there is no symbol resolution. A name that starts with an upper-case
  * letter is taken for a type, an object or a constant, and a chain of at least two lower-case names
  * before such a name ({@code java.util} in {@code java.util.List}) for a package.
+ *
+ * <p>Only code without parse errors is visited, so a qualified expression always has a selector.
  */
 abstract class KotlinUnitScopeVisitor extends KtTreeVisitorVoid {
 
@@ -54,8 +56,7 @@ abstract class KotlinUnitScopeVisitor extends KtTreeVisitorVoid {
       case KtNameReferenceExpression name -> isTypeName(name.getReferencedName());
       case KtCallExpression call -> call.getCalleeExpression() instanceof KtNameReferenceExpression callee
           && isTypeName(callee.getReferencedName());
-      case KtDotQualifiedExpression qualified -> qualified.getSelectorExpression() != null
-          && isTypeExpression(qualified.getSelectorExpression());
+      case KtDotQualifiedExpression qualified -> isTypeExpression(qualified.getSelectorExpression());
       default -> false;
     };
   }
@@ -76,7 +77,6 @@ abstract class KotlinUnitScopeVisitor extends KtTreeVisitorVoid {
     }
     return chain.getParent() instanceof KtDotQualifiedExpression qualified
         && qualified.getReceiverExpression() == chain
-        && qualified.getSelectorExpression() != null
         && isTypeExpression(qualified.getSelectorExpression())
         && lowerCaseNameSegments(chain) >= MIN_PACKAGE_SEGMENTS;
   }

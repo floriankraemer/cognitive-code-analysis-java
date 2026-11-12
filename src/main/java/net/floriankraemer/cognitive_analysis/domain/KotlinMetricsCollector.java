@@ -175,30 +175,36 @@ public class KotlinMetricsCollector {
     }
 
     /**
-     * A declaration is ignored when the tag is in a comment that the parser binds to it, such as its
-     * KDoc or a comment trailing it on its last line, or in any comment between the previous sibling and
-     * its name.
+     * A declaration is ignored when the tag is in a comment that the parser binds to it, such as its KDoc, a
+     * comment between its annotations or a comment trailing it on its last line, or in an unbound comment
+     * between the previous sibling and the declaration.
      */
     private boolean isIgnored(final KtDeclaration declaration) {
-      final Optional<PsiElement> previous = previousSibling(declaration);
-      final int nameOffset = declaration.getTextOffset();
+      final List<PsiComment> preceding = precedingComments(declaration);
       return ignoreComments.stream().anyMatch(comment -> comment.getParent() == declaration
-          || startsAfterLineOf(comment, previous) && comment.getTextRange().getStartOffset() < nameOffset);
+          || comment.getParent() == declaration.getModifierList()
+          || preceding.contains(comment));
     }
 
-    /** A comment on the line a sibling ends on trails that sibling, so it must start on a later line. */
-    private boolean startsAfterLineOf(final PsiComment comment, final Optional<PsiElement> previous) {
-      return previous.map(sibling -> lineOf(comment.getTextRange().getStartOffset())
-          > lineOf(sibling.getTextRange().getEndOffset())).orElse(true);
-    }
-
-    private static Optional<PsiElement> previousSibling(final PsiElement element) {
-      PsiElement sibling = element.getPrevSibling();
+    /**
+     * The comments between the previous sibling and the declaration, skipping empty siblings such as a missing
+     * package directive. A comment on the line the previous sibling ends on trails that sibling.
+     */
+    private List<PsiComment> precedingComments(final KtDeclaration declaration) {
+      final List<PsiComment> comments = new ArrayList<>();
+      PsiElement sibling = declaration.getPrevSibling();
       while (sibling instanceof PsiWhiteSpace || sibling instanceof PsiComment
           || sibling != null && sibling.getTextLength() == 0) {
+        if (sibling instanceof PsiComment comment) {
+          comments.add(comment);
+        }
         sibling = sibling.getPrevSibling();
       }
-      return Optional.ofNullable(sibling);
+      if (sibling != null) {
+        final int previousLine = lineOf(sibling.getTextRange().getEndOffset());
+        comments.removeIf(comment -> lineOf(comment.getTextRange().getStartOffset()) <= previousLine);
+      }
+      return comments;
     }
 
     /** @return the 1-based line of the offset */

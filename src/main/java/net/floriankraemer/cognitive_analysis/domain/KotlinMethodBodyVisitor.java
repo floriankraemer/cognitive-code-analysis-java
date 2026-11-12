@@ -121,16 +121,16 @@ final class KotlinMethodBodyVisitor extends KotlinUnitScopeVisitor {
     super.visitParameter(parameter);
   }
 
+  /** Its children are the name and the type, which name nothing to count. */
   @Override
   public void visitDestructuringDeclarationEntry(final KtDestructuringDeclarationEntry entry) {
     declare(entry.getName());
-    super.visitDestructuringDeclarationEntry(entry);
   }
 
+  /** Its children are the keyword and the label, which name nothing to count. */
   @Override
   public void visitThisExpression(final KtThisExpression expression) {
     readsThis = true;
-    super.visitThisExpression(expression);
   }
 
   @Override

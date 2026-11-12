@@ -341,6 +341,54 @@ class KotlinMetricsCollectorTest {
   }
 
   @Test
+  void namesTypeAndRangeChecksTheSameInExpressionsAndWhenBranches() throws Exception {
+    final Map<String, CognitiveMetrics> metrics = collector.collect("A.kt", """
+        class A {
+            fun checks(o: Any) = when (o) {
+                is String -> o is CharSequence
+                in 1..2 -> o in 3..4
+                else -> false
+            }
+            fun negatedChecks(o: Any) = when (o) {
+                !is String -> o !is CharSequence
+                !in 1..2 -> o !in 3..4
+                else -> false
+            }
+        }
+        """);
+
+    // is, in and .. in both places
+    assertThat(metrics.get("A::checks").getHalstead().distinctOperators()).isEqualTo(3);
+    assertThat(metrics.get("A::negatedChecks").getHalstead().distinctOperators()).isEqualTo(3);
+  }
+
+  @Test
+  void ignoresByCommentsBetweenAnnotationsBeforeTheNameAndBeforeTheFirstDeclarationOfAFile() throws Exception {
+    assertThat(collector.collect("A.kt", """
+        // @cca-ignore
+        class Hidden {
+            fun hidden() {}
+        }
+        class A {
+            @Deprecated("x") /* @cca-ignore */ @Suppress("y") fun betweenAnnotations() {}
+            fun /* @cca-ignore */ beforeTheName() {}
+            fun kept() {}
+        }
+        """)).containsOnlyKeys("A::kept");
+  }
+
+  @Test
+  void appliesAnUnboundCommentOnTheLineOfThePreviousDeclarationToThatDeclarationOnly() throws Exception {
+    assertThat(collector.collect("A.kt", """
+        class A {
+            fun a() {} /* @cca-ignore */
+
+            fun b() {}
+        }
+        """)).containsOnlyKeys("A::b");
+  }
+
+  @Test
   void countsTheReceiverOfACallableReferenceAsAnOperand() throws Exception {
     final HalsteadMetrics halstead = collector.collect("A.kt", """
         class A {

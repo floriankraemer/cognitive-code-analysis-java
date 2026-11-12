@@ -66,10 +66,10 @@ final class KotlinHalsteadVisitor extends KotlinUnitScopeVisitor {
     super.visitIsExpression(expression);
   }
 
+  /** Its only child is the type, which is no operand. */
   @Override
   public void visitWhenConditionIsPattern(final KtWhenConditionIsPattern condition) {
     operators.add(condition.isNegated() ? "!is" : "is");
-    super.visitWhenConditionIsPattern(condition);
   }
 
   @Override
