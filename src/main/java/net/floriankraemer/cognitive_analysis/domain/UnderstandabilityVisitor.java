@@ -8,6 +8,7 @@ import com.github.javaparser.ast.expr.EnclosedExpr;
 import com.github.javaparser.ast.expr.Expression;
 import com.github.javaparser.ast.expr.LambdaExpr;
 import com.github.javaparser.ast.expr.MethodCallExpr;
+import com.github.javaparser.ast.expr.NameExpr;
 import com.github.javaparser.ast.expr.SwitchExpr;
 import com.github.javaparser.ast.expr.ThisExpr;
 import com.github.javaparser.ast.stmt.BreakStmt;
@@ -37,6 +38,7 @@ import java.util.Optional;
 final class UnderstandabilityVisitor extends UnitScopeVisitor {
 
   private final Optional<String> methodName;
+  private final String classSimpleName;
   private int nesting;
   private int structural;
   private int hybrid;
@@ -44,9 +46,13 @@ final class UnderstandabilityVisitor extends UnitScopeVisitor {
   private int nestingPoints;
   private boolean recursive;
 
-  /** @param methodName the name a recursive call has; empty for constructors */
-  UnderstandabilityVisitor(final Optional<String> methodName) {
+  /**
+   * @param methodName the name a recursive call has; empty for constructors
+   * @param classSimpleName the simple name of the declaring class, which a recursive call may use as scope
+   */
+  UnderstandabilityVisitor(final Optional<String> methodName, final String classSimpleName) {
     this.methodName = methodName;
+    this.classSimpleName = classSimpleName;
   }
 
   Understandability result() {
@@ -166,13 +172,25 @@ final class UnderstandabilityVisitor extends UnitScopeVisitor {
     }
   }
 
+  /**
+   * A call is recursive when it has the method's name (overloads match too) and no scope, {@code this},
+   * {@code Own.this} or the class name {@code Own} as scope. {@code super} and any other scope are no recursion.
+   */
   @Override
   public void visit(final MethodCallExpr call, final Void arg) {
     if (methodName.filter(call.getNameAsString()::equals).isPresent()
-        && call.getScope().map(ThisExpr.class::isInstance).orElse(true)) {
+        && call.getScope().map(this::isOwnScope).orElse(true)) {
       recursive = true;
     }
     super.visit(call, arg);
+  }
+
+  private boolean isOwnScope(final Expression scope) {
+    return switch (scope) {
+      case ThisExpr self -> self.getTypeName().map(type -> type.getIdentifier().equals(classSimpleName)).orElse(true);
+      case NameExpr name -> name.getNameAsString().equals(classSimpleName);
+      default -> false;
+    };
   }
 
   /** Counts a whole sequence once, at its outermost operator; nested operators belong to it. */

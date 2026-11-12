@@ -16,6 +16,11 @@ public record Understandability(int complexity, Map<String, Integer> breakdown) 
 
   static final Understandability NONE = of(0, 0, 0, 0, 0);
 
+  /** Keeps the order of the breakdown and makes it read-only, also when restored from the cache. */
+  public Understandability {
+    breakdown = Collections.unmodifiableMap(new LinkedHashMap<>(breakdown));
+  }
+
   static Understandability of(
       final int structural, final int hybrid, final int fundamental, final int nesting, final int recursion) {
     final int total = structural + hybrid + fundamental + nesting;
@@ -26,7 +31,7 @@ public record Understandability(int complexity, Map<String, Integer> breakdown) 
     breakdown.put("fundamental", fundamental);
     breakdown.put("nesting", nesting);
     breakdown.put("recursion", recursion);
-    return new Understandability(total, Collections.unmodifiableMap(breakdown));
+    return new Understandability(total, breakdown);
   }
 
   /** @return the same bands as the cyclomatic complexity */

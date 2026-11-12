@@ -1,9 +1,11 @@
 package net.floriankraemer.cognitive_analysis.domain;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
@@ -68,6 +70,37 @@ class UnderstandabilityTest {
         run total=0
         check total=0
         """);
+  }
+
+  @Test
+  void countsCallsToTheOwnMethodWithoutScopeOrThroughTheOwnClassOnly() throws Exception {
+    assertThat(describe("Recursion.java")).isEqualTo("""
+        className total=1 fundamental=1 recursion=1
+        qualifiedThis total=1 fundamental=1 recursion=1
+        countsOnce total=1 fundamental=1 recursion=1
+        overload(int) total=1 fundamental=1 recursion=1
+        overload(String) total=0
+        toString total=0
+        otherClassName total=0
+        otherObject total=0
+        innerThis total=1 fundamental=1 recursion=1
+        outerThis total=0
+        outerClassName total=0
+        """);
+  }
+
+  @Test
+  void restoresTheBreakdownReadOnlyAndInOrder() {
+    final Map<String, Integer> source = new LinkedHashMap<>();
+    source.put("total", 1);
+    source.put("structural", 1);
+
+    final Understandability understandability = new Understandability(1, source);
+    source.put("hybrid", 2);
+
+    assertThat(understandability.breakdown()).containsExactly(Map.entry("total", 1), Map.entry("structural", 1));
+    assertThatThrownBy(() -> understandability.breakdown().put("x", 1))
+        .isInstanceOf(UnsupportedOperationException.class);
   }
 
   @Test

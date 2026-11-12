@@ -44,6 +44,25 @@ class MetricsCacheTest {
   }
 
   @Test
+  void restoresTheCollectedMetricsExactly() throws Exception {
+    Path source = Path.of("src/test/resources/fixtures/understandability/WhitePaper.java");
+    MetricsCache cache = cache(cacheConfig(true, tempDir.resolve("cache")));
+    String key = keyOf(cache, source);
+    Map<String, CognitiveMetrics> collected = new CognitiveMetricsCollector().collect(Files.readString(source));
+
+    cache.store(key, source, collected);
+
+    Map<String, CognitiveMetrics> loaded = cache.load(key).orElseThrow();
+    assertThat(loaded).usingRecursiveComparison().isEqualTo(collected);
+    CognitiveMetrics addVersion = loaded.get("fixtures.understandability.WhitePaper::addVersion");
+    assertThat(addVersion.getUnderstandability()).isEqualTo(collected.get(
+        "fixtures.understandability.WhitePaper::addVersion").getUnderstandability());
+    assertThat(addVersion.getUnderstandability().complexity()).isEqualTo(35);
+    assertThat(addVersion.getUnderstandability().breakdown().keySet())
+        .containsExactly("total", "structural", "hybrid", "fundamental", "nesting", "recursion");
+  }
+
+  @Test
   void keysChangeWhenTheContentChangesEvenWithTheSameSizeAndModificationTime() throws Exception {
     Path source = write("A.java", "class A {}");
     MetricsCache cache = cache(cacheConfig(true, tempDir.resolve("cache")));
@@ -136,7 +155,7 @@ class MetricsCacheTest {
     Path source = write("A.java", "class A {}");
     MetricsCache cache = cache(cacheConfig(true, tempDir.resolve("cache")));
     String key = keyOf(cache, source);
-    writeEntry(key, "{\"version\": 1, \"analysisResult\": {");
+    writeEntry(key, "{\"version\": " + MetricsCache.CACHE_FORMAT_VERSION + ", \"analysisResult\": {");
 
     assertThat(cache.load(key)).isEmpty();
   }
@@ -146,7 +165,7 @@ class MetricsCacheTest {
     Path source = write("A.java", "class A {}");
     MetricsCache cache = cache(cacheConfig(true, tempDir.resolve("cache")));
     String key = keyOf(cache, source);
-    writeEntry(key, "{\"version\": 0, \"filePath\": \"A.java\", \"analysisResult\": {}}");
+    writeEntry(key, "{\"version\": " + (MetricsCache.CACHE_FORMAT_VERSION - 1) + ",\"filePath\": \"A.java\", \"analysisResult\": {}}");
 
     assertThat(cache.load(key)).isEmpty();
   }
@@ -156,7 +175,7 @@ class MetricsCacheTest {
     Path source = write("A.java", "class A {}");
     MetricsCache cache = cache(cacheConfig(true, tempDir.resolve("cache")));
     String key = keyOf(cache, source);
-    writeEntry(key, "{\"version\": 1, \"filePath\": \"A.java\", \"analysisResult\": {\"A::a\": {\"unknown\": 1}}}");
+    writeEntry(key, "{\"version\": " + MetricsCache.CACHE_FORMAT_VERSION + ", \"filePath\": \"A.java\", \"analysisResult\": {\"A::a\": {\"unknown\": 1}}}");
 
     assertThat(cache.load(key)).isEmpty();
   }
@@ -166,7 +185,7 @@ class MetricsCacheTest {
     Path source = write("A.java", "class A {}");
     MetricsCache cache = cache(cacheConfig(true, tempDir.resolve("cache")));
     String key = keyOf(cache, source);
-    writeEntry(key, "{\"version\": 1, \"filePath\": \"A.java\"}");
+    writeEntry(key, "{\"version\": " + MetricsCache.CACHE_FORMAT_VERSION + ", \"filePath\": \"A.java\"}");
 
     assertThat(cache.load(key)).isEmpty();
   }

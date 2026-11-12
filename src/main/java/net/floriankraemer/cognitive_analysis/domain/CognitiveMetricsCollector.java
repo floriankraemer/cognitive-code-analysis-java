@@ -193,7 +193,8 @@ public class CognitiveMetricsCollector {
     final CyclomaticVisitor cyclomatic = new CyclomaticVisitor();
     final HalsteadVisitor halstead = new HalsteadVisitor();
     final UnderstandabilityVisitor understandability = new UnderstandabilityVisitor(
-        unit.declaration() instanceof MethodDeclaration ? Optional.of(unit.name()) : Optional.empty());
+        unit.declaration() instanceof MethodDeclaration ? Optional.of(unit.name()) : Optional.empty(),
+        className.substring(className.lastIndexOf('.') + 1));
     unit.body().ifPresent(body -> {
       body.accept(visitor, null);
       body.accept(cyclomatic, null);
