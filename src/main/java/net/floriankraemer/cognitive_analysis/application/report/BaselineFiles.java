@@ -37,9 +37,9 @@ public final class BaselineFiles {
   }
 
   /** A candidate file; the timestamp of the name comes first, then the modification time. */
-  private record Candidate(Path file, String timestamp, FileTime modified) {}
+  record Candidate(Path file, String timestamp, FileTime modified) {}
 
-  private static final Comparator<Candidate> NEWEST_LAST = Comparator.comparing(Candidate::timestamp)
+  static final Comparator<Candidate> NEWEST_LAST = Comparator.comparing(Candidate::timestamp)
       .thenComparing(Candidate::modified)
       .thenComparing(candidate -> candidate.file().getFileName().toString());
 

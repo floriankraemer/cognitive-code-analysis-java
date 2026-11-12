@@ -6,6 +6,7 @@ import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.Objects;
 import java.util.UUID;
 import net.floriankraemer.cognitive_analysis.CognitiveAnalysisException;
 
@@ -22,8 +23,8 @@ public final class AtomicFileWriter {
       Files.writeString(temporary, content, StandardCharsets.UTF_8);
       move(temporary, path);
     } catch (IOException e) {
-      final String reason = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
-      throw new CognitiveAnalysisException("Unable to write to file " + path + ": " + reason, e);
+      throw new CognitiveAnalysisException("Unable to write to file " + path + ": "
+          + Objects.toString(e.getMessage(), e.getClass().getSimpleName()), e);
     } finally {
       try {
         Files.deleteIfExists(temporary);

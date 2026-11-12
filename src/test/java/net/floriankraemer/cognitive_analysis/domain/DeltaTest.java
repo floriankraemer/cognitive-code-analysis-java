@@ -52,4 +52,10 @@ public class DeltaTest {
     assertTrue(Delta.rounded(1.0, 1.0006).hasIncreased());
     assertEquals(-1.5, Delta.rounded(3.0, 1.5).getValue());
   }
+
+  @Test
+  public void testRoundedKeepsNonFiniteValues() {
+    assertTrue(Delta.rounded(1.0, Double.POSITIVE_INFINITY).hasIncreased());
+    assertTrue(Double.isNaN(Delta.rounded(Double.NaN, 1.0).getValue()));
+  }
 }

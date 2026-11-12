@@ -98,15 +98,9 @@ public class CognitiveMetrics {
     weights.put(name, weight);
   }
 
-  /** The change of the weight against a previous run, empty until {@link #calculateDeltas} ran. */
+  /** The change of the weight against a previous run, empty until {@link #applyBaseline} ran. */
   public Optional<Delta> delta(final MetricName name) {
     return Optional.ofNullable(deltas.get(name));
-  }
-
-  public void calculateDeltas(final CognitiveMetrics previous) {
-    for (final MetricName name : MetricName.values()) {
-      deltas.put(name, new Delta(previous.weight(name), weight(name)));
-    }
   }
 
   /** The change of a tracked metric against the baseline, empty when the baseline has no value for it. */

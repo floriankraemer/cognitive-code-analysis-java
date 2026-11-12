@@ -35,7 +35,7 @@
           "lineCountWeight" : -0.333,
           "argCountWeight" : 1.0,
           "returnCountWeight" : -0.333,
-          "variableCountWeight" : -0.333,
+          "variableCountWeight" : -0.334,
           "propertyCallCountWeight" : -0.333,
           "ifCountWeight" : 1.0,
           "ifNestingLevelWeight" : -0.333,

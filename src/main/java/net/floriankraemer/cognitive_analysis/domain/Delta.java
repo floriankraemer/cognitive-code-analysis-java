@@ -30,7 +30,7 @@ public final class Delta {
   }
 
   private static double round(final double value) {
-    return BigDecimal.valueOf(value).setScale(3, RoundingMode.HALF_UP).doubleValue();
+    return !Double.isFinite(value) ? value : BigDecimal.valueOf(value).setScale(3, RoundingMode.HALF_UP).doubleValue();
   }
 
   @JsonIgnore

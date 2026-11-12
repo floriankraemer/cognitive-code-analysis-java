@@ -242,4 +242,10 @@ class BaselineReaderTest {
 
     assertThatThrownBy(() -> BaselineReader.read(file)).hasMessageStartingWith("Invalid baseline file " + file + ": ");
   }
+
+  @Test
+  void theReasonOfAnIoErrorIsItsMessageOrItsTypeWithoutOne() {
+    assertThat(BaselineReader.reason(new java.io.IOException("disk gone"))).isEqualTo("disk gone");
+    assertThat(BaselineReader.reason(new java.io.IOException())).isEqualTo("IOException");
+  }
 }

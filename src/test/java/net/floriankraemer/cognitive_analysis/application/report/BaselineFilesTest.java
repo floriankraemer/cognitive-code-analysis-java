@@ -111,12 +111,14 @@ class BaselineFilesTest {
   }
 
   @Test
-  void theModificationTimeBreaksATieOfEqualTimestamps() throws Exception {
-    // Not possible with one file name, but a name with the timestamp and a suffix has none and ties by time.
-    touch("baseline-x.json", 1_000);
-    final Path newer = touch("baseline-y.json", 1_000);
+  void equalTimestampsAndModificationTimesAreOrderedByName() {
+    final FileTime time = FileTime.fromMillis(1_000);
+    final BaselineFiles.Candidate x = new BaselineFiles.Candidate(Path.of("baseline-x.json"), "", time);
+    final BaselineFiles.Candidate y = new BaselineFiles.Candidate(Path.of("baseline-y.json"), "", time);
 
-    assertThat(BaselineFiles.latest(tempDir)).contains(newer);
+    assertThat(BaselineFiles.NEWEST_LAST.compare(x, y)).isNegative();
+    assertThat(BaselineFiles.NEWEST_LAST.compare(y, x)).isPositive();
+    assertThat(BaselineFiles.NEWEST_LAST.compare(x, x)).isZero();
   }
 
   @Test

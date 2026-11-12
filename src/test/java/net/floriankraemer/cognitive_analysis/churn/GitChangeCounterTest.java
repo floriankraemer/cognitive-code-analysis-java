@@ -109,6 +109,23 @@ class GitChangeCounterTest {
 
   @Test
   @DisabledOnOs(OS.WINDOWS)
+  void failsAndKeepsTheInterruptFlagWhenTheThreadIsInterrupted() throws Exception {
+    final Path slow = script("slow-interrupted", "#!/bin/sh\nsleep 30\n");
+    final GitChangeCounter counter = new GitChangeCounter(slow.toString(), LocalDate.parse("2000-01-01"), TIMEOUT);
+
+    Thread.currentThread().interrupt();
+    try {
+      assertThatThrownBy(() -> counter.count(tempDir.resolve("A.java")))
+          .isInstanceOf(CognitiveAnalysisException.class)
+          .hasMessage("Interrupted while waiting for git");
+      assertThat(Thread.currentThread().isInterrupted()).isTrue();
+    } finally {
+      Thread.interrupted(); // clear the flag for the following tests
+    }
+  }
+
+  @Test
+  @DisabledOnOs(OS.WINDOWS)
   void failsOnOutputThatIsNotANumber() throws Exception {
     final Path odd = script("odd", "#!/bin/sh\necho hello\n");
     final GitChangeCounter counter = new GitChangeCounter(odd.toString(), LocalDate.parse("2000-01-01"), TIMEOUT);
