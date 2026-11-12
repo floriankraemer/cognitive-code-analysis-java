@@ -23,6 +23,9 @@ public class CognitiveMetrics {
   @JsonProperty("deltas")
   private final Map<MetricName, Delta> deltas;
 
+  @JsonProperty("otherDeltas")
+  private final Map<DeltaMetric, Delta> otherDeltas;
+
   @JsonProperty("cognitiveComplexity")
   private double cognitiveComplexity;
   private CyclomaticComplexity cyclomatic = new CyclomaticVisitor().result();
@@ -35,7 +38,7 @@ public class CognitiveMetrics {
    * @param line the line the declaration starts on
    */
   public CognitiveMetrics(final String className, final String methodName, final int line) {
-    this(className, methodName, line, Map.of(), Map.of(), Map.of(), 0.0);
+    this(className, methodName, line, Map.of(), Map.of(), Map.of(), Map.of(), 0.0);
   }
 
   /** Restores a state written by Jackson, see the annotated fields. */
@@ -47,6 +50,7 @@ public class CognitiveMetrics {
       @JsonProperty("values") final Map<MetricName, Integer> values,
       @JsonProperty("weights") final Map<MetricName, Double> weights,
       @JsonProperty("deltas") final Map<MetricName, Delta> deltas,
+      @JsonProperty("otherDeltas") final Map<DeltaMetric, Delta> otherDeltas,
       @JsonProperty("cognitiveComplexity") final double cognitiveComplexity) {
     this.className = className;
     this.methodName = methodName;
@@ -57,6 +61,10 @@ public class CognitiveMetrics {
     this.weights.putAll(weights);
     this.deltas = new EnumMap<>(MetricName.class);
     this.deltas.putAll(deltas);
+    this.otherDeltas = new EnumMap<>(DeltaMetric.class);
+    if (otherDeltas != null) {
+      this.otherDeltas.putAll(otherDeltas);
+    }
     this.cognitiveComplexity = cognitiveComplexity;
   }
 
@@ -98,6 +106,21 @@ public class CognitiveMetrics {
   public void calculateDeltas(final CognitiveMetrics previous) {
     for (final MetricName name : MetricName.values()) {
       deltas.put(name, new Delta(previous.weight(name), weight(name)));
+    }
+  }
+
+  /** The change of a tracked metric against the baseline, empty when the baseline has no value for it. */
+  public Optional<Delta> otherDelta(final DeltaMetric metric) {
+    return Optional.ofNullable(otherDeltas.get(metric));
+  }
+
+  /** Sets every delta that the baseline method has a value to compare with. */
+  public void applyBaseline(final BaselineMethod baseline) {
+    for (final MetricName name : MetricName.values()) {
+      deltas.put(name, Delta.rounded(baseline.weight(name), weight(name)));
+    }
+    for (final DeltaMetric metric : DeltaMetric.values()) {
+      baseline.other(metric).ifPresent(before -> otherDeltas.put(metric, Delta.rounded(before, metric.valueOf(this))));
     }
   }
 

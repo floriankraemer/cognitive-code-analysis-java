@@ -65,7 +65,7 @@ public final class MetricsCache {
   public MetricsCache(final CognitiveConfig config, final Path workingDirectory, final PrintWriter warnings) {
     this.enabled = config.cache().enabled();
     this.directory = workingDirectory.toAbsolutePath().resolve(config.cache().directory()).normalize();
-    this.configHash = sha256Hex(toJson(config));
+    this.configHash = sha256Hex(canonicalJson(config));
     this.warnings = warnings;
   }
 
@@ -132,9 +132,10 @@ public final class MetricsCache {
     return directory.resolve(key.substring(0, 2)).resolve(key + ".json");
   }
 
-  private static String toJson(final CognitiveConfig config) {
+  /** The value with properties and map entries in a fixed order, so equal settings give equal text. */
+  static String canonicalJson(final Object value) {
     try {
-      return CANONICAL_MAPPER.writeValueAsString(config);
+      return CANONICAL_MAPPER.writeValueAsString(value);
     } catch (JsonProcessingException e) {
       throw new IllegalStateException("The configuration cannot be serialized", e);
     }
@@ -169,7 +170,7 @@ public final class MetricsCache {
     return build.getProperty("version") + "|" + build.getProperty("build.timestamp");
   }
 
-  private static String sha256Hex(final String text) {
+  static String sha256Hex(final String text) {
     return sha256Hex(text.getBytes(StandardCharsets.UTF_8));
   }
 

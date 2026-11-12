@@ -2,6 +2,8 @@ package net.floriankraemer.cognitive_analysis.application;
 
 import java.math.BigDecimal;
 import java.util.Locale;
+import java.util.Optional;
+import net.floriankraemer.cognitive_analysis.domain.Delta;
 import picocli.CommandLine.Help.Ansi;
 
 /** Formats metric values as table cells and colors them by their thresholds. */
@@ -55,6 +57,15 @@ final class MetricFormatter {
       default -> null;
     };
     return complexity + " (" + (color == null ? riskLevel : paint(color, riskLevel)) + ")";
+  }
+
+  /** The cell with the change against the baseline in a second line; unchanged metrics keep the plain cell. */
+  String withDelta(final String cell, final Optional<Delta> delta) {
+    return delta.filter(Delta::hasChanged).map(change -> {
+      final String amount = new BigDecimal(String.format(Locale.ROOT, "%.3f", Math.abs(change.getValue())))
+          .stripTrailingZeros().toPlainString();
+      return cell + "\n" + (change.hasIncreased() ? paint(RED, "Δ +" + amount) : paint(GREEN, "Δ -" + amount));
+    }).orElse(cell);
   }
 
   private String halstead(final double value, final double high, final double medium) {

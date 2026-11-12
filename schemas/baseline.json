@@ -1,0 +1,124 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Baseline file of the Java cognitive code analysis",
+  "description": "A baseline file written by 'analyse --generate-baseline' (format 2.0), or a JSON report used as a legacy baseline.",
+  "oneOf": [
+    {
+      "$comment": "Format 2.0: metadata plus the body of the JSON report.",
+      "type": "object",
+      "required": ["version", "createdAt", "configHash", "metrics"],
+      "properties": {
+        "version": {
+          "const": "2.0",
+          "description": "The format version."
+        },
+        "createdAt": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$",
+          "description": "When the file was generated, as yyyy-MM-dd HH:mm:ss."
+        },
+        "configHash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "SHA-256 of the canonical form of the metric settings the file was generated with."
+        },
+        "metrics": {
+          "$ref": "#/definitions/classes"
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "$comment": "Legacy format: the body of the JSON report without metadata.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/classes"
+        },
+        {
+          "not": {
+            "required": ["version"]
+          }
+        }
+      ]
+    }
+  ],
+  "definitions": {
+    "classes": {
+      "description": "The classes by key: the fully qualified name, or '<name>@<file>' for every file when the class occurs in several.",
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/definitions/class"
+      }
+    },
+    "class": {
+      "type": "object",
+      "required": ["methods"],
+      "properties": {
+        "file": {
+          "type": ["string", "null"]
+        },
+        "methods": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/method"
+          }
+        }
+      }
+    },
+    "method": {
+      "type": "object",
+      "required": [
+        "lineCount", "argCount", "returnCount", "variableCount", "propertyCallCount", "ifCount", "ifNestingLevel", "elseCount",
+        "lineCountWeight", "argCountWeight", "returnCountWeight", "variableCountWeight", "propertyCallCountWeight",
+        "ifCountWeight", "ifNestingLevelWeight", "elseCountWeight"
+      ],
+      "properties": {
+        "class": {"type": "string"},
+        "method": {"type": "string"},
+        "file": {"type": ["string", "null"]},
+        "line": {"type": "integer", "minimum": 1},
+        "lineCount": {"$ref": "#/definitions/count"},
+        "argCount": {"$ref": "#/definitions/count"},
+        "returnCount": {"$ref": "#/definitions/count"},
+        "variableCount": {"$ref": "#/definitions/count"},
+        "propertyCallCount": {"$ref": "#/definitions/count"},
+        "ifCount": {"$ref": "#/definitions/count"},
+        "ifNestingLevel": {"$ref": "#/definitions/count"},
+        "elseCount": {"$ref": "#/definitions/count"},
+        "lineCountWeight": {"$ref": "#/definitions/weight"},
+        "argCountWeight": {"$ref": "#/definitions/weight"},
+        "returnCountWeight": {"$ref": "#/definitions/weight"},
+        "variableCountWeight": {"$ref": "#/definitions/weight"},
+        "propertyCallCountWeight": {"$ref": "#/definitions/weight"},
+        "ifCountWeight": {"$ref": "#/definitions/weight"},
+        "ifNestingLevelWeight": {"$ref": "#/definitions/weight"},
+        "elseCountWeight": {"$ref": "#/definitions/weight"},
+        "score": {"$ref": "#/definitions/optionalNumber"},
+        "halsteadVolume": {"$ref": "#/definitions/optionalNumber"},
+        "halsteadDifficulty": {"$ref": "#/definitions/optionalNumber"},
+        "halsteadEffort": {"$ref": "#/definitions/optionalNumber"},
+        "cyclomaticComplexity": {"$ref": "#/definitions/optionalNumber"},
+        "cyclomaticRiskLevel": {"type": ["string", "null"]},
+        "understandability": {"$ref": "#/definitions/optionalNumber"},
+        "understandabilityRiskLevel": {"type": ["string", "null"]},
+        "deltas": {
+          "type": "object",
+          "additionalProperties": {"type": ["number", "null"]}
+        }
+      }
+    },
+    "count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "weight": {
+      "type": "number",
+      "minimum": 0
+    },
+    "optionalNumber": {
+      "description": "Null when the value is not finite.",
+      "type": ["number", "null"],
+      "minimum": 0
+    }
+  }
+}

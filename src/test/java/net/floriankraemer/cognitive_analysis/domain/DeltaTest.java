@@ -44,4 +44,12 @@ public class DeltaTest {
     assertFalse(delta2.hasIncreased());
     assertEquals(0, delta2.getValue());
   }
+
+  @Test
+  public void testRoundedComparesAtThreeDecimalsHalfUp() {
+    assertFalse(Delta.rounded(0.333, 1.0 / 3.0).hasChanged());
+    assertEquals(0.001, Delta.rounded(0.3335, 0.3345).getValue(), 1e-12);
+    assertTrue(Delta.rounded(1.0, 1.0006).hasIncreased());
+    assertEquals(-1.5, Delta.rounded(3.0, 1.5).getValue());
+  }
 }
