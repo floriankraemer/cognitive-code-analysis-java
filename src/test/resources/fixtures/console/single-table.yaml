@@ -1,0 +1,6 @@
+cognitive:
+  cache:
+    enabled: false
+  groupByClass: false
+  showHalsteadComplexity: true
+  showCyclomaticComplexity: true

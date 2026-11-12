@@ -64,8 +64,8 @@ class ChurnCommandE2ETest {
     assertThat(run("churn", repo.toString())).isZero();
 
     assertThat(table(out.toString())).containsExactly(
-        "│churn.Busy │2.197│6.591│      3      │",
-        "│churn.Light│0.693│1.386│      2      │");
+        "│ churn.Busy  │ 2.197 │ 6.591 │       3       │",
+        "│ churn.Light │ 0.693 │ 1.386 │       2       │");
   }
 
   @Test
@@ -75,8 +75,8 @@ class ChurnCommandE2ETest {
     assertThat(run("churn", repo.toString(), "-s", "2024-03-01")).isZero();
 
     assertThat(table(out.toString())).containsExactly(
-        "│churn.Busy │2.197│2.197│      1      │",
-        "│churn.Light│0.693│0.693│      1      │");
+        "│ churn.Busy  │ 2.197 │ 2.197 │       1       │",
+        "│ churn.Light │ 0.693 │ 0.693 │       1       │");
   }
 
   @Test

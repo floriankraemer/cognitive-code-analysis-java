@@ -1,0 +1,15 @@
+Config: src/test/resources/fixtures/console/threshold.yaml
+Cache: disabled
+
+Found 3 files. Starting analysis.
+
+Class: test.testcode.ClassToAnalyze
+File: src/test/resources/fixtures/sample/ClassToAnalyze.java
+┌────────────────────────┬────────┬───────────┬─────────┬───────────┬──────────┬───────┬────────────┬───────────┬────────────┐
+│ Method Name            │ Lines  │ Arguments │ Returns │ Variables │ Property │  If   │ If Nesting │   Else    │ Cognitive  │
+│                        │        │           │         │           │ Accesses │       │   Level    │           │ Complexity │
+├────────────────────────┼────────┼───────────┼─────────┼───────────┼──────────┼───────┼────────────┼───────────┼────────────┤
+│ methodWithTwoArguments │ 16 (0) │   2 (0)   │  0 (0)  │   0 (0)   │  0 (0)   │ 3 (0) │ 3 (1.099)  │ 3 (1.099) │   2.197    │
+└────────────────────────┴────────┴───────────┴─────────┴───────────┴──────────┴───────┴────────────┴───────────┴────────────┘
+
+Cognitive metrics calculated for src/test/resources/fixtures/sample,src/test/resources/fixtures/multi

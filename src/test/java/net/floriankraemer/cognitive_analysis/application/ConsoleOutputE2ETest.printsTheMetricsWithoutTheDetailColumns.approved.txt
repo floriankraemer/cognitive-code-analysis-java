@@ -1,0 +1,45 @@
+Config: src/test/resources/fixtures/console/without-detailed.yaml
+Cache: disabled
+
+Found 3 files. Starting analysis.
+
+Class: multi.Alpha
+File: src/test/resources/fixtures/multi/Alpha.java
+┌─────────────┬────────────┬──────────┬────────────┬──────────┬────────────┬───────────────────┐
+│ Method Name │ Cognitive  │ Halstead │  Halstead  │ Halstead │ Cyclomatic │ Understandability │
+│             │ Complexity │  Volume  │ Difficulty │  Effort  │ Complexity │                   │
+├─────────────┼────────────┼──────────┼────────────┼──────────┼────────────┼───────────────────┤
+│ second      │   0.000    │   8.00   │    0.50    │   4.00   │  1 (low)   │      0 (low)      │
+│ first       │   0.000    │   8.00   │    0.50    │   4.00   │  1 (low)   │      0 (low)      │
+└─────────────┴────────────┴──────────┴────────────┴──────────┴────────────┴───────────────────┘
+
+Class: multi.Beta
+File: src/test/resources/fixtures/multi/Beta.java
+┌─────────────┬────────────┬──────────┬────────────┬──────────┬────────────┬───────────────────┐
+│ Method Name │ Cognitive  │ Halstead │  Halstead  │ Halstead │ Cyclomatic │ Understandability │
+│             │ Complexity │  Volume  │ Difficulty │  Effort  │ Complexity │                   │
+├─────────────┼────────────┼──────────┼────────────┼──────────┼────────────┼───────────────────┤
+│ zulu        │   0.000    │   8.00   │    0.50    │   4.00   │  1 (low)   │      0 (low)      │
+│ alpha       │   0.000    │   8.00   │    0.50    │   4.00   │  1 (low)   │      0 (low)      │
+└─────────────┴────────────┴──────────┴────────────┴──────────┴────────────┴───────────────────┘
+
+Class: multi.Helper
+File: src/test/resources/fixtures/multi/Alpha.java
+┌─────────────┬────────────┬──────────┬────────────┬──────────┬────────────┬───────────────────┐
+│ Method Name │ Cognitive  │ Halstead │  Halstead  │ Halstead │ Cyclomatic │ Understandability │
+│             │ Complexity │  Volume  │ Difficulty │  Effort  │ Complexity │                   │
+├─────────────┼────────────┼──────────┼────────────┼──────────┼────────────┼───────────────────┤
+│ run         │   0.000    │  19.65   │    1.00    │  19.65   │  2 (low)   │      1 (low)      │
+└─────────────┴────────────┴──────────┴────────────┴──────────┴────────────┴───────────────────┘
+
+Class: test.testcode.ClassToAnalyze
+File: src/test/resources/fixtures/sample/ClassToAnalyze.java
+┌────────────────────────┬────────────┬──────────┬────────────┬──────────┬────────────┬───────────────────┐
+│ Method Name            │ Cognitive  │ Halstead │  Halstead  │ Halstead │ Cyclomatic │ Understandability │
+│                        │ Complexity │  Volume  │ Difficulty │  Effort  │ Complexity │                   │
+├────────────────────────┼────────────┼──────────┼────────────┼──────────┼────────────┼───────────────────┤
+│ simpleMethod           │   0.000    │   8.00   │    0.50    │   4.00   │  1 (low)   │      0 (low)      │
+│ methodWithTwoArguments │   2.197    │  106.30  │    2.88    │  305.62  │  5 (low)   │    9 (medium)     │
+└────────────────────────┴────────────┴──────────┴────────────┴──────────┴────────────┴───────────────────┘
+
+Cognitive metrics calculated for src/test/resources/fixtures/sample,src/test/resources/fixtures/multi

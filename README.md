@@ -29,6 +29,44 @@ java -jar target/cognitive-analysis.jar analyse src/main/java,tools/Generator.ja
 Directories are searched recursively for `.java` files, skipping hidden directories.
 A file that cannot be parsed is reported and skipped, and the analysis goes on.
 
+The console output starts with the configuration in use and the cache state, then one table per class:
+
+```text
+Config: built-in
+Cache: enabled
+
+Found 1 files. Starting analysis.
+
+Class: test.testcode.ClassToAnalyze
+File: src/test/resources/fixtures/sample/ClassToAnalyze.java
+┌────────────────────────┬────────┬───────────┬─────────┬───────────┬──────────┬───────┬────────────┬───────────┬────────────┐
+│ Method Name            │ Lines  │ Arguments │ Returns │ Variables │ Property │  If   │ If Nesting │   Else    │ Cognitive  │
+│                        │        │           │         │           │ Accesses │       │   Level    │           │ Complexity │
+├────────────────────────┼────────┼───────────┼─────────┼───────────┼──────────┼───────┼────────────┼───────────┼────────────┤
+│ simpleMethod           │ 3 (0)  │   0 (0)   │  0 (0)  │   0 (0)   │  0 (0)   │ 0 (0) │   0 (0)    │   0 (0)   │   0.000    │
+│ methodWithTwoArguments │ 16 (0) │   2 (0)   │  0 (0)  │   0 (0)   │  0 (0)   │ 3 (0) │ 3 (1.099)  │ 3 (1.099) │   2.197    │
+└────────────────────────┴────────┴───────────┴─────────┴───────────┴──────────┴───────┴────────────┴───────────┴────────────┘
+```
+
+A cell of the detail columns reads `count (weight)`, with the weight shown with up to three decimals.
+The score is red above `scoreThreshold` and green otherwise, Halstead values and risk levels are yellow or red from their thresholds.
+Colors are used only on a terminal, and `NO_COLOR` switches them off.
+The settings that choose the columns and the grouping are described in [Configuration](./docs/Configuration.md#console-output).
+
+Order the methods with `--sort-by <field>` and `--sort-order asc|desc` (default `asc`):
+
+```bash
+java -jar target/cognitive-analysis.jar analyse src/main/java --sort-by score --sort-order desc
+```
+
+The fields are `score`, `halstead`, `cyclomatic`, `understandability`, `class`, `method`, `file`, the raw counts `lineCount`, `argCount`, `returnCount`, `variableCount`, `propertyCallCount`, `ifCount`, `ifNestingLevel`, `elseCount`, and the weight of each count as `<count>Weight`, for example `ifCountWeight`.
+Numbers are compared as numbers and text without regard to letter case; methods with an equal value stay in order of class and method.
+Reports follow the same order.
+Within a class table the methods keep the sort order, and the class tables themselves are always ordered by class name.
+
+Use `--debug` to print the time of each stage (`config`, `discovery`, `analysis`, `sorting`, `output`) and the counters `filesFound`, `filesAnalysed`, `filesFailed`, `methodsAnalysed`, `cacheHits` and `cacheMisses` after the run.
+On a terminal, a progress line written to the terminal itself shows how many files are analysed; it never reaches redirected output.
+
 Write an HTML, CSV or JSON report instead:
 
 ```bash
