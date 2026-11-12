@@ -1,0 +1,32 @@
+{
+  "$schema" : "https://json.schemastore.org/sarif-2.1.0.json",
+  "version" : "2.1.0",
+  "runs" : [ {
+    "tool" : {
+      "driver" : {
+        "name" : "cognitive-analysis",
+        "version" : "<version>",
+        "informationUri" : "https://github.com/floriankraemer/cognitive-code-analysis-java",
+        "rules" : [ {
+          "id" : "cognitive-complexity",
+          "name" : "Cognitive Complexity",
+          "shortDescription" : {
+            "text" : "Method exceeds cognitive complexity threshold"
+          },
+          "defaultConfiguration" : {
+            "level" : "warning"
+          },
+          "properties" : {
+            "precision" : "high"
+          }
+        } ]
+      }
+    },
+    "originalUriBaseIds" : {
+      "%SRCROOT%" : {
+        "uri" : "<working-directory-uri>"
+      }
+    },
+    "results" : [ ]
+  } ]
+}

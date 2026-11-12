@@ -1,0 +1,52 @@
+{
+  "$schema" : "https://json.schemastore.org/sarif-2.1.0.json",
+  "version" : "2.1.0",
+  "runs" : [ {
+    "tool" : {
+      "driver" : {
+        "name" : "cognitive-analysis",
+        "version" : "<version>",
+        "informationUri" : "https://github.com/floriankraemer/cognitive-code-analysis-java",
+        "rules" : [ {
+          "id" : "cognitive-complexity",
+          "name" : "Cognitive Complexity",
+          "shortDescription" : {
+            "text" : "Method exceeds cognitive complexity threshold"
+          },
+          "defaultConfiguration" : {
+            "level" : "warning"
+          },
+          "properties" : {
+            "precision" : "high"
+          }
+        } ]
+      }
+    },
+    "originalUriBaseIds" : {
+      "%SRCROOT%" : {
+        "uri" : "<working-directory-uri>"
+      }
+    },
+    "results" : [ {
+      "ruleId" : "cognitive-complexity",
+      "level" : "error",
+      "message" : {
+        "text" : "Method methodWithTwoArguments has cognitive complexity 2.2 (threshold: 0.5)"
+      },
+      "locations" : [ {
+        "physicalLocation" : {
+          "artifactLocation" : {
+            "uri" : "src/test/resources/fixtures/sample/ClassToAnalyze.java",
+            "uriBaseId" : "%SRCROOT%"
+          },
+          "region" : {
+            "startLine" : 9
+          }
+        }
+      } ],
+      "partialFingerprints" : {
+        "primaryLocationLineHash" : "9ecc8050cb9030b9ebdd2663d1d6bade811376f48085f34c27bddbb3066451b7"
+      }
+    } ]
+  } ]
+}

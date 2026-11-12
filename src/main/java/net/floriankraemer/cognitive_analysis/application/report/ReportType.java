@@ -2,15 +2,21 @@ package net.floriankraemer.cognitive_analysis.application.report;
 
 import java.time.Clock;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Locale;
 import net.floriankraemer.cognitive_analysis.config.CognitiveConfig;
 
-/** The report formats of the analyse command. */
+/** The report formats of the analyse command. The command name of each is its constant in lower case with dashes. */
 public enum ReportType {
   JSON(JsonReport::new),
   CSV(CsvReport::new),
   HTML(HtmlReport::new),
-  MARKDOWN(MarkdownReport::new);
+  MARKDOWN(MarkdownReport::new),
+  CHECKSTYLE(CheckstyleReport::new),
+  JUNIT(JUnitReport::new),
+  SARIF(SarifReport::new),
+  GITLAB_CODEQUALITY(GitLabCodeQualityReport::new),
+  GITHUB_ACTIONS(GitHubActionsReport::new);
 
   @FunctionalInterface
   private interface Factory {
@@ -27,18 +33,28 @@ public enum ReportType {
     return factory.create(config, clock);
   }
 
-  /** Parses a report type in any letter case. */
-  public static ReportType parse(final String value) {
-    try {
-      return valueOf(value.toUpperCase(Locale.ROOT));
-    } catch (IllegalArgumentException e) {
-      throw new IllegalArgumentException(
-          "Invalid report type '" + value + "'. Expected one of: " + names() + ".", e);
-    }
+  /** The name on the command line, e.g. {@code gitlab-codequality}. */
+  String commandName() {
+    return name().toLowerCase(Locale.ROOT).replace('_', '-');
   }
 
-  /** The lower case names, comma separated, for help and error messages. */
+  /** Parses a report type in any letter case. */
+  public static ReportType parse(final String value) {
+    final String name = value.toLowerCase(Locale.ROOT);
+    return Arrays.stream(values())
+        .filter(type -> type.commandName().equals(name))
+        .findFirst()
+        .orElseThrow(() -> new IllegalArgumentException(
+            "Invalid report type '" + value + "'. Expected one of: " + names() + "."));
+  }
+
+  /** The command names in declaration order, for help and error messages. */
+  public static List<String> commandNames() {
+    return Arrays.stream(values()).map(ReportType::commandName).toList();
+  }
+
+  /** The command names, comma separated, for error messages. */
   public static String names() {
-    return String.join(", ", Arrays.stream(values()).map(type -> type.name().toLowerCase(Locale.ROOT)).toList());
+    return String.join(", ", commandNames());
   }
 }

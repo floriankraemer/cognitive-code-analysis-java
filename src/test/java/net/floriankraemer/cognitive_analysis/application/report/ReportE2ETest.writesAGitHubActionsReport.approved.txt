@@ -1,0 +1,1 @@
+::error file=src/test/resources/fixtures/sample/ClassToAnalyze.java,line=9::Method methodWithTwoArguments has cognitive complexity 2.2 (threshold: 0.5)

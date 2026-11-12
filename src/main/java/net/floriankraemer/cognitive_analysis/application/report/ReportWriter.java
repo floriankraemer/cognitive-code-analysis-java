@@ -7,8 +7,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.time.Clock;
-import java.util.UUID;
 import java.util.List;
+import java.util.Objects;
+import java.util.UUID;
 import net.floriankraemer.cognitive_analysis.CognitiveAnalysisException;
 import net.floriankraemer.cognitive_analysis.config.CognitiveConfig;
 import net.floriankraemer.cognitive_analysis.domain.ScoredMethod;
@@ -38,7 +39,7 @@ public final class ReportWriter {
       Files.writeString(temporary, content, StandardCharsets.UTF_8);
       move(temporary, path);
     } catch (IOException e) {
-      final String reason = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
+      final String reason = Objects.requireNonNullElse(e.getMessage(), e.getClass().getSimpleName());
       throw new CognitiveAnalysisException("Unable to write to file " + file + ": " + reason, e);
     } finally {
       try {

@@ -49,7 +49,7 @@ class ReportE2ETest {
   }
 
   private static String normalized(final Path report) throws Exception {
-    return Files.readString(report).replace("\r\n", "\n").replaceAll(TIMESTAMP, "<timestamp>");
+    return ReportGoldens.mask(Files.readString(report).replace("\r\n", "\n").replaceAll(TIMESTAMP, "<timestamp>"));
   }
 
   @Test
@@ -81,6 +81,31 @@ class ReportE2ETest {
   @Test
   void writesAMarkdownReport() throws Exception {
     Approvals.verify(normalized(report("markdown", "md")), new Options().forFile().withExtension(".md"));
+  }
+
+  @Test
+  void writesACheckstyleReport() throws Exception {
+    Approvals.verify(normalized(report("checkstyle", "xml")), new Options().forFile().withExtension(".xml"));
+  }
+
+  @Test
+  void writesAJUnitReport() throws Exception {
+    Approvals.verify(normalized(report("junit", "xml")), new Options().forFile().withExtension(".xml"));
+  }
+
+  @Test
+  void writesASarifReport() throws Exception {
+    Approvals.verify(normalized(report("sarif", "sarif")), new Options().forFile().withExtension(".sarif"));
+  }
+
+  @Test
+  void writesAGitLabCodeQualityReport() throws Exception {
+    Approvals.verify(normalized(report("GitLab-CodeQuality", "json")), new Options().forFile().withExtension(".json"));
+  }
+
+  @Test
+  void writesAGitHubActionsReport() throws Exception {
+    Approvals.verify(normalized(report("github-actions", "txt")), new Options().forFile().withExtension(".txt"));
   }
 
   @Test
@@ -122,8 +147,20 @@ class ReportE2ETest {
 
     assertThat(exitCode).isEqualTo(1);
     assertThat(out.toString()).isEmpty();
-    assertThat(err.toString()).contains("Invalid report type 'xml'. Expected one of: json, csv, html, markdown.");
+    assertThat(err.toString()).contains("Invalid report type 'xml'. Expected one of: json, csv, html, markdown,"
+        + " checkstyle, junit, sarif, gitlab-codequality, github-actions.");
     assertThat(report).doesNotExist();
+  }
+
+  @Test
+  void theHelpOfTheAnalyseCommandListsEveryReportTypeOfTheEnum() {
+    final CommandLine commandLine = new CommandLine(new App());
+    commandLine.setOut(new PrintWriter(out, true));
+
+    commandLine.execute("analyse", "--help");
+
+    assertThat(out.toString().replaceAll("\\s+", " "))
+        .contains("Report type: " + String.join(", ", ReportType.commandNames()) + ". Requires --report-file.");
   }
 
   @Test
