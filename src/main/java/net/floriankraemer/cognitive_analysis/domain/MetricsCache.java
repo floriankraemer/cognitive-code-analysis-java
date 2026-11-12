@@ -2,6 +2,7 @@ package net.floriankraemer.cognitive_analysis.domain;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.MapperFeature;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
@@ -40,6 +41,7 @@ public final class MetricsCache {
   /** Keeps the insertion order of the methods, so a cache hit prints the same as a fresh analysis. */
   private static final ObjectMapper PAYLOAD_MAPPER = JsonMapper.builder().build();
 
+  private static final List<String> REQUIRED_METRIC_PARTS = List.of("values", "weights", "deltas");
   private static final String BUILD_RESOURCE = "/jcca-build.properties";
   private static final List<String> BUILD_PROPERTIES = List.of("version", "build.timestamp");
 
@@ -90,11 +92,24 @@ public final class MetricsCache {
       return Optional.empty();
     }
     try {
-      final Payload payload = PAYLOAD_MAPPER.readValue(entryPath(key).toFile(), Payload.class);
+      final JsonNode tree = PAYLOAD_MAPPER.readTree(entryPath(key).toFile());
+      requireCompleteMetrics(tree);
+      final Payload payload = PAYLOAD_MAPPER.treeToValue(tree, Payload.class);
       return payload.version() == CACHE_FORMAT_VERSION ? Optional.ofNullable(payload.analysisResult()) : Optional.empty();
     } catch (IOException | RuntimeException e) {
       // Any unreadable entry is a miss: the file is analysed again and the entry is overwritten.
       return Optional.empty();
+    }
+  }
+
+  /** The restore of a method needs its values, weights and deltas; a missing one makes the entry a miss. */
+  private static void requireCompleteMetrics(final JsonNode tree) {
+    for (final JsonNode metrics : tree.path("analysisResult")) {
+      for (final String part : REQUIRED_METRIC_PARTS) {
+        if (!metrics.hasNonNull(part)) {
+          throw new IllegalStateException("Cache entry without " + part);
+        }
+      }
     }
   }
 

@@ -5,10 +5,8 @@ import static java.util.stream.Collectors.toList;
 
 import java.io.PrintWriter;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 import java.util.TreeMap;
 import net.floriankraemer.cognitive_analysis.config.CognitiveConfig;
 import net.floriankraemer.cognitive_analysis.domain.CognitiveMetrics;

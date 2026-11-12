@@ -299,34 +299,34 @@
 					</execution>
 				</executions>
 			</plugin>
-		</plugins>
-	</build>
-
-	<reporting>
-		<plugins>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-checkstyle-plugin</artifactId>
-				<version>3.0.0</version>
+				<version>3.6.0</version>
+				<dependencies>
+					<dependency>
+						<groupId>com.puppycrawl.tools</groupId>
+						<artifactId>checkstyle</artifactId>
+						<version>10.21.4</version>
+					</dependency>
+				</dependencies>
 				<configuration>
-					<configLocation>google_checks.xml</configLocation>
+					<configLocation>checkstyle.xml</configLocation>
+					<includeTestSourceDirectory>true</includeTestSourceDirectory>
+					<violationSeverity>warning</violationSeverity>
+					<consoleOutput>true</consoleOutput>
 				</configuration>
-			</plugin>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-pmd-plugin</artifactId>
-				<version>3.23.0</version>
-				<configuration>
-					<rulesets>
-						<ruleset>/category/java/bestpractices.xml</ruleset>
-						<ruleset>/category/java/codestyle.xml</ruleset>
-						<ruleset>/category/java/design.xml</ruleset>
-						<ruleset>/category/java/errorprone.xml</ruleset>
-						<ruleset>/category/java/performance.xml</ruleset>
-					</rulesets>
-				</configuration>
+				<executions>
+					<execution>
+						<id>imports</id>
+						<phase>verify</phase>
+						<goals>
+							<goal>check</goal>
+						</goals>
+					</execution>
+				</executions>
 			</plugin>
 		</plugins>
-	</reporting>
+	</build>
 
 </project>

@@ -12,6 +12,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.stream.Stream;
@@ -178,6 +179,21 @@ class MetricsCacheTest {
     writeEntry(key, "{\"version\": " + MetricsCache.CACHE_FORMAT_VERSION + ", \"filePath\": \"A.java\", \"analysisResult\": {\"A::a\": {\"unknown\": 1}}}");
 
     assertThat(cache.load(key)).isEmpty();
+  }
+
+  @Test
+  void missesAnEntryWhoseMetricsLackValuesWeightsOrDeltas() throws Exception {
+    Path source = write("A.java", "class A {}");
+    MetricsCache cache = cache(cacheConfig(true, tempDir.resolve("cache")));
+    String key = keyOf(cache, source);
+    cache.store(key, source, sampleMetrics());
+    Path entry = tempDir.resolve("cache").resolve(key.substring(0, 2)).resolve(key + ".json");
+    String stored = Files.readString(entry);
+
+    for (String part : List.of("values", "weights", "deltas")) {
+      writeEntry(key, stored.replace("\"" + part + "\"", "\"x" + part + "\""));
+      assertThat(cache.load(key)).as("without " + part).isEmpty();
+    }
   }
 
   @Test

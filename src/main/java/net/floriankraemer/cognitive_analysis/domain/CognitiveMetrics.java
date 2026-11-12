@@ -58,23 +58,23 @@ public class CognitiveMetrics {
   }
 
   @JsonProperty("values")
-  private void restoreValues(final Map<MetricName, Integer> restored) {
-    values.putAll(restored);
+  private void restoreValues(final Map<MetricName, Integer> restoredValues) {
+    values.putAll(restoredValues);
   }
 
   @JsonProperty("weights")
-  private void restoreWeights(final Map<MetricName, Double> restored) {
-    weights.putAll(restored);
+  private void restoreWeights(final Map<MetricName, Double> restoredWeights) {
+    weights.putAll(restoredWeights);
   }
 
   @JsonProperty("deltas")
-  private void restoreDeltas(final Map<MetricName, Delta> restored) {
-    deltas.putAll(restored);
+  private void restoreDeltas(final Map<MetricName, Delta> restoredDeltas) {
+    deltas.putAll(restoredDeltas);
   }
 
   @JsonProperty("otherDeltas")
-  private void restoreOtherDeltas(final Map<DeltaMetric, Delta> restored) {
-    otherDeltas.putAll(restored);
+  private void restoreOtherDeltas(final Map<DeltaMetric, Delta> restoredOtherDeltas) {
+    otherDeltas.putAll(restoredOtherDeltas);
   }
 
   public String getClassName() {

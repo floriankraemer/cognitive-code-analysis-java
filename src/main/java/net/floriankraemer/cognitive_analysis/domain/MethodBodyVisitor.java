@@ -1,6 +1,5 @@
 package net.floriankraemer.cognitive_analysis.domain;
 
-import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.body.Parameter;
 import com.github.javaparser.ast.body.VariableDeclarator;
 import com.github.javaparser.ast.expr.Expression;

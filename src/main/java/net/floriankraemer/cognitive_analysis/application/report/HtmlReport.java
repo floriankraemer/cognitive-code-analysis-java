@@ -3,7 +3,6 @@ package net.floriankraemer.cognitive_analysis.application.report;
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import net.floriankraemer.cognitive_analysis.application.report.ReportSupport.Row;
 import net.floriankraemer.cognitive_analysis.config.CognitiveConfig;
 import net.floriankraemer.cognitive_analysis.config.MetricName;
