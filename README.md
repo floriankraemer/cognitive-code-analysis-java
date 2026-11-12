@@ -67,7 +67,7 @@ Within a class table the methods keep the sort order, and the class tables thems
 Use `--debug` to print the time of each stage (`config`, `discovery`, `analysis`, `sorting`, `output`) and the counters `filesFound`, `filesAnalysed`, `filesFailed`, `methodsAnalysed`, `cacheHits` and `cacheMisses` after the run.
 On a terminal, a progress line written to the terminal itself shows how many files are analysed; it never reaches redirected output.
 
-Write an HTML, CSV or JSON report instead:
+Write a JSON, CSV, HTML or Markdown report instead, see [Reports](./docs/Reports.md):
 
 ```bash
 java -jar target/cognitive-analysis.jar analyse src/main/java --report-type html --report-file report.html

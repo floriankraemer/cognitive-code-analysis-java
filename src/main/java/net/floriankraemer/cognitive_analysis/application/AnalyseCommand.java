@@ -2,19 +2,16 @@ package net.floriankraemer.cognitive_analysis.application;
 
 import java.io.PrintWriter;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Locale;
 import java.util.concurrent.Callable;
 import java.util.function.Supplier;
 import java.util.function.LongSupplier;
 import net.floriankraemer.cognitive_analysis.CognitiveAnalysisException;
-import net.floriankraemer.cognitive_analysis.application.report.CsvReportBuilder;
-import net.floriankraemer.cognitive_analysis.application.report.HtmlReportBuilder;
-import net.floriankraemer.cognitive_analysis.application.report.JsonReportBuilder;
-import net.floriankraemer.cognitive_analysis.application.report.ReportBuilder;
-import net.floriankraemer.cognitive_analysis.application.report.ReportBuilder.ReportType;
+import net.floriankraemer.cognitive_analysis.application.report.ReportType;
+import net.floriankraemer.cognitive_analysis.application.report.ReportWriter;
 import net.floriankraemer.cognitive_analysis.config.CognitiveConfig;
 import net.floriankraemer.cognitive_analysis.config.ConfigLoader;
 import net.floriankraemer.cognitive_analysis.domain.CognitiveMetricsFacade;
@@ -41,12 +38,7 @@ public class AnalyseCommand implements Callable<Integer> {
   static final class ReportTypeConverter implements ITypeConverter<ReportType> {
     @Override
     public ReportType convert(final String value) {
-      try {
-        return ReportType.valueOf(value.toUpperCase(Locale.ROOT));
-      } catch (IllegalArgumentException e) {
-        throw new IllegalArgumentException(
-            "Invalid report type '" + value + "'. Expected one of: html, csv, json.", e);
-      }
+      return ReportType.parse(value);
     }
   }
 
@@ -74,7 +66,7 @@ public class AnalyseCommand implements Callable<Integer> {
   @Option(
       names = {"-r", "--report-type"},
       converter = ReportTypeConverter.class,
-      description = "Report type: html, csv or json. Requires --report-file."
+      description = "Report type: json, csv, html or markdown. Requires --report-file."
   )
   ReportType reportType;
 
@@ -106,8 +98,7 @@ public class AnalyseCommand implements Callable<Integer> {
   /** The terminal the progress goes to, or null when the process is not interactive. */
   Supplier<PrintWriter> terminalWriter = () -> Terminal.isAttached() ? System.console().writer() : null;
 
-  private final ReportBuilder reportBuilder = new ReportBuilder(
-      new HtmlReportBuilder(), new CsvReportBuilder(), new JsonReportBuilder());
+  private final ReportWriter reportWriter = new ReportWriter(Clock.systemDefaultZone());
 
   @Override
   public Integer call() {
@@ -144,7 +135,7 @@ public class AnalyseCommand implements Callable<Integer> {
       summary.endStage("sorting");
 
       if (reportType != null) {
-        reportBuilder.build(reportType, reportFile, MetricsCollection.of(methods));
+        reportWriter.write(reportType, reportFile, config, methods);
         out.println("Report generated at: " + reportFile);
       } else {
         console.renderMethods(out, methods);

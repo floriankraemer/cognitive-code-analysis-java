@@ -53,7 +53,7 @@ Options:
 ## Settings
 
 `metrics`, `excludeFilePatterns`, `excludePatterns` and `cache` affect the analysis.
-`scoreThreshold`, `show*` and `groupByClass` shape the console output, see [Console output](#console-output).
+`scoreThreshold`, `show*` and `groupByClass` shape the console output, see [Console output](#console-output), and the HTML and Markdown reports, see [Reports](./Reports.md).
 `customReporters` is parsed and validated, and is applied from a later release.
 
 ```yaml
