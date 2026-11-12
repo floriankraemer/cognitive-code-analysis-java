@@ -26,37 +26,61 @@ This calculation is done for each metric and the results are summed to get the f
 
 ## Metrics Collected
 
-- **Line Count**: 
-  - **Description**: The total number of lines of code within the method.
+All counts are per method or constructor.
+Lambdas belong to the method that contains them.
+Anonymous and local classes are left out, both as units of their own and from the counts of the enclosing method.
+
+- **Line Count**:
+  - **Description**: The number of lines from the first annotation or modifier of the declaration to its closing brace. Javadoc is not counted.
   - **Purpose**: Measures the size of the method in terms of lines of code, which can give an indication of its complexity and readability.
 
-- **Argument Count**: 
-  - **Description**: The number of arguments or parameters that the method takes.
+- **Argument Count**:
+  - **Description**: The number of parameters of the method. A compact record constructor has the record components as its parameters.
   - **Purpose**: High argument counts can indicate that a method is doing too much or is highly dependent on external inputs, which may be a sign that the method needs refactoring.
 
-- **Return Count**: 
-  - **Description**: The number of return statements within the method.
+- **Return Count**:
+  - **Description**: The number of `return` statements, including those inside lambdas.
   - **Purpose**: Multiple return points can make a method harder to follow and maintain. This metric helps identify methods that may benefit from being refactored for clarity.
 
-- **Variable Count**: 
-  - **Description**: The number of variables used within the method, including both local variables and parameters.
+- **Variable Count**:
+  - **Description**: The number of distinct variable names used in the method body, without the method parameters.
+    Local variables, lambda and catch parameters, for-each and pattern variables count, and `this` counts once when it is used.
+    A name that is reused, for example in two loops, counts once; the unnamed variable `_` does not count.
+    Names are not resolved against the classpath: a name starting with an upper-case letter is taken for a type or a constant and does not count, and a field read without `this.` counts like a variable.
   - **Purpose**: A high variable count can indicate a method that is doing too much or is overly complex. Monitoring this metric helps to ensure methods remain simple and focused.
 
-- **Property Call Count**: 
-  - **Description**: The number of times a property of a class is accessed within the method.
+- **Property Call Count**:
+  - **Description**: The number of distinct field names accessed with a dot, such as `this.x`, `other.x` or `a.b.x`.
+    Static accesses on a type, such as `System.out` or `Integer.MAX_VALUE`, do not count.
+    As there is no type information, `array.length` counts as a field access.
   - **Purpose**: Frequent property accesses may indicate a method that is highly coupled to the internal state of the object, which can make the code harder to test and maintain.
 
-- **If Nesting Level**: 
-  - **Description**: The maximum depth of nested `if` statements within the method.
+- **If Count**:
+  - **Description**: The number of `if` statements. An `else if` continues its chain and does not count. A conditional expression (`a ? b : c`) does not count.
+  - **Purpose**: Like else count, this measures the complexity of branching logic. A high if count can make code harder to understand and maintain.
+
+- **If Nesting Level**:
+  - **Description**: The maximum depth of `if` statements nested in the branches of other `if` statements. An `else if` stays on the depth of its chain. Loops, `try` and `switch` do not add depth.
   - **Purpose**: Deeply nested `if` statements can be difficult to follow and may indicate a need for refactoring into smaller, more manageable pieces.
 
-- **Else Count**: 
-  - **Description**: The total number of `else` statements within the method.
+- **Else Count**:
+  - **Description**: The number of `else` and `else if` branches.
   - **Purpose**: Helps measure the complexity of branching logic. A high else count might indicate complex or tightly coupled conditional logic.
 
-- **If Count**: 
-  - **Description**: The total number of `if` statements within the method.
-  - **Purpose**: Like else count, this measures the complexity of branching logic. A high if count can make code harder to understand and maintain.
+## Analysed Methods
+
+The methods and constructors of top-level and nested classes, enums, records and interfaces are analysed.
+Interface methods count only when they have a body, that is `default`, `static` and `private` methods.
+Abstract and native methods of classes count with all metrics at zero except the line and argument counts.
+The bodies of enum constants are anonymous classes and are left out.
+
+A class is named by its fully qualified name, with nested classes separated by dots, such as `com.example.Outer.Inner`.
+A method is named `com.example.Outer.Inner::method`, and a constructor is named after its class.
+When a class declares several methods or constructors with the same name, all of them get their parameter types as written, without type arguments, such as `find(List,String...)`.
+When the same method name occurs in several files, only the first file in path order is reported.
+
+To leave a class or method out, put `@cca-ignore` into its Javadoc or into any comment between the previous declaration and its name.
+Ignoring a class also ignores its nested classes.
 
 ## Result Interpretation
 

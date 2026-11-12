@@ -25,8 +25,8 @@ java -jar cognitive-analysis.jar analyse <path-to-folder> --config <path-to-conf
 
 ## Settings
 
-Only `metrics` affects the calculation today.
-The other settings (`scoreThreshold`, `exclude*`, `show*`, `groupByClass`, `cache`, `customReporters`) are parsed and validated, and are applied from a later release.
+`metrics`, `excludeFilePatterns` and `excludePatterns` affect the analysis today.
+The other settings (`scoreThreshold`, `show*`, `groupByClass`, `cache`, `customReporters`) are parsed and validated, and are applied from a later release.
 
 ```yaml
 cognitive:
@@ -58,6 +58,27 @@ cognitive:
 
 `scoreThreshold` must be greater than 0.
 A metric `threshold` must not be negative, and its `scale` must be greater than 0.
+
+## Excluding files and methods
+
+Both lists hold Java regular expressions.
+A pattern excludes an item when it is found anywhere in the item's text, so anchor it with `^` and `$` to match the whole text.
+An invalid regular expression is a configuration error that names the pattern.
+
+- `excludeFilePatterns` is matched against the absolute, normalized path of each Java file, written with `/` as the separator on every platform.
+- `excludePatterns` is matched against the method name `com.example.Outer.Inner::method`, as described in [Analysed Methods](./Cognitive-Complexity-Analysis.md#analysed-methods).
+
+```yaml
+cognitive:
+  excludeFilePatterns:
+    - '/generated/'
+    - 'Test\.java$'
+  excludePatterns:
+    - '::(get|set|is)[A-Z]'
+    - '^com\.example\.legacy\.'
+```
+
+Use single quotes in YAML, so a backslash reaches the regular expression unchanged.
 
 ## Tuning the calculation
 
