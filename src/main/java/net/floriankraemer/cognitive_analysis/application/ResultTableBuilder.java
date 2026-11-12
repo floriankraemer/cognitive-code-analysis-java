@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.function.Function;
 import net.floriankraemer.cognitive_analysis.config.CognitiveConfig;
 import net.floriankraemer.cognitive_analysis.config.MetricName;
+import net.floriankraemer.cognitive_analysis.coverage.CoverageData;
 import net.floriankraemer.cognitive_analysis.domain.CognitiveMetrics;
 import net.floriankraemer.cognitive_analysis.domain.DeltaMetric;
 import picocli.CommandLine.Help.Ansi;
@@ -34,21 +35,26 @@ public class ResultTableBuilder {
   }
 
   /** A table of the methods of one class: the method name leads. */
-  public String build(final List<CognitiveMetrics> methods) {
-    return render(methods, false);
+  public String build(final List<CognitiveMetrics> methods, final boolean withCoverage) {
+    return render(methods, false, withCoverage);
   }
 
   /** A table of methods of several classes: the class name leads and the rows name their class. */
-  public String buildWithClass(final List<CognitiveMetrics> methods) {
-    return render(methods, true);
+  public String buildWithClass(final List<CognitiveMetrics> methods, final boolean withCoverage) {
+    return render(methods, true, withCoverage);
   }
 
-  private String render(final List<CognitiveMetrics> methods, final boolean withClass) {
+  /** Whether a coverage report was applied to the methods, so that the tables of one run get the same columns. */
+  public static boolean hasCoverage(final List<CognitiveMetrics> methods) {
+    return methods.stream().anyMatch(CognitiveMetrics::isCoverageProvided);
+  }
+
+  private String render(final List<CognitiveMetrics> methods, final boolean withClass, final boolean withCoverage) {
     final List<Column> columns = new ArrayList<>();
     if (withClass) {
       columns.add(new Column("Class", CognitiveMetrics::getClassName));
     }
-    columns.addAll(columns());
+    columns.addAll(columns(withClass, withCoverage));
 
     final List<List<String>> rows =
         methods.stream().map(metrics -> columns.stream().map(column -> column.cell().apply(metrics)).toList()).toList();
@@ -57,7 +63,7 @@ public class ResultTableBuilder {
     return new TextTable(firstCenteredColumn).render(columns.stream().map(Column::header).toList(), rows);
   }
 
-  private List<Column> columns() {
+  private List<Column> columns(final boolean withClass, final boolean withCoverage) {
     final List<Column> columns = new ArrayList<>();
     columns.add(new Column("Method Name", CognitiveMetrics::getMethodName));
     if (config.showDetailedCognitiveMetrics()) {
@@ -88,7 +94,10 @@ public class ResultTableBuilder {
           formatter.withRisk(metrics.getUnderstandability().complexity(), metrics.getUnderstandability().riskLevel()),
           metrics.otherDelta(DeltaMetric.UNDERSTANDABILITY))));
     }
-    // Hook: the coverage column is appended here, after the metric columns.
+    if (withCoverage) {
+      columns.add(new Column(
+          withClass ? "Coverage" : "Line\nCoverage", metrics -> CoverageData.percent(metrics.coverage().orElse(null))));
+    }
     return columns;
   }
 }

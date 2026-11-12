@@ -8,8 +8,10 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import net.floriankraemer.cognitive_analysis.CognitiveAnalysisException;
 import net.floriankraemer.cognitive_analysis.churn.ChurnMetrics.RiskLevel;
+import net.floriankraemer.cognitive_analysis.coverage.CoverageData;
 import net.floriankraemer.cognitive_analysis.domain.CognitiveMetrics;
 import net.floriankraemer.cognitive_analysis.domain.MetricsCollection;
 
@@ -40,6 +42,16 @@ public final class ChurnCalculator {
    */
   public static List<ChurnMetrics> calculate(final MetricsCollection metrics, final ChangeCounter counter)
       throws CognitiveAnalysisException {
+    return calculate(metrics, counter, Optional.empty());
+  }
+
+  /**
+   * As {@link #calculate(MetricsCollection, ChangeCounter)}, with the risk churn and risk level of each class
+   * when coverage data is given. A class the coverage data has no line coverage for has none of the three.
+   */
+  public static List<ChurnMetrics> calculate(
+      final MetricsCollection metrics, final ChangeCounter counter, final Optional<CoverageData> coverage)
+      throws CognitiveAnalysisException {
     final Map<String, Totals> classes = new LinkedHashMap<>();
 
     for (final Map.Entry<String, Map<String, CognitiveMetrics>> fileEntry : metrics.entrySet()) {
@@ -55,8 +67,17 @@ public final class ChurnCalculator {
     final List<ChurnMetrics> result = new ArrayList<>();
     classes.forEach((className, totals) -> {
       final double score = round(totals.score);
+      final double churn = churn(totals.timesChanged, score);
+      final Double classCoverage = coverage.flatMap(data -> data.classCoverage(className)).orElse(null);
       result.add(new ChurnMetrics(
-          className, totals.file, score, totals.timesChanged, churn(totals.timesChanged, score), null, null, null));
+          className,
+          totals.file,
+          score,
+          totals.timesChanged,
+          churn,
+          classCoverage,
+          classCoverage == null ? null : riskChurn(totals.timesChanged, score, classCoverage),
+          classCoverage == null ? null : riskLevel(churn, classCoverage)));
     });
     result.sort(Comparator.comparingDouble(ChurnMetrics::churn).reversed().thenComparing(ChurnMetrics::className));
     return result;

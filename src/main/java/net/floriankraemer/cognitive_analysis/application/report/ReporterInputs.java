@@ -55,6 +55,7 @@ final class ReporterInputs {
             halstead.totalOperands(),
             halstead.volume(),
             halstead.difficulty(),
-            halstead.effort()));
+            halstead.effort()),
+        metrics.coverage().orElse(null));
   }
 }

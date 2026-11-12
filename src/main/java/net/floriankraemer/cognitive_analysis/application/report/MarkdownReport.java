@@ -7,6 +7,7 @@ import java.util.Map;
 import net.floriankraemer.cognitive_analysis.application.report.ReportSupport.Row;
 import net.floriankraemer.cognitive_analysis.config.CognitiveConfig;
 import net.floriankraemer.cognitive_analysis.config.MetricName;
+import net.floriankraemer.cognitive_analysis.coverage.CoverageData;
 import net.floriankraemer.cognitive_analysis.domain.CognitiveMetrics;
 import net.floriankraemer.cognitive_analysis.domain.ScoredMethod;
 
@@ -36,28 +37,31 @@ final class MarkdownReport implements Report {
     }
     if (config.groupByClass()) {
       md.append("---\n\n");
-      classes.forEach((className, classRows) -> appendClass(md, className, classRows));
+      final boolean withCoverage = ReportSupport.hasCoverage(rows);
+      classes.forEach((className, classRows) -> appendClass(md, className, classRows, withCoverage));
     } else {
       appendSingleTable(md, rows);
     }
     return md.toString();
   }
 
-  private void appendClass(final StringBuilder md, final String className, final List<Row> rows) {
+  private void appendClass(
+      final StringBuilder md, final String className, final List<Row> rows, final boolean withCoverage) {
     md.append("* **Class:** ").append(escape(className)).append('\n')
         .append("* **File:** ").append(escape(rows.get(0).file())).append("\n\n");
-    appendTable(md, false, rows);
+    appendTable(md, false, rows, withCoverage);
     md.append("\n---\n\n");
   }
 
   private void appendSingleTable(final StringBuilder md, final List<Row> rows) {
     md.append("## All Methods (").append(rows.size()).append(" total)\n\n");
     if (!rows.isEmpty()) {
-      appendTable(md, true, rows);
+      appendTable(md, true, rows, ReportSupport.hasCoverage(rows));
     }
   }
 
-  private void appendTable(final StringBuilder md, final boolean withClass, final List<Row> rows) {
+  private void appendTable(
+      final StringBuilder md, final boolean withClass, final List<Row> rows, final boolean withCoverage) {
     final List<String> header = new ArrayList<>();
     if (withClass) {
       header.add("Class");
@@ -78,14 +82,17 @@ final class MarkdownReport implements Report {
     if (config.showUnderstandability()) {
       header.add("Understandability");
     }
+    if (withCoverage) {
+      header.add(withClass ? "Coverage" : "Line Coverage");
+    }
     appendRow(md, header);
     appendRow(md, header.stream().map(column -> "---").toList());
     for (final Row row : rows) {
-      appendRow(md, cells(withClass, row.metrics()));
+      appendRow(md, cells(withClass, withCoverage, row.metrics()));
     }
   }
 
-  private List<String> cells(final boolean withClass, final CognitiveMetrics metrics) {
+  private List<String> cells(final boolean withClass, final boolean withCoverage, final CognitiveMetrics metrics) {
     final List<String> cells = new ArrayList<>();
     if (withClass) {
       cells.add(escape(metrics.getClassName()));
@@ -108,6 +115,9 @@ final class MarkdownReport implements Report {
     if (config.showUnderstandability()) {
       cells.add(ReportSupport.withRisk(
           metrics.getUnderstandability().complexity(), metrics.getUnderstandability().riskLevel()));
+    }
+    if (withCoverage) {
+      cells.add(CoverageData.percent(metrics.coverage().orElse(null)));
     }
     return cells;
   }

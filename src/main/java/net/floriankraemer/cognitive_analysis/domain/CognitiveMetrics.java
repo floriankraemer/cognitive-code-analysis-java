@@ -31,6 +31,9 @@ public class CognitiveMetrics {
   private CyclomaticComplexity cyclomatic = new CyclomaticVisitor().result();
   private HalsteadMetrics halstead = new HalsteadMetrics(0, 0, 0, 0);
   private Understandability understandability = Understandability.NONE;
+  /** Line coverage between 0.0 and 1.0; null without coverage data. Never part of the cached state. */
+  private Double coverage;
+  private boolean coverageProvided;
 
   /**
    * @param className the fully qualified class name, nested classes separated by dots
@@ -151,5 +154,21 @@ public class CognitiveMetrics {
 
   public void setUnderstandability(final Understandability understandability) {
     this.understandability = understandability;
+  }
+
+  /** The line coverage of the method between 0.0 and 1.0, empty when no coverage data covers it. */
+  public Optional<Double> coverage() {
+    return Optional.ofNullable(coverage);
+  }
+
+  /** Whether a coverage report was applied, even when it has no data on this method. */
+  public boolean isCoverageProvided() {
+    return coverageProvided;
+  }
+
+  /** Records the result of applying a coverage report; null when the report has no data on the method. */
+  public void setCoverage(final Double coverage) {
+    this.coverage = coverage;
+    this.coverageProvided = true;
   }
 }

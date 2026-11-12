@@ -30,9 +30,11 @@ final class CsvReport implements Report {
   public String render(final List<ScoredMethod> metrics) throws CognitiveAnalysisException {
     final StringWriter out = new StringWriter();
     try (CSVPrinter printer = new CSVPrinter(out, FORMAT)) {
-      printer.printRecord(header());
-      for (final Row row : ReportSupport.rows(metrics)) {
-        printer.printRecord(record(row));
+      final List<Row> rows = ReportSupport.rows(metrics);
+      final boolean withCoverage = ReportSupport.hasCoverage(rows);
+      printer.printRecord(header(withCoverage));
+      for (final Row row : rows) {
+        printer.printRecord(record(row, withCoverage));
       }
     } catch (IOException e) {
       throw new CognitiveAnalysisException("Failed to build the CSV report", e);
@@ -40,7 +42,7 @@ final class CsvReport implements Report {
     return out.toString();
   }
 
-  private static List<String> header() {
+  private static List<String> header(final boolean withCoverage) {
     final List<String> header = new ArrayList<>(List.of("Class", "Method", "File", "Line"));
     for (final MetricName name : MetricName.values()) {
       final String label = ReportSupport.longLabel(name);
@@ -48,10 +50,13 @@ final class CsvReport implements Report {
     }
     header.addAll(List.of("Score", "Cyclomatic Complexity", "Halstead Volume", "Halstead Difficulty",
         "Halstead Effort", "Understandability"));
+    if (withCoverage) {
+      header.add("Coverage");
+    }
     return header;
   }
 
-  private static List<Object> record(final Row row) {
+  private static List<Object> record(final Row row, final boolean withCoverage) {
     final CognitiveMetrics metrics = row.metrics();
     final List<Object> record = new ArrayList<>(
         List.of(metrics.getClassName(), metrics.getMethodName(), row.file(), metrics.getLine()));
@@ -66,6 +71,9 @@ final class CsvReport implements Report {
     record.add(ReportSupport.fixed(metrics.getHalstead().difficulty()));
     record.add(ReportSupport.fixed(metrics.getHalstead().effort()));
     record.add(metrics.getUnderstandability().complexity());
+    if (withCoverage) {
+      record.add(metrics.coverage().map(ReportSupport::fixed).orElse(""));
+    }
     return record;
   }
 }

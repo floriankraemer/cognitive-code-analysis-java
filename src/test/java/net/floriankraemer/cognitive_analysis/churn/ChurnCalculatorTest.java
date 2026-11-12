@@ -3,16 +3,21 @@ package net.floriankraemer.cognitive_analysis.churn;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import net.floriankraemer.cognitive_analysis.CognitiveAnalysisException;
 import net.floriankraemer.cognitive_analysis.churn.ChurnMetrics.RiskLevel;
+import net.floriankraemer.cognitive_analysis.coverage.CoverageData;
+import net.floriankraemer.cognitive_analysis.coverage.CoverageFormat;
 import net.floriankraemer.cognitive_analysis.domain.CognitiveMetrics;
 import net.floriankraemer.cognitive_analysis.domain.MetricsCollection;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
@@ -106,6 +111,41 @@ class ChurnCalculatorTest {
 
     assertThat(result.score()).isEqualTo(0.3);
     assertThat(result.churn()).isEqualTo(0.9);
+  }
+
+  @Test
+  void addsCoverageRiskChurnAndRiskLevelOfTheClass(@TempDir final Path tempDir) throws Exception {
+    final MetricsCollection metrics = new MetricsCollection();
+    add(metrics, "A.java", "pkg.A", "one", 10);
+    add(metrics, "B.java", "pkg.B", "one", 10);
+    add(metrics, "C.java", "pkg.C", "one", 1);
+    final Path report = Files.writeString(tempDir.resolve("cobertura.xml"), """
+        <coverage><packages><package name="pkg"><classes>
+          <class name="pkg.A" line-rate="0.25"/>
+          <class name="pkg.B" line-rate="0.9"/>
+        </classes></package></packages></coverage>""");
+    final CoverageData coverage = CoverageFormat.COBERTURA.read(report);
+
+    final List<ChurnMetrics> result = ChurnCalculator.calculate(
+        metrics, counts(Map.of("A.java", 4, "B.java", 4, "C.java", 4)), Optional.of(coverage));
+
+    assertThat(result).containsExactly(
+        new ChurnMetrics("pkg.A", "A.java", 10, 4, 40, 0.25, 30.0, RiskLevel.CRITICAL),
+        new ChurnMetrics("pkg.B", "B.java", 10, 4, 40, 0.9, 4.0, RiskLevel.LOW),
+        new ChurnMetrics("pkg.C", "C.java", 1, 4, 4, null, null, null));
+  }
+
+  @Test
+  void leavesCoverageEmptyWithoutCoverageData() throws Exception {
+    final MetricsCollection metrics = new MetricsCollection();
+    add(metrics, "A.java", "pkg.A", "one", 10);
+
+    final ChurnMetrics result =
+        ChurnCalculator.calculate(metrics, counts(Map.of("A.java", 4)), Optional.empty()).get(0);
+
+    assertThat(result.coverage()).isNull();
+    assertThat(result.riskChurn()).isNull();
+    assertThat(result.riskLevel()).isNull();
   }
 
   @Test

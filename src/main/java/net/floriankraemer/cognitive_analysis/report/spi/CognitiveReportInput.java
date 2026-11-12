@@ -27,6 +27,8 @@ public record CognitiveReportInput(List<Method> methods, Settings settings) {
    * @param cyclomatic the cyclomatic complexity
    * @param understandability the cognitive complexity as specified by SonarSource
    * @param halstead the Halstead metrics
+   * @param coverage the line coverage between 0.0 and 1.0, or null when no coverage report was given or it has
+   *     no data on the method
    */
   public record Method(
       String file,
@@ -37,7 +39,8 @@ public record CognitiveReportInput(List<Method> methods, Settings settings) {
       Map<String, Metric> metrics,
       int cyclomatic,
       int understandability,
-      Halstead halstead) {
+      Halstead halstead,
+      Double coverage) {
 
     public Method {
       metrics = Collections.unmodifiableMap(new LinkedHashMap<>(metrics));
