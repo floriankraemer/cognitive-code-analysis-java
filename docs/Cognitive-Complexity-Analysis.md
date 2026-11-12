@@ -27,6 +27,7 @@ This calculation is done for each metric and the results are summed to get the f
 ## Metrics Collected
 
 All counts are per method or constructor.
+The rules below are written for Java; [Kotlin](#kotlin) maps its constructs onto them.
 Lambdas belong to the method that contains them.
 Anonymous and local classes are left out, both as units of their own and from the counts of the enclosing method.
 
@@ -119,6 +120,68 @@ Ignoring a class also ignores its nested classes.
 JavaParser 3.28.2, the latest release, cannot parse a local `enum`, that is an enum declared inside a method body (Java 16 and later).
 A file that contains one is reported as `Parser failed for file <path>: ...` and skipped, and the analysis goes on with the other files.
 Local classes, records and interfaces are parsed, and are left out as described above.
+
+## Kotlin
+
+Kotlin files (`.kt`) are analysed with the same metrics, thresholds, scores, reports, baselines and cache as Java files, so Java and Kotlin results can be compared directly.
+Projects that mix both languages are analysed in one run, and each file is parsed by the parser of its language.
+Kotlin is parsed with the PSI parser of the Kotlin compiler (`kotlin-compiler-embeddable`), without type resolution and without a classpath.
+Kotlin scripts (`.kts`), such as `build.gradle.kts`, are not analysed.
+
+### Analysed Kotlin functions
+
+The functions of classes, data classes, enum classes, interfaces, objects and companion objects are analysed, and so are the top-level functions and extension functions of a file.
+
+| Kotlin declaration                           | Reported as                                                                 |
+|----------------------------------------------|-----------------------------------------------------------------------------|
+| `fun f()` in `class Outer` of `package p`    | `p.Outer::f`                                                                |
+| `fun f()` in `class Inner` nested in `Outer` | `p.Outer.Inner::f`                                                          |
+| `fun f()` in `object Registry`               | `p.Registry::f`                                                             |
+| `fun f()` in `companion object`              | `p.Outer.Companion::f`, or the name of a named companion object             |
+| top-level `fun f()` in `Tools.kt`            | `p.ToolsKt::f`, the JVM facade class of the file                            |
+| top-level function with `@file:JvmName("X")` | `p.X::f`                                                                    |
+| top-level extension `fun String.f()`         | `p.ToolsKt::f`                                                              |
+| extension function inside a class            | a function of that class                                                    |
+| `constructor(...)` in `class Outer`          | `p.Outer::Outer`, like a Java constructor                                   |
+| overloads `f(Int)` and `f(String?, vararg List<T>)` | `f(Int)` and `f(String,List...)`, the receiver of an extension first |
+
+Interface functions count only when they have a body.
+Abstract and external functions of classes count with all metrics at zero except the line and argument counts.
+The primary constructor, `init` blocks, property getters and setters, and the bodies of enum entries are not analysed.
+Anonymous objects (`object : Runnable { ... }`) and local classes are left out like Java anonymous and local classes.
+Lambdas and local functions belong to the function that contains them.
+The line count starts at the first annotation or modifier, not at the KDoc.
+To leave out a class or function, put `@cca-ignore` into its KDoc, into a comment on the line it ends on, or into any comment between the previous declaration and its name.
+
+### Java and Kotlin metric mapping
+
+| Kotlin construct                                | Counts like the Java construct | Notes                                                                                     |
+|-------------------------------------------------|--------------------------------|-------------------------------------------------------------------------------------------|
+| `if` statement and `if` expression              | `if`                           | `else if` continues its chain like in Java.                                               |
+| `when` with or without subject                  | `switch`                       | Cyclomatic: +1 per branch with conditions, the `else` branch adds nothing. Understandability: +1 per `when`. |
+| `for (x in xs)`                                 | enhanced `for`                 |                                                                                           |
+| `while`, `do`-`while`                           | `while`, `do`-`while`          |                                                                                           |
+| `try`/`catch`                                   | `try`/`catch`                  | Each `catch` counts.                                                                      |
+| `&&`, `\|\|`                                    | `&&`, `\|\|`                   |                                                                                           |
+| elvis `a ?: b`                                  | no Java equivalent             | +1 cyclomatic only; no cognitive or understandability increment.                          |
+| safe call `?.`, not-null assertion `!!`         | no Java equivalent             | Not counted, except as Halstead operators.                                                |
+| lambda `{ x -> ... }`                           | lambda                         | Nests its body without an increment; its returns, variables and decisions belong to the function. |
+| `return`, `return@label`                        | `return`                       | The value of an expression body (`fun f() = x`) is no return.                             |
+| `val`, `var`, destructuring, lambda, catch, `for` and local function parameters | local variables | The implicit lambda parameter `it` counts once when it is used.               |
+| `this.x`, `obj.x`, `obj?.x` and a bare property name | field access              | A bare name that is neither a parameter nor declared in the function is read as `this.x`. A receiver starting with an upper-case letter, such as `Companion.LIMIT`, is a type and does not count. |
+| `Type(...)`                                     | `new Type(...)`                | Halstead operator `new:Type` for any call of an upper-case name.                          |
+| `a to b` and other infix calls                  | method call                    | Halstead operator `call:to`.                                                              |
+| `in`, `!in`, `is`, `!is`, `..`                  | `instanceof` and operators     | Halstead operators.                                                                       |
+| string template `"a $b"`                        | string concatenation           | Halstead: each literal part and each name is an operand; a template without interpolation is one operand. |
+
+The cyclomatic breakdown of a Kotlin function has the kinds `if`, `case`, `while`, `doWhile`, `forEach`, `catch`, `logicalAnd`, `logicalOr` and `elvis`.
+
+### Kotlin limits
+
+Names are not resolved, so the same guesses as for Java apply: a name starting with an upper-case letter is a type or constant, and a chain of at least two lower-case names before an upper-case name is a package.
+A function called through a fully qualified name without an upper-case segment, such as `kotlin.math.max(a, b)`, reads `kotlin` as a property and `math` as a property access.
+`this` in an extension function is its receiver and counts as `this`.
+The Kotlin parser takes about half a second to start, once per run, and only when the analysed paths contain a Kotlin file.
 
 ## Result Interpretation
 

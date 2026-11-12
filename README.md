@@ -1,4 +1,7 @@
-# Cognitive Complexity Analysis
+# Cognitive Complexity Analysis for Java and Kotlin
+
+This tool measures the cognitive complexity of **Java and Kotlin** code, including projects that mix both languages.
+Both languages are measured with the same metrics, scores, reports, baselines and cache, so their results can be compared directly.
 
 Cognitive Code Analysis is an approach to understanding and improving code by focusing on how human cognition interacts with code. It emphasizes making code more readable, understandable, and maintainable by considering the cognitive processes of the developers who write and work with the code.
 
@@ -20,13 +23,21 @@ Analyse a directory and print the result tables to the console:
 java -jar target/cognitive-analysis.jar analyse src/main/java
 ```
 
+Kotlin sources are analysed the same way, and a mixed project needs no extra option:
+
+```bash
+java -jar target/cognitive-analysis.jar analyse src/main/kotlin
+java -jar target/cognitive-analysis.jar analyse src/main/java,src/main/kotlin
+```
+
 The path can also be a single file or a comma-separated list of files and directories:
 
 ```bash
-java -jar target/cognitive-analysis.jar analyse src/main/java,tools/Generator.java
+java -jar target/cognitive-analysis.jar analyse src/main/java,tools/Generator.java,tools/Release.kt
 ```
 
-Directories are searched recursively for `.java` files, skipping hidden directories.
+Directories are searched recursively for `.java` and `.kt` files, skipping hidden directories.
+Kotlin scripts (`.kts`), such as `build.gradle.kts`, are not analysed.
 A file that cannot be parsed is reported and skipped, and the analysis goes on.
 
 The console output starts with the configuration in use and the cache state, then one table per class:
@@ -97,6 +108,34 @@ See [Churn](./docs/Churn.md) for the options and report formats.
 
 Run `java -jar target/cognitive-analysis.jar --help` for all options.
 
+## Kotlin
+
+Kotlin functions are reported like Java methods.
+Classes, data classes, enum classes, interfaces, objects and companion objects keep their names (`shop.OrderService`, `shop.OrderService.Companion`).
+Top-level and top-level extension functions belong to the JVM facade class of their file, `shop.OrderServiceKt` for `OrderService.kt`, or the name given with `@file:JvmName`.
+Secondary constructors are named after their class; `init` blocks, property accessors and anonymous objects are not analysed.
+
+| Kotlin                                  | Measured like the Java     | Difference                                                       |
+|-----------------------------------------|----------------------------|------------------------------------------------------------------|
+| `if` statement or expression, `else if` | `if`, `else if`            |                                                                  |
+| `when`, with or without subject         | `switch`                   | Cyclomatic +1 per branch with conditions; `else` adds nothing.   |
+| `for (x in xs)`, `while`, `do`-`while`  | enhanced `for`, `while`, `do`-`while` |                                                       |
+| `try`/`catch`, `&&`, `\|\|`              | `try`/`catch`, `&&`, `\|\|` |                                                                |
+| `a ?: b`                                | no equivalent              | Cyclomatic +1 only.                                              |
+| `?.`, `!!`                              | no equivalent              | Not counted, except as Halstead operators.                       |
+| lambdas and local functions             | lambdas                    | Belong to the enclosing function and nest without an increment. |
+| `return`, `return@label`                | `return`                   | An expression body (`fun f() = x`) has no return.               |
+| `val`, `var`, destructuring, `it`       | local variables            | `it` counts when it is used.                                     |
+| `this.x`, `obj.x`, `obj?.x`, bare `x`   | field access               |                                                                  |
+
+Limitations:
+
+* Names are not resolved against a classpath, so upper-case names are taken for types and constants, as for Java.
+* `init` blocks, property accessors, primary constructors, enum entry bodies and Kotlin scripts (`.kts`) are not analysed.
+* The Kotlin compiler makes the jar about 60 MB larger, and its parser adds about half a second to a run that finds Kotlin files.
+
+See [Kotlin](./docs/Cognitive-Complexity-Analysis.md#kotlin) for the full mapping and the limits.
+
 ## Documentation
 
 * [Cognitive Complexity Analysis](./docs/Cognitive-Complexity-Analysis.md#cognitive-complexity-analysis)
@@ -104,6 +143,7 @@ Run `java -jar target/cognitive-analysis.jar --help` for all options.
     * [What is the difference to Cyclomatic Complexity?](./docs/Cognitive-Complexity-Analysis.md#what-is-the-difference-to-cyclomatic-complexity)
     * [How is Cognitive Complexity calculated?](./docs/Cognitive-Complexity-Analysis.md#how-is-cognitive-complexity-calculated)
     * [Metrics Collected](./docs/Cognitive-Complexity-Analysis.md#metrics-collected)
+    * [Kotlin](./docs/Cognitive-Complexity-Analysis.md#kotlin)
     * [Result Interpretation](./docs/Cognitive-Complexity-Analysis.md#result-interpretation)
     * [Configuration](./docs/Configuration.md#configuration)
         * [Tuning the calculation](./docs/Configuration.md#tuning-the-calculation)
