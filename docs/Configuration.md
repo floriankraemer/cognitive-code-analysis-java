@@ -12,7 +12,7 @@ The file is chosen in this order:
 3. The bundled defaults only.
 
 ```bash
-java -jar cognitive-analysis.jar analyse <path-to-folder> --config <path-to-config-file>
+java -jar target/cognitive-analysis.jar analyse src/main/java --config jcca.yaml
 ```
 
 ## Creating a config file
@@ -20,7 +20,7 @@ java -jar cognitive-analysis.jar analyse <path-to-folder> --config <path-to-conf
 `init` writes a config file with the bundled defaults, so you can start from a complete file.
 
 ```bash
-java -jar cognitive-analysis.jar init
+java -jar target/cognitive-analysis.jar init
 ```
 
 In an interactive console, `init` asks for the settings below.
