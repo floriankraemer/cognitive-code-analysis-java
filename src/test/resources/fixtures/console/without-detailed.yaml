@@ -1,0 +1,7 @@
+cognitive:
+  cache:
+    enabled: false
+  showDetailedCognitiveMetrics: false
+  showHalsteadComplexity: true
+  showCyclomaticComplexity: true
+  showUnderstandability: true

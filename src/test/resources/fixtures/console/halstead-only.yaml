@@ -1,0 +1,4 @@
+cognitive:
+  cache:
+    enabled: false
+  showHalsteadComplexity: true

@@ -1,0 +1,48 @@
+Config: src/test/resources/fixtures/console/minimal.yaml
+Cache: disabled
+
+Found 3 files. Starting analysis.
+
+Class: multi.Alpha
+File: src/test/resources/fixtures/multi/Alpha.java
+┌─────────────┬────────────┐
+│ Method Name │ Cognitive  │
+│             │ Complexity │
+├─────────────┼────────────┤
+│ second      │   0.000    │
+├─────────────┼────────────┤
+│ first       │   0.000    │
+└─────────────┴────────────┘
+
+Class: multi.Beta
+File: src/test/resources/fixtures/multi/Beta.java
+┌─────────────┬────────────┐
+│ Method Name │ Cognitive  │
+│             │ Complexity │
+├─────────────┼────────────┤
+│ zulu        │   0.000    │
+├─────────────┼────────────┤
+│ alpha       │   0.000    │
+└─────────────┴────────────┘
+
+Class: multi.Helper
+File: src/test/resources/fixtures/multi/Alpha.java
+┌─────────────┬────────────┐
+│ Method Name │ Cognitive  │
+│             │ Complexity │
+├─────────────┼────────────┤
+│ run         │   0.000    │
+└─────────────┴────────────┘
+
+Class: test.testcode.ClassToAnalyze
+File: src/test/resources/fixtures/sample/ClassToAnalyze.java
+┌────────────────────────┬────────────┐
+│ Method Name            │ Cognitive  │
+│                        │ Complexity │
+├────────────────────────┼────────────┤
+│ simpleMethod           │   0.000    │
+├────────────────────────┼────────────┤
+│ methodWithTwoArguments │   2.197    │
+└────────────────────────┴────────────┘
+
+Cognitive metrics calculated for src/test/resources/fixtures/sample,src/test/resources/fixtures/multi

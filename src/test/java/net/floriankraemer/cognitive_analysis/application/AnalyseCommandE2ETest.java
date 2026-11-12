@@ -81,7 +81,7 @@ class AnalyseCommandE2ETest {
     int exitCode = run("analyse", tempDir.toString());
 
     assertThat(exitCode).isEqualTo(1);
-    assertThat(out.toString()).isEmpty();
+    assertThat(out.toString()).doesNotContain("┌").doesNotContain("Cognitive metrics calculated");
     assertThat(err.toString()).isEqualTo("Error reading file: " + broken + System.lineSeparator());
   }
 
@@ -156,6 +156,7 @@ class AnalyseCommandE2ETest {
         .containsExactly(
             "File: src/test/resources/fixtures/multi/Alpha.java",
             "File: src/test/resources/fixtures/multi/Beta.java",
+            "File: src/test/resources/fixtures/multi/Alpha.java",
             "File: " + FIXTURE_DIR + "/ClassToAnalyze.java");
   }
 
@@ -167,12 +168,12 @@ class AnalyseCommandE2ETest {
 
     assertThat(exitCode).isZero();
     assertThat(err.toString()).isEmpty();
-    assertThat(out.toString().lines().filter(line -> line.startsWith("File: ") || line.startsWith("│Main")))
+    assertThat(out.toString().lines().filter(line -> line.startsWith("File: ") || line.startsWith("│ main")))
         .containsExactly(
             "File: " + dir + "/m1/Main.java",
-            "│Main │main  │  3  │    1    │   0   │    0    │   0    │0 │    0     │ 0  │  0.000   │",
+            "│ main        │ 3 (0.000) │ 1 (0.000) │ 0 (0.000) │ 0 (0.000) │ 0 (0.000) │ 0 (0.000) │ 0 (0.000)  │ 0 (0.000) │   0.000    │",
             "File: " + dir + "/m2/Main.java",
-            "│Main │main  │  5  │    1    │   0   │    0    │   1    │1 │    1     │ 0  │  0.000   │");
+            "│ main        │ 5 (0.000) │ 1 (0.000) │ 0 (0.000) │ 0 (0.000) │ 1 (0.000) │ 1 (0.000) │ 1 (0.000)  │ 0 (0.000) │   0.000    │");
   }
 
   @Test
@@ -199,8 +200,14 @@ class AnalyseCommandE2ETest {
 
     assertThat(exitCode).isZero();
     assertThat(err.toString()).isEmpty();
-    assertThat(out.toString()).isEqualTo(
-        System.lineSeparator() + "Cognitive metrics calculated for " + tempDir + System.lineSeparator());
+    assertThat(out.toString()).isEqualTo("""
+        Config: src/test/resources/fixtures/no-cache.yaml
+        Cache: disabled
+
+        Found 0 files. Starting analysis.
+
+        Cognitive metrics calculated for %s
+        """.formatted(tempDir));
   }
 
   @Test
@@ -211,9 +218,9 @@ class AnalyseCommandE2ETest {
     assertThat(err.toString()).isEmpty();
     assertThat(out.toString())
         .contains("File: src/test/resources/fixtures/multi/Alpha.java")
-        .contains("│second")
+        .contains("│ second")
         .doesNotContain("Beta.java")
-        .doesNotContain("│first")
+        .doesNotContain("│ first")
         .doesNotContain("multi.Helper");
   }
 
@@ -333,7 +340,8 @@ class AnalyseCommandE2ETest {
     int exitCode = run("analyse", FIXTURE_DIR, "-r", "html", "-f", report.toString());
 
     assertThat(exitCode).isZero();
-    assertThat(out.toString()).isEqualTo("Report generated at: " + report + System.lineSeparator());
+    assertThat(out.toString()).endsWith("Report generated at: " + report + System.lineSeparator());
+    assertThat(out.toString()).doesNotContain("┌");
     assertThat(Files.readString(report))
         .startsWith("<!DOCTYPE html>")
         .contains("<td>test.testcode.ClassToAnalyze</td>")

@@ -2,12 +2,18 @@ package net.floriankraemer.cognitive_analysis.application;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
 
 /**
  * Renders rows of (possibly multi-line) cells as a box-drawing table.
- * Column widths follow the widest line of each column.
+ * Column widths follow the widest line of each column, ANSI color codes not counted.
  */
 public final class TextTable {
+
+  private static final Pattern ANSI_CODE = Pattern.compile("\u001B\\[[0-9;]*m");
+
+  /** Spaces between the border and the text of a cell, on each side. */
+  private static final int PADDING = 1;
 
   /** Columns from this index on are centered; earlier ones are left-aligned. */
   private final int firstCenteredColumn;
@@ -41,7 +47,7 @@ public final class TextTable {
     for (List<String> row : rows) {
       for (int c = 0; c < columns; c++) {
         for (String line : row.get(c).split("\n", -1)) {
-          widths[c] = Math.max(widths[c], line.length());
+          widths[c] = Math.max(widths[c], visibleLength(line));
         }
       }
     }
@@ -63,17 +69,21 @@ public final class TextTable {
   }
 
   private String pad(final String text, final int width, final boolean center) {
-    final int space = width - text.length();
+    final int space = width - visibleLength(text);
     final int left = center ? space / 2 : 0;
-    return " ".repeat(left) + text + " ".repeat(space - left);
+    return " ".repeat(PADDING + left) + text + " ".repeat(PADDING + space - left);
   }
 
   private String border(final char left, final char middle, final char right, final int[] widths) {
     final StringBuilder line = new StringBuilder().append(left);
     for (int c = 0; c < widths.length; c++) {
-      line.append("─".repeat(widths[c]));
+      line.append("─".repeat(widths[c] + 2 * PADDING));
       line.append(c < widths.length - 1 ? middle : right);
     }
     return line.toString();
+  }
+
+  private static int visibleLength(final String text) {
+    return ANSI_CODE.matcher(text).replaceAll("").length();
   }
 }
