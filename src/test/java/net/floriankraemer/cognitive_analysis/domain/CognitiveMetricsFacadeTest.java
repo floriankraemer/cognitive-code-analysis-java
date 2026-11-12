@@ -8,7 +8,11 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.FileTime;
 import java.util.List;
+import java.util.stream.Stream;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import net.floriankraemer.cognitive_analysis.CognitiveAnalysisException;
 import net.floriankraemer.cognitive_analysis.config.CognitiveConfig;
 import net.floriankraemer.cognitive_analysis.config.MetricName;
@@ -127,8 +131,156 @@ class CognitiveMetricsFacadeTest {
     assertThat(facade(TestConfigs.defaults()).calculateCognitiveMetrics(List.of(tempDir.toString()))).isEmpty();
   }
 
+  @Test
+  void reusesTheMetricsOfAnUnchangedFileInsteadOfParsingItAgain() throws Exception {
+    Path source = write("src/A.java", "class A { void a() {} }");
+    CognitiveConfig config = cachedIn(tempDir.resolve("cache"));
+    facade(config).calculateCognitiveMetrics(List.of(srcDir()));
+    replaceInEntries("A::a", "A::fromCache");
+
+    MetricsCollection result = facade(config).calculateCognitiveMetrics(List.of(srcDir()));
+
+    assertThat(result.get(source.toString())).containsOnlyKeys("A::fromCache");
+  }
+
+  @Test
+  void reparsesAFileWhoseContentChangesAndKeepsAnEntryForAModificationTimeChange() throws Exception {
+    Path source = write("src/A.java", "class A { void a() {} }");
+    CognitiveConfig config = cachedIn(tempDir.resolve("cache"));
+    FileTime original = Files.getLastModifiedTime(source);
+    facade(config).calculateCognitiveMetrics(List.of(srcDir()));
+    replaceInEntries("A::a", "A::fromCache");
+
+    Files.setLastModifiedTime(source, FileTime.fromMillis(original.toMillis() + 1000));
+    MetricsCollection retimed = facade(config).calculateCognitiveMetrics(List.of(srcDir()));
+    assertThat(retimed.get(source.toString())).containsOnlyKeys("A::fromCache");
+
+    Files.writeString(source, "class A { void b() {} }");
+    Files.setLastModifiedTime(source, original);
+    MetricsCollection sameSize = facade(config).calculateCognitiveMetrics(List.of(srcDir()));
+    assertThat(sameSize.get(source.toString())).containsOnlyKeys("A::b");
+
+    Files.writeString(source, "class A { void b() {}  }");
+    MetricsCollection resized = facade(config).calculateCognitiveMetrics(List.of(srcDir()));
+    assertThat(resized.get(source.toString())).containsOnlyKeys("A::b");
+  }
+
+  @Test
+  void aCacheHitRestoresEveryMetricOfTheFreshAnalysis() throws Exception {
+    write("src/A.java", "class A { int a(int x) { if (x > 0 && x < 9) { return 1; } else { return x; } } }");
+    CognitiveConfig config = cachedIn(tempDir.resolve("cache"));
+    MetricsCollection fresh = facade(config).calculateCognitiveMetrics(List.of(srcDir()));
+
+    MetricsCollection cached = facade(config).calculateCognitiveMetrics(List.of(srcDir()));
+
+    CognitiveMetrics method = cached.values().iterator().next().get("A::a");
+    assertThat(method.getCyclomatic().complexity()).isGreaterThan(1);
+    assertThat(method.getHalstead().length()).isPositive();
+    assertThat(entries()).hasSize(1);
+    ObjectMapper json = JsonMapper.builder().build();
+    assertThat(json.writeValueAsString(cached)).isEqualTo(json.writeValueAsString(fresh));
+  }
+
+  @Test
+  void analysesAgainAndOverwritesACorruptEntry() throws Exception {
+    Path source = write("src/A.java", "class A { void a() {} }");
+    CognitiveConfig config = cachedIn(tempDir.resolve("cache"));
+    facade(config).calculateCognitiveMetrics(List.of(srcDir()));
+    for (Path entry : entries()) {
+      Files.writeString(entry, "{ not json");
+    }
+
+    MetricsCollection result = facade(config).calculateCognitiveMetrics(List.of(srcDir()));
+
+    assertThat(result.get(source.toString())).containsOnlyKeys("A::a");
+    assertThat(entries()).hasSize(1).allSatisfy(entry -> assertThat(Files.readString(entry)).contains("\"A::a\""));
+    assertThat(warnings.toString()).isEmpty();
+  }
+
+  @Test
+  void neverCachesAFileThatCannotBeParsed() throws Exception {
+    write("src/Broken.java", "class Broken {\n  void oops( {\n}\n");
+    write("src/Valid.java", "class Valid { void valid() {} }");
+    CognitiveConfig config = cachedIn(tempDir.resolve("cache"));
+
+    facade(config).calculateCognitiveMetrics(List.of(srcDir()));
+
+    assertThat(entries()).hasSize(1);
+    assertThat(warnings.toString()).startsWith("Parser failed for file");
+  }
+
+  @Test
+  void storesEntriesInTheDefaultDirectoryOfTheWorkingDirectory() throws Exception {
+    write("src/A.java", "class A { void a() {} }");
+
+    facade(TestConfigs.defaults()).calculateCognitiveMetrics(List.of(srcDir()));
+
+    try (Stream<Path> files = Files.walk(tempDir.resolve(".jcca.cache"))) {
+      assertThat(files.filter(path -> path.toString().endsWith(".json"))).hasSize(1);
+    }
+  }
+
+  @Test
+  void writesNothingWhenTheCacheIsDisabled() throws Exception {
+    write("src/A.java", "class A { void a() {} }");
+    Path cacheDir = tempDir.resolve("cache");
+    CognitiveConfig config = TestConfigs.load("""
+        cognitive:
+          cache:
+            enabled: false
+            directory: '%s'
+        """.formatted(cacheDir));
+
+    MetricsCollection result = facade(config).calculateCognitiveMetrics(List.of(srcDir()));
+
+    assertThat(result).hasSize(1);
+    assertThat(cacheDir).doesNotExist();
+  }
+
+  @Test
+  void warnsOnceWhenTheCacheCannotBeWrittenAndStillAnalysesEveryFile() throws Exception {
+    write("src/A.java", "class A { void a() {} }");
+    write("src/B.java", "class B { void b() {} }");
+    Path blocked = Files.writeString(tempDir.resolve("blocked"), "a file, not a directory");
+
+    MetricsCollection result = facade(cachedIn(blocked)).calculateCognitiveMetrics(List.of(srcDir()));
+
+    assertThat(result).hasSize(2);
+    assertThat(warnings.toString().lines())
+        .hasSize(1)
+        .allSatisfy(line -> assertThat(line).startsWith("Warning: cannot write the cache to " + blocked));
+  }
+
+  private CognitiveConfig cachedIn(final Path directory) {
+    return TestConfigs.load("""
+        cognitive:
+          cache:
+            directory: '%s'
+        """.formatted(directory));
+  }
+
+  private String srcDir() {
+    return tempDir.resolve("src").toString();
+  }
+
+  private List<Path> entries() throws IOException {
+    Path cacheDir = tempDir.resolve("cache");
+    if (!Files.exists(cacheDir)) {
+      return List.of();
+    }
+    try (Stream<Path> files = Files.walk(cacheDir)) {
+      return files.filter(path -> path.toString().endsWith(".json")).toList();
+    }
+  }
+
+  private void replaceInEntries(final String from, final String to) throws IOException {
+    for (Path entry : entries()) {
+      Files.writeString(entry, Files.readString(entry).replace(from, to));
+    }
+  }
+
   private CognitiveMetricsFacade facade(CognitiveConfig config) {
-    return new CognitiveMetricsFacade(config, new PrintWriter(warnings, true));
+    return new CognitiveMetricsFacade(config, new PrintWriter(warnings, true), tempDir);
   }
 
   private Path write(String relativePath, String content) throws IOException {

@@ -1,5 +1,6 @@
 package net.floriankraemer.cognitive_analysis.config;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
@@ -11,7 +12,8 @@ import java.util.regex.Pattern;
  *
  * @param excludeFilePatterns skip a file when one is found in its absolute path with {@code /} separators
  * @param excludePatterns skip a method when one is found in its key {@code pkg.Class::method}
- * @param source the user configuration file that was merged over the bundled defaults, if any
+ * @param source the user configuration file that was merged over the bundled defaults, if any; not part of
+ *     the settings, so it is left out of the serialized form
  */
 public record CognitiveConfig(
     List<Pattern> excludeFilePatterns,
@@ -26,7 +28,7 @@ public record CognitiveConfig(
     Map<MetricName, MetricSettings> metrics,
     CacheSettings cache,
     CustomReporters customReporters,
-    Optional<Path> source) {
+    @JsonIgnore Optional<Path> source) {
 
   /** Threshold, scale and on/off switch of one metric. */
   public record MetricSettings(double threshold, double scale, boolean enabled) {}

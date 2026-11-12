@@ -1,3 +1,5 @@
 cognitive:
   excludeFilePatterns: ['/fixtures/multi/Beta\.java$']
   excludePatterns: ['::first$', '^multi\.Helper::']
+  cache:
+    enabled: false
