@@ -2,6 +2,8 @@ package net.floriankraemer.cognitive_analysis.application.report;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import net.floriankraemer.cognitive_analysis.config.MetricName;
+import net.floriankraemer.cognitive_analysis.domain.CognitiveMetrics;
 import net.floriankraemer.cognitive_analysis.domain.MetricsCollection;
 
 import java.util.ArrayList;
@@ -26,11 +28,24 @@ public class JsonReportBuilder extends AbstractReportBuilder {
     metricsCollection.forEach((fileName, metrics) -> {
       Map<String, Object> fileMetrics = new LinkedHashMap<>();
       fileMetrics.put("file", fileName);
-      fileMetrics.put("metrics", new ArrayList<>(metrics.values()));
+      fileMetrics.put("metrics", metrics.values().stream().map(JsonReportBuilder::toMap).toList());
       report.add(fileMetrics);
     });
 
     return serializeToJson(report);
+  }
+
+  private static Map<String, Object> toMap(CognitiveMetrics metrics) {
+    Map<String, Object> method = new LinkedHashMap<>();
+    method.put("className", metrics.getClassName());
+    method.put("methodName", metrics.getMethodName());
+    method.put("line", metrics.getLine());
+    for (MetricName name : MetricName.values()) {
+      method.put(name.key(), metrics.value(name));
+      method.put(name.key() + "Weight", metrics.weight(name));
+    }
+    method.put("score", metrics.getCognitiveComplexity());
+    return method;
   }
 
   private String serializeToJson(List<Map<String, Object>> report) throws ReportBuilderException {

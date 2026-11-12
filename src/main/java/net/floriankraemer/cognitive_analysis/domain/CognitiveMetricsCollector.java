@@ -1,197 +1,196 @@
 package net.floriankraemer.cognitive_analysis.domain;
 
-import com.github.javaparser.ParseProblemException;
+import static java.util.stream.Collectors.counting;
+import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.joining;
+
+import com.github.javaparser.JavaParser;
+import com.github.javaparser.ParseResult;
 import com.github.javaparser.ParserConfiguration;
-import com.github.javaparser.StaticJavaParser;
+import com.github.javaparser.ParserConfiguration.LanguageLevel;
+import com.github.javaparser.Position;
+import com.github.javaparser.Range;
 import com.github.javaparser.ast.CompilationUnit;
-import com.github.javaparser.ast.PackageDeclaration;
+import com.github.javaparser.ast.Node;
+import com.github.javaparser.ast.NodeList;
+import com.github.javaparser.ast.body.BodyDeclaration;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
-import com.github.javaparser.ast.body.FieldDeclaration;
+import com.github.javaparser.ast.body.CompactConstructorDeclaration;
+import com.github.javaparser.ast.body.ConstructorDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
-import com.github.javaparser.ast.body.VariableDeclarator;
-import com.github.javaparser.ast.expr.MethodCallExpr;
-import com.github.javaparser.ast.stmt.DoStmt;
-import com.github.javaparser.ast.stmt.ForStmt;
-import com.github.javaparser.ast.stmt.IfStmt;
-import com.github.javaparser.ast.stmt.ReturnStmt;
-import com.github.javaparser.ast.stmt.SwitchStmt;
-import com.github.javaparser.ast.stmt.TryStmt;
-import com.github.javaparser.ast.stmt.WhileStmt;
-import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
-
-import java.io.PrintWriter;
+import com.github.javaparser.ast.body.Parameter;
+import com.github.javaparser.ast.body.RecordDeclaration;
+import com.github.javaparser.ast.body.TypeDeclaration;
+import com.github.javaparser.ast.comments.Comment;
+import com.github.javaparser.ast.expr.SimpleName;
+import com.github.javaparser.ast.stmt.BlockStmt;
+import com.github.javaparser.ast.type.ArrayType;
+import com.github.javaparser.ast.type.ClassOrInterfaceType;
+import com.github.javaparser.ast.type.Type;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import net.floriankraemer.cognitive_analysis.config.MetricName;
 
-
+/**
+ * Parses Java source code and measures the cognitive metrics of every method and constructor.
+ *
+ * <p>This is the only Java-specific part of the analysis. It is stateless and thread-safe.
+ *
+ * <p>Units are the methods and constructors of top-level and member classes, enums, records and
+ * interfaces. Interface methods count only when they have a body; abstract and native class methods
+ * count with empty metrics. Anonymous and local classes are skipped; lambdas belong to their method.
+ * A class is keyed by its fully qualified name with nested classes separated by dots, a method by
+ * {@code pkg.Outer.Inner::method}. Constructors are named after their class. When a class declares
+ * several methods with the same name, all of them get their erased parameter types appended, as in
+ * {@code method(List,String...)}. A {@value #IGNORE_TAG} comment before a declaration skips it.
+ */
 public class CognitiveMetricsCollector {
 
-  private Map<String, CognitiveMetrics> methodMetrics = new LinkedHashMap<>();
-  private String packageName;
-
-  private final PrintWriter warnings;
-
-  public CognitiveMetricsCollector(final PrintWriter warnings) {
-    this.warnings = warnings;
-    StaticJavaParser
-        .getParserConfiguration()
-        .setLanguageLevel(ParserConfiguration.LanguageLevel.CURRENT);
-  }
+  static final String IGNORE_TAG = "@cca-ignore";
+  private static final LanguageLevel LANGUAGE_LEVEL = LanguageLevel.JAVA_26;
 
   /**
-   * Analyze the given Java code to calculate cognitive metrics.
-   *
-   * @param code The Java code to analyze.
+   * @return the metrics per method key, in source order
+   * @throws SourceParseException when the code is not valid Java
    */
-  public void analyze(final String code) {
-    methodMetrics = new LinkedHashMap<>();
-
-    try {
-      CompilationUnit compilationUnit = StaticJavaParser.parse(code);
-
-      // Extract package name from the compilation unit, if available
-      packageName = compilationUnit.getPackageDeclaration()
-          .map(PackageDeclaration::getNameAsString)
-          .orElse("");
-
-      compilationUnit.accept(new ClassVisitor(), null);
-    } catch (ParseProblemException e) {
-      warnings.println("Error parsing code: " + e.getMessage());
+  public Map<String, CognitiveMetrics> collect(final String code) throws SourceParseException {
+    final ParseResult<CompilationUnit> result =
+        new JavaParser(new ParserConfiguration().setLanguageLevel(LANGUAGE_LEVEL)).parse(code);
+    if (!result.isSuccessful()) {
+      throw new SourceParseException(result.getProblems().get(0).getVerboseMessage());
     }
+    return new FileScan(result.getResult().orElseThrow()).scan();
   }
 
-  /**
-   * Get the method metrics.
-   *
-   * @return A map of method names to their cognitive metrics.
-   */
-  public Map<String, CognitiveMetrics> getMethodMetrics() {
-    return methodMetrics;
-  }
+  /** The state of collecting one file. */
+  private static final class FileScan {
 
-  private static class StatementVisitor extends VoidVisitorAdapter<Void> {
-    private final CognitiveMetrics metrics;
-    private final int currentNestingLevel;
+    private final CompilationUnit unit;
+    private final List<Comment> ignoreComments;
+    private final Map<String, CognitiveMetrics> metrics = new LinkedHashMap<>();
 
-    public StatementVisitor(CognitiveMetrics metrics, int nestingLevel) {
-      this.metrics = metrics;
-      this.currentNestingLevel = nestingLevel;
+    FileScan(final CompilationUnit unit) {
+      this.unit = unit;
+      this.ignoreComments = unit.getAllComments().stream()
+          .filter(comment -> comment.getContent().contains(IGNORE_TAG))
+          .toList();
     }
 
-    @Override
-    public void visit(IfStmt ifStmt, Void arg) {
-      metrics.incrementIfCount();
-      int nestedIfLevel = currentNestingLevel + 1;
-      metrics.setIfNestingLevel(Math.max(metrics.getIfNestingLevel(), nestedIfLevel));
+    Map<String, CognitiveMetrics> scan() {
+      final String packagePrefix =
+          unit.getPackageDeclaration().map(declaration -> declaration.getNameAsString() + ".").orElse("");
+      unit.getTypes().forEach(type -> scanType(type, packagePrefix + type.getNameAsString()));
+      return metrics;
+    }
 
-      ifStmt.getThenStmt().accept(new StatementVisitor(metrics, nestedIfLevel), null);
-
-      if (ifStmt.getElseStmt().isPresent()) {
-        metrics.incrementElseCount();
-        ifStmt.getElseStmt().get().accept(new StatementVisitor(metrics, nestedIfLevel), null);
+    private void scanType(final TypeDeclaration<?> type, final String className) {
+      if (isIgnored(type, type.getName())) {
+        return;
+      }
+      final Map<String, Long> nameCounts = type.getMembers().stream()
+          .map(member -> unitOf(type, member))
+          .flatMap(Optional::stream)
+          .collect(groupingBy(Unit::name, counting()));
+      for (final BodyDeclaration<?> member : type.getMembers()) {
+        if (member instanceof TypeDeclaration<?> nested) {
+          scanType(nested, className + "." + nested.getNameAsString());
+          continue;
+        }
+        final Optional<Unit> callable = unitOf(type, member);
+        if (callable.isPresent() && !isIgnored(member, callable.get().simpleName())) {
+          final Unit found = callable.get();
+          final String methodName =
+              nameCounts.get(found.name()) > 1 ? found.name() + signature(found.parameters()) : found.name();
+          metrics.putIfAbsent(className + "::" + methodName, measure(className, methodName, found));
+        }
       }
     }
 
-    @Override
-    public void visit(TryStmt tryStmt, Void arg) {
-      super.visit(tryStmt, arg);
-
-      int nestedTryLevel = currentNestingLevel + 1;
-      metrics.setTryCatchNestingLevel(Math.max(metrics.getTryCatchNestingLevel(), nestedTryLevel));
-
-      tryStmt.getTryBlock().accept(new StatementVisitor(metrics, nestedTryLevel), null);
-      tryStmt.getCatchClauses().forEach(
-          catchClause -> catchClause.accept(new StatementVisitor(metrics, nestedTryLevel), null));
+    /**
+     * A declaration is ignored when the tag is in its attached comment or in any comment between the
+     * previous sibling and its name, which covers stacked comments and comments between annotations.
+     */
+    private boolean isIgnored(final Node declaration, final SimpleName name) {
+      final Optional<Position> lowerBound = previousSiblingEnd(declaration);
+      final Position nameBegin = begin(name);
+      return ignoreComments.stream().anyMatch(comment ->
+          declaration.getComment().filter(attached -> attached == comment).isPresent()
+              || startsAfterLineOf(comment, lowerBound) && begin(comment).isBefore(nameBegin));
     }
 
-    @Override
-    public void visit(ForStmt forStmt, Void arg) {
-      super.visit(forStmt, arg);
-      metrics.incrementLoopCount();
+    /** A comment on the line a sibling ends on trails that sibling, so it must start on a later line. */
+    private static boolean startsAfterLineOf(final Comment comment, final Optional<Position> lowerBound) {
+      return lowerBound.map(bound -> begin(comment).line > bound.line).orElse(true);
     }
 
-    @Override
-    public void visit(WhileStmt whileStmt, Void arg) {
-      super.visit(whileStmt, arg);
-      metrics.incrementLoopCount();
+    private static Optional<Position> previousSiblingEnd(final Node declaration) {
+      final Position declarationBegin = begin(declaration);
+      return declaration.getParentNode().orElseThrow().getChildNodes().stream()
+          .filter(sibling -> !(sibling instanceof Comment))
+          .map(sibling -> sibling.getRange().orElseThrow().end)
+          .filter(end -> end.isBefore(declarationBegin))
+          .max(Position::compareTo);
     }
 
-    @Override
-    public void visit(DoStmt doStmt, Void arg) {
-      super.visit(doStmt, arg);
-      metrics.incrementLoopCount();
-    }
-
-    @Override
-    public void visit(SwitchStmt switchStmt, Void arg) {
-      super.visit(switchStmt, arg);
-      metrics.incrementSwitchCount();
-    }
-
-    @Override
-    public void visit(MethodCallExpr methodCallExpr, Void arg) {
-      super.visit(methodCallExpr, arg);
-      metrics.incrementMethodCallCount();
-    }
-
-    @Override
-    public void visit(ReturnStmt returnStmt, Void arg) {
-      super.visit(returnStmt, arg);
-      metrics.incrementReturnCount();
-    }
-
-    @Override
-    public void visit(VariableDeclarator variableDeclarator, Void arg) {
-      super.visit(variableDeclarator, arg);
-      metrics.incrementVariableCount();
-    }
-
-    @Override
-    public void visit(FieldDeclaration fieldDeclaration, Void arg) {
-      super.visit(fieldDeclaration, arg);
-      metrics.incrementPropertyCallCount();
+    private static Position begin(final Node node) {
+      return node.getBegin().orElseThrow();
     }
   }
 
-  private final class ClassVisitor extends VoidVisitorAdapter<Void> {
-    @Override
-    public void visit(ClassOrInterfaceDeclaration declaration, Void arg) {
-      super.visit(declaration, arg);
-      String className = declaration.getNameAsString();
+  /** A method or constructor with the name it is reported under. */
+  private record Unit(
+      BodyDeclaration<?> declaration,
+      String name,
+      SimpleName simpleName,
+      NodeList<Parameter> parameters,
+      Optional<BlockStmt> body) {}
 
-      declaration.accept(new MethodVisitor(className), null);
-    }
+  private static Optional<Unit> unitOf(final TypeDeclaration<?> type, final BodyDeclaration<?> member) {
+    final String typeName = type.getNameAsString();
+    return switch (member) {
+      case MethodDeclaration method when method.getBody().isPresent() || !isInterface(type) -> Optional.of(
+          new Unit(method, method.getNameAsString(), method.getName(), method.getParameters(), method.getBody()));
+      case ConstructorDeclaration constructor -> Optional.of(new Unit(
+          constructor, typeName, constructor.getName(), constructor.getParameters(),
+          Optional.of(constructor.getBody())));
+      case CompactConstructorDeclaration constructor -> Optional.of(new Unit(
+          constructor, typeName, constructor.getName(), ((RecordDeclaration) type).getParameters(),
+          Optional.of(constructor.getBody())));
+      default -> Optional.empty();
+    };
   }
 
-  private class MethodVisitor extends VoidVisitorAdapter<Void> {
-    private final String className;
+  private static boolean isInterface(final TypeDeclaration<?> type) {
+    return type instanceof ClassOrInterfaceDeclaration declaration && declaration.isInterface();
+  }
 
-    public MethodVisitor(String className) {
-      this.className = className;
-    }
+  private static String signature(final List<Parameter> parameters) {
+    return parameters.stream()
+        .map(parameter -> erasure(parameter.getType()) + (parameter.isVarArgs() ? "..." : ""))
+        .collect(joining(",", "(", ")"));
+  }
 
-    @Override
-    public void visit(MethodDeclaration methodDeclaration, Void arg) {
-      super.visit(methodDeclaration, arg);
+  /** The type as written, without type arguments and annotations: {@code List<String>} becomes {@code List}. */
+  private static String erasure(final Type type) {
+    return switch (type) {
+      case ArrayType array -> erasure(array.getComponentType()) + "[]";
+      case ClassOrInterfaceType classType -> classType.getNameWithScope();
+      default -> type.asString();
+    };
+  }
 
-      String methodName = className + "." + methodDeclaration.getNameAsString();
-      CognitiveMetrics metrics = new CognitiveMetrics(
-          className,
-          methodDeclaration.getNameAsString()
-      );
+  private static CognitiveMetrics measure(final String className, final String methodName, final Unit unit) {
+    final Range range = unit.declaration().getRange().orElseThrow();
+    final CognitiveMetrics metrics = new CognitiveMetrics(className, methodName, range.begin.line);
+    metrics.setValue(MetricName.LINE_COUNT, range.end.line - range.begin.line + 1);
+    metrics.setValue(MetricName.ARG_COUNT, unit.parameters().size());
 
-      // Set the package name
-      metrics.setPackageName(packageName);
-
-      methodMetrics.put(methodName, metrics);
-
-      metrics.setArgCount(methodDeclaration.getParameters().size());
-      metrics.setLineCount(methodDeclaration.getEnd().map(end ->
-              end.line - methodDeclaration.getBegin().get().line + 1
-          )
-          .orElse(1));
-
-      methodDeclaration.accept(new StatementVisitor(metrics, 0), null);
-    }
+    final MethodBodyVisitor visitor = new MethodBodyVisitor();
+    unit.body().ifPresent(body -> body.accept(visitor, null));
+    unit.parameters().forEach(parameter -> visitor.variables().remove(parameter.getNameAsString()));
+    visitor.writeTo(metrics);
+    return metrics;
   }
 }

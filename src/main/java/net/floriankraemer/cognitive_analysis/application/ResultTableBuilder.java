@@ -1,16 +1,18 @@
 package net.floriankraemer.cognitive_analysis.application;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import net.floriankraemer.cognitive_analysis.config.MetricName;
 import net.floriankraemer.cognitive_analysis.domain.CognitiveMetrics;
 
 public class ResultTableBuilder {
 
+  /** Class, Method, one column per metric in {@link MetricName} order, and the score. */
   private static final List<String> HEADERS = List.of(
-      "Class", "Method", "Line\nCount", "If\nCount", "If-Nesting\nLevel", "Else\nCount",
-      "Loop\nCount", "Switch\nCount", "Method\nCall\nCount", "Return\nCount",
-      "Argument\nCount", "Try-Catch\nNesting\nLevel", "Complexity"
+      "Class", "Method", "Lines", "Arguments", "Returns", "Variables", "Property\nAccesses",
+      "If", "If Nesting\nLevel", "Else", "Cognitive\nComplexity"
   );
 
   /** Class and Method are left-aligned, all metric columns centered. */
@@ -24,21 +26,14 @@ public class ResultTableBuilder {
   }
 
   private List<String> buildRow(final CognitiveMetrics metrics) {
-    return List.of(
-        metrics.getClassName(),
-        metrics.getMethodName(),
-        formatValue(metrics.getLineCount(), metrics.getLineCountWeight()),
-        formatValue(metrics.getIfCount(), metrics.getIfCountWeight()),
-        formatValue(metrics.getIfNestingLevel(), metrics.getIfNestingLevelWeight()),
-        formatValue(metrics.getElseCount(), metrics.getElseCountWeight()),
-        formatValue(metrics.getLoopCount(), metrics.getLoopCountWeight()),
-        formatValue(metrics.getSwitchCount(), metrics.getSwitchCountWeight()),
-        formatValue(metrics.getMethodCallCount(), metrics.getMethodCallCountWeight()),
-        formatValue(metrics.getReturnCount(), metrics.getReturnCountWeight()),
-        formatValue(metrics.getArgCount(), metrics.getArgCountWeight()),
-        formatValue(metrics.getTryCatchNestingLevel(), metrics.getTryCatchNestingLevelWeight()),
-        String.format(Locale.ROOT, "%.3f", metrics.getCognitiveComplexity())
-    );
+    final List<String> row = new ArrayList<>();
+    row.add(metrics.getClassName());
+    row.add(metrics.getMethodName());
+    for (final MetricName name : MetricName.values()) {
+      row.add(formatValue(metrics.value(name), metrics.weight(name)));
+    }
+    row.add(String.format(Locale.ROOT, "%.3f", metrics.getCognitiveComplexity()));
+    return row;
   }
 
   private String formatValue(final int value, final double weight) {

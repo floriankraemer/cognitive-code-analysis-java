@@ -1,8 +1,9 @@
 package net.floriankraemer.cognitive_analysis.application;
 
 import java.io.PrintWriter;
-import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -15,10 +16,7 @@ import net.floriankraemer.cognitive_analysis.application.report.ReportBuilder.Re
 import net.floriankraemer.cognitive_analysis.config.CognitiveConfig;
 import net.floriankraemer.cognitive_analysis.config.ConfigLoader;
 import net.floriankraemer.cognitive_analysis.domain.CognitiveMetrics;
-import net.floriankraemer.cognitive_analysis.domain.CognitiveMetricsCollector;
 import net.floriankraemer.cognitive_analysis.domain.CognitiveMetricsFacade;
-import net.floriankraemer.cognitive_analysis.domain.ComplexityCalculator;
-import net.floriankraemer.cognitive_analysis.domain.FileFinder;
 import net.floriankraemer.cognitive_analysis.domain.MetricsCollection;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Model.CommandSpec;
@@ -30,7 +28,7 @@ import picocli.CommandLine.ITypeConverter;
 @Command(
     name = "analyse",
     mixinStandardHelpOptions = true,
-    description = "Calculates cognitive complexity metrics for the Java files of a directory.",
+    description = "Calculates cognitive complexity metrics for Java files.",
     exitCodeOnInvalidInput = 1
 )
 public class AnalyseCommand implements Callable<Integer> {
@@ -51,7 +49,11 @@ public class AnalyseCommand implements Callable<Integer> {
   @Spec
   CommandSpec spec;
 
-  @Parameters(index = "0", paramLabel = "<path>", description = "Directory with the Java files to analyse.")
+  @Parameters(
+      index = "0",
+      paramLabel = "<path>",
+      description = "Comma-separated Java files and directories; directories are searched recursively."
+  )
   String path;
 
   @Option(names = {"-c", "--config"}, description = "Path to a YAML configuration file.")
@@ -79,17 +81,11 @@ public class AnalyseCommand implements Callable<Integer> {
       err.println("Both report type and file must be provided.");
       return 1;
     }
-    if (!Files.isDirectory(Path.of(path))) {
-      err.println("Directory does not exist: " + path);
-      return 1;
-    }
 
     try {
       final CognitiveConfig config =
           new ConfigLoader(Path.of("")).load(configFile == null ? null : Path.of(configFile));
-      final CognitiveMetricsFacade facade = new CognitiveMetricsFacade(
-          new FileFinder(), new CognitiveMetricsCollector(err), new ComplexityCalculator(config));
-      final MetricsCollection metrics = facade.calculateCognitiveMetrics(path);
+      final MetricsCollection metrics = new CognitiveMetricsFacade(config, err).calculateCognitiveMetrics(paths());
       final PrintWriter out = spec.commandLine().getOut();
 
       if (reportType != null) {
@@ -103,6 +99,15 @@ public class AnalyseCommand implements Callable<Integer> {
       err.println(describe(e));
       return 1;
     }
+  }
+
+  /** The comma-separated entries of the path argument, trimmed; blank entries are ignored. */
+  private List<String> paths() throws CognitiveAnalysisException {
+    final List<String> paths = Arrays.stream(path.split(",")).map(String::trim).filter(entry -> !entry.isEmpty()).toList();
+    if (paths.isEmpty()) {
+      throw new CognitiveAnalysisException("Path does not exist: " + path);
+    }
+    return paths;
   }
 
   /** Falls back to the exception type when there is no message, so users never see "null". */

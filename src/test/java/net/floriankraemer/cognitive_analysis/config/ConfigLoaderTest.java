@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.regex.Pattern;
 import java.util.Optional;
 import java.util.stream.Stream;
 import net.floriankraemer.cognitive_analysis.CognitiveAnalysisException;
@@ -102,8 +103,8 @@ class ConfigLoaderTest {
   void mergesScalarsListsAndMetricsFieldByField() throws Exception {
     write("jcca.yaml", """
         cognitive:
-          excludeFilePatterns: ["**/gen/**", "*Test.java"]
-          excludePatterns: ["get*"]
+          excludeFilePatterns: ["/gen/", 'Test\\.java$']
+          excludePatterns: ["::get"]
           scoreThreshold: 1.25
           showOnlyMethodsExceedingThreshold: true
           showHalsteadComplexity: true
@@ -129,8 +130,8 @@ class ConfigLoaderTest {
 
     CognitiveConfig config = load(null);
 
-    assertThat(config.excludeFilePatterns()).containsExactly("**/gen/**", "*Test.java");
-    assertThat(config.excludePatterns()).containsExactly("get*");
+    assertThat(config.excludeFilePatterns()).map(Pattern::pattern).containsExactly("/gen/", "Test\\.java$");
+    assertThat(config.excludePatterns()).map(Pattern::pattern).containsExactly("::get");
     assertThat(config.scoreThreshold()).isEqualTo(1.25);
     assertThat(config.showOnlyMethodsExceedingThreshold()).isTrue();
     assertThat(config.showHalsteadComplexity()).isTrue();
@@ -296,6 +297,10 @@ class ConfigLoaderTest {
             "Invalid configuration value \"cognitive.excludePatterns\": must be a list of strings."),
         Arguments.of("pattern not a string", "cognitive:\n  excludeFilePatterns: [1]\n",
             "Invalid configuration value \"cognitive.excludeFilePatterns\": must be a list of strings."),
+        Arguments.of("invalid file pattern", "cognitive:\n  excludeFilePatterns: [\"ok\", \"**/gen/**\"]\n",
+            "Invalid configuration value \"cognitive.excludeFilePatterns\": \"**/gen/**\" is not a valid regular expression (Dangling meta character '*')."),
+        Arguments.of("invalid method pattern", "cognitive:\n  excludePatterns: [\"get(\"]\n",
+            "Invalid configuration value \"cognitive.excludePatterns\": \"get(\" is not a valid regular expression (Unclosed group)."),
         Arguments.of("cache enabled not boolean", "cognitive:\n  cache: {enabled: 1}\n",
             "Invalid configuration value \"cognitive.cache.enabled\": must be true or false."),
         Arguments.of("cache directory not a string", "cognitive:\n  cache: {directory: 1}\n",

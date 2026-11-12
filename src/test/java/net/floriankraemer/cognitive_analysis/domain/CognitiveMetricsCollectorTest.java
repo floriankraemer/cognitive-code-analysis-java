@@ -1,186 +1,265 @@
 package net.floriankraemer.cognitive_analysis.domain;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import org.junit.jupiter.api.BeforeEach;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Locale;
+import java.util.Map;
+import java.util.stream.Collectors;
+import net.floriankraemer.cognitive_analysis.config.MetricName;
 import org.junit.jupiter.api.Test;
 
-import java.io.PrintWriter;
-import java.io.StringWriter;
-import java.util.Map;
+/**
+ * Asserts every unit of each fixture with all of its counts, so a missing, extra or miscounted
+ * method fails. The expected values are worked out by hand from the fixture sources.
+ */
+class CognitiveMetricsCollectorTest {
 
-public class CognitiveMetricsCollectorTest {
+  private static final Path FIXTURES = Path.of("src/test/resources/fixtures/cognitive");
 
-  private final StringWriter warnings = new StringWriter();
-  private CognitiveMetricsCollector collector;
+  private final CognitiveMetricsCollector collector = new CognitiveMetricsCollector();
 
-  @BeforeEach
-  public void setUp() {
-    collector = new CognitiveMetricsCollector(new PrintWriter(warnings, true));
+  @Test
+  void countsIfsElsesAndNestingWithElseIfContinuingItsChain() throws Exception {
+    assertThat(collectFixture("IfStatements.java")).isEqualTo("""
+        fixtures.cognitive.IfStatements::chain @5 lines=11 args=1 returns=4 vars=0 props=0 ifs=1 nesting=1 elses=3
+        fixtures.cognitive.IfStatements::nestedInThenAndElse @17 lines=15 args=3 returns=0 vars=0 props=0 ifs=4 nesting=3 elses=2
+        fixtures.cognitive.IfStatements::elseIfBodyNests @33 lines=9 args=1 returns=0 vars=0 props=0 ifs=2 nesting=2 elses=1
+        fixtures.cognitive.IfStatements::braceElseIf @43 lines=9 args=1 returns=0 vars=0 props=0 ifs=2 nesting=2 elses=1
+        fixtures.cognitive.IfStatements::ifsInLoopsTrySwitchAndLambda @53 lines=39 args=1 returns=0 vars=3 props=0 ifs=7 nesting=1 elses=0
+        fixtures.cognitive.IfStatements::ternariesDoNotCount @93 lines=4 args=1 returns=1 vars=1 props=0 ifs=0 nesting=0 elses=0
+        fixtures.cognitive.IfStatements::ifInsideLambdaInsideIf @98 lines=9 args=1 returns=0 vars=1 props=0 ifs=2 nesting=2 elses=0
+        fixtures.cognitive.IfStatements::log @108 lines=3 args=1 returns=0 vars=0 props=0 ifs=0 nesting=0 elses=0
+        """);
   }
 
   @Test
-  public void testAnalyzeSimpleMethod() {
-    String code = """
-        package com.example;
+  void countsReturnsOfLambdasButNothingOfAnonymousAndLocalClasses() throws Exception {
+    assertThat(collectFixture("Returns.java")).isEqualTo("""
+        fixtures.cognitive.Returns::returnsInLambdas @8 lines=10 args=0 returns=3 vars=3 props=0 ifs=1 nesting=1 elses=0
+        fixtures.cognitive.Returns::anonymousClassIsSkipped @19 lines=15 args=1 returns=1 vars=2 props=0 ifs=0 nesting=0 elses=0
+        fixtures.cognitive.Returns::localClassIsSkipped @35 lines=18 args=1 returns=1 vars=0 props=0 ifs=0 nesting=0 elses=0
+        """);
+  }
 
-        public class TestClass {
-            public void simpleMethod() {
-                int a = 1;
-                int b = 2;
-                return;
-            }
+  @Test
+  void findsTheUnitsOfNestedClassesEnumsRecordsAndInterfacesAndKeysOverloadsByTheirTypes() throws Exception {
+    assertThat(collectFixture("Units.java")).isEqualTo("""
+        fixtures.cognitive.Units::Units() @8 lines=2 args=0 returns=0 vars=0 props=0 ifs=0 nesting=0 elses=0
+        fixtures.cognitive.Units::Units(int) @11 lines=3 args=1 returns=0 vars=0 props=0 ifs=0 nesting=0 elses=0
+        fixtures.cognitive.Units::abstractMethod @15 lines=1 args=2 returns=0 vars=0 props=0 ifs=0 nesting=0 elses=0
+        fixtures.cognitive.Units::overloaded() @17 lines=2 args=0 returns=0 vars=0 props=0 ifs=0 nesting=0 elses=0
+        fixtures.cognitive.Units::overloaded(List,Map) @20 lines=2 args=2 returns=0 vars=0 props=0 ifs=0 nesting=0 elses=0
+        fixtures.cognitive.Units::overloaded(String...) @23 lines=2 args=1 returns=0 vars=0 props=0 ifs=0 nesting=0 elses=0
+        fixtures.cognitive.Units::overloaded(int[],java.util.List) @26 lines=2 args=2 returns=0 vars=0 props=0 ifs=0 nesting=0 elses=0
+        fixtures.cognitive.Units::generic @29 lines=3 args=1 returns=1 vars=0 props=0 ifs=0 nesting=0 elses=0
+        fixtures.cognitive.Units.StaticNested::inStatic @34 lines=2 args=0 returns=0 vars=0 props=0 ifs=0 nesting=0 elses=0
+        fixtures.cognitive.Units.StaticNested.Deeper::inDeeper @38 lines=2 args=0 returns=0 vars=0 props=0 ifs=0 nesting=0 elses=0
+        fixtures.cognitive.Units.Inner::Inner @44 lines=2 args=0 returns=0 vars=0 props=0 ifs=0 nesting=0 elses=0
+        fixtures.cognitive.Units.Color::code @60 lines=3 args=0 returns=1 vars=0 props=0 ifs=0 nesting=0 elses=0
+        fixtures.cognitive.Units.Point::Point(int,int) @66 lines=5 args=2 returns=0 vars=0 props=0 ifs=1 nesting=1 elses=0
+        fixtures.cognitive.Units.Point::Point(int) @72 lines=3 args=1 returns=0 vars=0 props=0 ifs=0 nesting=0 elses=0
+        fixtures.cognitive.Units.Point::sum @76 lines=3 args=0 returns=1 vars=2 props=0 ifs=0 nesting=0 elses=0
+        fixtures.cognitive.Units.Shape::describe @84 lines=3 args=0 returns=1 vars=0 props=0 ifs=0 nesting=0 elses=0
+        fixtures.cognitive.Units.Shape::unit @88 lines=3 args=0 returns=1 vars=0 props=0 ifs=0 nesting=0 elses=0
+        fixtures.cognitive.Units.Shape::helper @92 lines=2 args=0 returns=0 vars=0 props=0 ifs=0 nesting=0 elses=0
+        """);
+  }
+
+  @Test
+  void handlesSwitchExpressionsPatternsTextBlocksAndUnnamedVariables() throws Exception {
+    assertThat(collectFixture("ModernJava.java")).isEqualTo("""
+        fixtures.cognitive.ModernJava::switchExpression @11 lines=13 args=1 returns=1 vars=1 props=0 ifs=1 nesting=1 elses=0
+        fixtures.cognitive.ModernJava::patternInstanceof @25 lines=8 args=1 returns=3 vars=2 props=0 ifs=1 nesting=1 elses=1
+        fixtures.cognitive.ModernJava::patternSwitch @34 lines=7 args=1 returns=1 vars=2 props=0 ifs=0 nesting=0 elses=0
+        fixtures.cognitive.ModernJava::textBlock @42 lines=7 args=0 returns=1 vars=1 props=0 ifs=0 nesting=0 elses=0
+        fixtures.cognitive.ModernJava::unnamedVariables @50 lines=9 args=1 returns=0 vars=0 props=0 ifs=1 nesting=1 elses=0
+        """);
+  }
+
+  @Test
+  void skipsTypesAndMethodsWithTheIgnoreTagInAPrecedingComment() throws Exception {
+    assertThat(collectFixture("Ignored.java")).isEqualTo("""
+        fixtures.cognitive.PartiallyIgnored::kept @46 lines=3 args=0 returns=0 vars=0 props=0 ifs=0 nesting=0 elses=0
+        fixtures.cognitive.PartiallyIgnored.KeptNested::kept @62 lines=2 args=0 returns=0 vars=0 props=0 ifs=0 nesting=0 elses=0
+        """);
+  }
+
+  @Test
+  void countsDistinctVariablesWithoutParametersAndDistinctNonStaticFieldAccesses() throws Exception {
+    assertThat(collectFixture("Variables.java")).isEqualTo("""
+        fixtures.cognitive.Variables::distinctNames @12 lines=12 args=1 returns=1 vars=3 props=0 ifs=0 nesting=0 elses=0
+        fixtures.cognitive.Variables::lambdaCatchAndForEachVariables @25 lines=17 args=1 returns=0 vars=4 props=0 ifs=0 nesting=0 elses=0
+        fixtures.cognitive.Variables::fieldAccess @43 lines=6 args=1 returns=1 vars=4 props=4 ifs=0 nesting=0 elses=0
+        fixtures.cognitive.Variables::thisCountsOnce @50 lines=6 args=0 returns=0 vars=1 props=1 ifs=0 nesting=0 elses=0
+        fixtures.cognitive.Variables::shadowsField @57 lines=4 args=0 returns=1 vars=2 props=1 ifs=0 nesting=0 elses=0
+        fixtures.cognitive.Variables::helper @62 lines=2 args=1 returns=0 vars=0 props=0 ifs=0 nesting=0 elses=0
+        """);
+  }
+
+  @Test
+  void countsTheScopeAndArgumentsOfAnObjectCreationButNotItsAnonymousBody() throws Exception {
+    CognitiveMetrics metrics = collector.collect("""
+        class A {
+          A holder;
+          class B { B(int value) {} }
+          Object a() {
+            int size = 1;
+            return holder.new B(size) {
+              int hidden() { return this.secret + other; }
+            };
+          }
         }
-        """;
+        """).get("A::a");
 
-    collector.analyze(code);
-    Map<String, CognitiveMetrics> metricsMap = collector.getMethodMetrics();
-
-    assertTrue(metricsMap.containsKey("TestClass.simpleMethod"));
-
-    CognitiveMetrics metrics = metricsMap.get("TestClass.simpleMethod");
-    assertEquals(1, metrics.getReturnCount());
-    assertEquals(2, metrics.getVariableCount());
-    assertEquals(0, metrics.getIfCount());
-    assertEquals(0, metrics.getLoopCount());
-    assertEquals("com.example", metrics.getPackageName());  // Check package name
+    assertThat(metrics.value(MetricName.VARIABLE_COUNT)).isEqualTo(2);
+    assertThat(metrics.value(MetricName.PROPERTY_CALL_COUNT)).isZero();
+    assertThat(metrics.value(MetricName.RETURN_COUNT)).isEqualTo(1);
   }
 
   @Test
-  public void testAnalyzeMethodWithControlStructures() {
-    String code = """
-        package com.example;
-
-        public class TestClass {
-            public void complexMethod(int x) {
-                if (x > 0) {
-                    for (int i = 0; i < x; i++) {
-                        System.out.println(i);
-                    }
-                } else {
-                    while (x < 0) {
-                        x++;
-                    }
-                }
-                return;
-            }
+  void treatsFullyQualifiedTypesAsNeitherVariablesNorProperties() throws Exception {
+    CognitiveMetrics metrics = collector.collect("""
+        class A {
+          void a() {
+            java.lang.System.out.flush();
+            java.util.Map.Entry.class.getName();
+            Object max = java.lang.Integer.MAX_VALUE;
+          }
         }
-        """;
+        """).get("A::a");
 
-    collector.analyze(code);
-    Map<String, CognitiveMetrics> metricsMap = collector.getMethodMetrics();
-
-    assertTrue(metricsMap.containsKey("TestClass.complexMethod"));
-
-    CognitiveMetrics metrics = metricsMap.get("TestClass.complexMethod");
-    assertEquals(1, metrics.getReturnCount());
-    assertEquals(1, metrics.getIfCount());
-    assertEquals(1, metrics.getElseCount());
-    assertEquals(1, metrics.getIfNestingLevel());
-    assertEquals(2, metrics.getLoopCount());
-    assertEquals("com.example", metrics.getPackageName());  // Check package name
+    assertThat(metrics.value(MetricName.VARIABLE_COUNT)).isEqualTo(1);
+    assertThat(metrics.value(MetricName.PROPERTY_CALL_COUNT)).isZero();
   }
 
   @Test
-  public void testAnalyzeMethodWithSwitch() {
-    String code = """
-        package com.example;
+  void keysClassesWithoutAPackageByTheirSimpleName() throws Exception {
+    assertThat(collector.collect("class A { void a() {} }")).containsOnlyKeys("A::a");
+  }
 
-        public class TestClass {
-            public void switchMethod(int day) {
-                switch (day) {
-                    case 1: System.out.println("Monday"); break;
-                    case 2: System.out.println("Tuesday"); break;
-                    default: System.out.println("Other day"); break;
-                }
-            }
+  @Test
+  void startsTheLineCountAtTheAnnotationsButNotAtTheJavadoc() throws Exception {
+    CognitiveMetrics metrics = collector.collect("""
+        class A {
+          /**
+           * Javadoc.
+           */
+          @Deprecated
+          @SuppressWarnings("unused")
+          void a() {
+          }
         }
-        """;
+        """).get("A::a");
 
-    collector.analyze(code);
-    Map<String, CognitiveMetrics> metricsMap = collector.getMethodMetrics();
-
-    assertTrue(metricsMap.containsKey("TestClass.switchMethod"));
-
-    CognitiveMetrics metrics = metricsMap.get("TestClass.switchMethod");
-    assertEquals(1, metrics.getSwitchCount());
-    assertEquals(0, metrics.getIfCount());
-    assertEquals(0, metrics.getLoopCount());
-    assertEquals("com.example", metrics.getPackageName());  // Check package name
+    assertThat(metrics.getLine()).isEqualTo(5);
+    assertThat(metrics.value(MetricName.LINE_COUNT)).isEqualTo(4);
   }
 
   @Test
-  public void testAnalyzeMethodWithTryCatch() {
-    String code = """
-        package com.example;
+  void excludesBodylessInterfaceMethodsButKeepsNativeAndAbstractClassMethods() throws Exception {
+    assertThat(collector.collect("""
+        interface I { void abstractMethod(); }
+        abstract class C { native void nativeMethod(); abstract void abstractMethod(); }
+        enum E { ONE; abstract void abstractMethod(); }
+        """)).containsOnlyKeys("C::nativeMethod", "C::abstractMethod", "E::abstractMethod");
+  }
 
-        public class TestClass {
-            public void tryMethod() {
-                try {
-                    System.out.println("Try block");
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
+  @Test
+  void ignoresTheTagInAnUnrelatedCommentOfTheFile() throws Exception {
+    assertThat(collector.collect("""
+        // @cca-ignore in a file header
+        package p;
+
+        class A {
+          void a() {}
         }
-        """;
-
-    collector.analyze(code);
-    Map<String, CognitiveMetrics> metricsMap = collector.getMethodMetrics();
-
-    assertTrue(metricsMap.containsKey("TestClass.tryMethod"));
-
-    CognitiveMetrics metrics = metricsMap.get("TestClass.tryMethod");
-    assertEquals(1, metrics.getTryCatchNestingLevel());
-    assertEquals(0, metrics.getIfCount());
-    assertEquals(0, metrics.getLoopCount());
-    assertEquals("com.example", metrics.getPackageName());  // Check package name
+        """)).containsOnlyKeys("p.A::a");
   }
 
   @Test
-  public void testAnalyzeCountsDoWhileLoopsAndFieldsOfAnonymousClasses() {
-    String code = """
-        public class TestClass {
-            public void loopMethod() {
-                do {
-                    Object o = new Object() {
-                        int field = 1;
-                    };
-                } while (false);
-            }
+  void appliesATrailingTagToTheDeclarationItFollowsOnly() throws Exception {
+    assertThat(collector.collect("""
+        class A {
+          void a() {} // @cca-ignore
+          void b() {}
         }
-        """;
-
-    collector.analyze(code);
-
-    CognitiveMetrics metrics = collector.getMethodMetrics().get("TestClass.loopMethod");
-    assertEquals(1, metrics.getLoopCount());
-    assertEquals(1, metrics.getPropertyCallCount());
-    assertEquals("", metrics.getPackageName());
+        """)).containsOnlyKeys("A::b");
   }
 
   @Test
-  public void testAnalyzeResetsMetricsBetweenRuns() {
-    collector.analyze("class A { void one() {} }");
-    collector.analyze("class B { void two() {} }");
-
-    assertEquals(java.util.Set.of("B.two"), collector.getMethodMetrics().keySet());
+  void ignoresATopLevelClassThatFollowsTheImports() throws Exception {
+    assertThat(collector.collect("""
+        import java.util.List;
+        // @cca-ignore
+        class A {
+          void a() {}
+        }
+        class B {
+          void b() {}
+        }
+        """)).containsOnlyKeys("B::b");
   }
 
   @Test
-  public void testAnalyzeInvalidJavaCodeWarnsAndCollectsNothing() {
-    String invalidCode = """
-        package com.example;
+  void keepsTheFirstOfTwoMethodsWithTheSameErasedSignature() throws Exception {
+    CognitiveMetrics metrics = collector.collect("""
+        class A {
+          void a(java.util.List<String> first) {}
+          void a(java.util.List<Integer> second) {
+            return;
+          }
+        }
+        """).get("A::a(java.util.List)");
 
-        public class TestClass {
-            public void invalidMethod( {
-                return;
-            }
-        """;
+    assertThat(metrics.value(MetricName.RETURN_COUNT)).isZero();
+  }
 
-    collector.analyze(invalidCode);
+  @Test
+  void rejectsInvalidCodeWithTheLocationOfTheFirstProblem() {
+    assertThatThrownBy(() -> collector.collect("class Broken {\n  void oops( {\n}\n"))
+        .isInstanceOf(SourceParseException.class)
+        .hasMessageStartingWith("(line 2,col 12) Parse error. Found \"{\"");
+  }
 
-    assertTrue(collector.getMethodMetrics().isEmpty());
-    assertTrue(warnings.toString().startsWith("Error parsing code: "));
+  @Test
+  void canBeUsedFromSeveralThreadsAtOnce() throws Exception {
+    String code = Files.readString(FIXTURES.resolve("IfStatements.java"));
+    String expected = render(collector.collect(code));
+
+    var results = java.util.stream.IntStream.range(0, 16).parallel()
+        .mapToObj(i -> {
+          try {
+            return render(collector.collect(code));
+          } catch (SourceParseException e) {
+            throw new IllegalStateException(e);
+          }
+        })
+        .collect(Collectors.toSet());
+
+    assertThat(results).containsExactly(expected);
+  }
+
+  private String collectFixture(String fileName) throws IOException, SourceParseException {
+    return render(collector.collect(Files.readString(FIXTURES.resolve(fileName))));
+  }
+
+  private static String render(Map<String, CognitiveMetrics> metrics) {
+    return metrics.entrySet().stream()
+        .map(entry -> {
+          CognitiveMetrics m = entry.getValue();
+          return String.format(Locale.ROOT,
+              "%s @%d lines=%d args=%d returns=%d vars=%d props=%d ifs=%d nesting=%d elses=%d%n",
+              entry.getKey(), m.getLine(),
+              m.value(MetricName.LINE_COUNT), m.value(MetricName.ARG_COUNT),
+              m.value(MetricName.RETURN_COUNT), m.value(MetricName.VARIABLE_COUNT),
+              m.value(MetricName.PROPERTY_CALL_COUNT), m.value(MetricName.IF_COUNT),
+              m.value(MetricName.IF_NESTING_LEVEL), m.value(MetricName.ELSE_COUNT));
+        })
+        .collect(Collectors.joining())
+        .replace("\r\n", "\n");
   }
 }
