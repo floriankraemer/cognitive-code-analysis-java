@@ -54,7 +54,7 @@ Options:
 
 `metrics`, `excludeFilePatterns`, `excludePatterns` and `cache` affect the analysis.
 `scoreThreshold`, `show*` and `groupByClass` shape the console output, see [Console output](#console-output), and the HTML and Markdown reports, see [Reports](./Reports.md).
-`customReporters` is parsed and validated, and is applied from a later release.
+`customReporters` registers your own report formats, see [Custom Reporters](./Custom-Reporters.md).
 
 ```yaml
 cognitive:

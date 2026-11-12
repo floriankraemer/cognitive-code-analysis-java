@@ -10,6 +10,7 @@ import java.util.concurrent.Callable;
 import java.util.function.Supplier;
 import java.util.function.LongSupplier;
 import net.floriankraemer.cognitive_analysis.CognitiveAnalysisException;
+import net.floriankraemer.cognitive_analysis.application.report.Report;
 import net.floriankraemer.cognitive_analysis.application.report.ReportType;
 import net.floriankraemer.cognitive_analysis.application.report.ReportWriter;
 import net.floriankraemer.cognitive_analysis.config.CognitiveConfig;
@@ -24,7 +25,6 @@ import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 import picocli.CommandLine.Spec;
-import picocli.CommandLine.ITypeConverter;
 
 @Command(
     name = "analyse",
@@ -33,14 +33,6 @@ import picocli.CommandLine.ITypeConverter;
     exitCodeOnInvalidInput = 1
 )
 public class AnalyseCommand implements Callable<Integer> {
-
-  /** Accepts the report type in any letter case, e.g. "html" or "HTML". */
-  static final class ReportTypeConverter implements ITypeConverter<ReportType> {
-    @Override
-    public ReportType convert(final String value) {
-      return ReportType.parse(value);
-    }
-  }
 
   /** The values of {@code --report-type}, for the help text. */
   static final class ReportTypeNames implements Iterable<String> {
@@ -73,11 +65,11 @@ public class AnalyseCommand implements Callable<Integer> {
 
   @Option(
       names = {"-r", "--report-type"},
-      converter = ReportTypeConverter.class,
       completionCandidates = ReportTypeNames.class,
       description = "Report type: ${COMPLETION-CANDIDATES}. Requires --report-file."
+          + " A key of customReporters.cognitive in the configuration is also accepted."
   )
-  ReportType reportType;
+  String reportType;
 
   @Option(names = {"-f", "--report-file"}, description = "File the report is written to. Requires --report-type.")
   String reportFile;
@@ -127,6 +119,7 @@ public class AnalyseCommand implements Callable<Integer> {
       final CognitiveConfig config =
           new ConfigLoader(Path.of("")).load(configFile == null ? null : Path.of(configFile));
       final ConsoleRenderer console = new ConsoleRenderer(config, ansi);
+      final Report report = reportType == null ? null : reportWriter.resolve(reportType, config);
       summary.endStage("config");
 
       final CognitiveMetricsFacade facade = new CognitiveMetricsFacade(config, err, Path.of(""));
@@ -144,7 +137,7 @@ public class AnalyseCommand implements Callable<Integer> {
       summary.endStage("sorting");
 
       if (reportType != null) {
-        reportWriter.write(reportType, reportFile, config, methods);
+        reportWriter.write(report, reportFile, methods);
         out.println("Report generated at: " + reportFile);
       } else {
         console.renderMethods(out, methods);

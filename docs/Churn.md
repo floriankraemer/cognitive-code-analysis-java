@@ -33,7 +33,7 @@ The console shows the classes with a score and a churn above zero.
 | `-c`, `--config <file>` | YAML configuration file, as for `analyse`. |
 | `-s`, `--since <date>` | Only count the changes since the start of this day. The format is `YYYY-MM-DD`. The default is `2000-01-01`. |
 | `--vcs <type>` | The version control system. Only `git` is supported, which is the default. |
-| `-r`, `--report-type <type>` | `json`, `csv`, `html`, `markdown`, `svg-treemap` or `svg`, in any letter case. `svg` is an alias of `svg-treemap`. |
+| `-r`, `--report-type <type>` | `json`, `csv`, `html`, `markdown`, `svg-treemap` or `svg`, in any letter case. `svg` is an alias of `svg-treemap`. A key of `customReporters.churn` is also accepted, see [Custom Reporters](./Custom-Reporters.md). |
 | `-f`, `--report-file <file>` | The file the report is written to. |
 
 Report type and report file must be given together.
