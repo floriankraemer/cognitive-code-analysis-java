@@ -4,6 +4,7 @@ import java.time.Clock;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import net.floriankraemer.cognitive_analysis.config.CognitiveConfig;
 
 /** The report formats of the analyse command. The command name of each is its constant in lower case with dashes. */
@@ -38,12 +39,15 @@ public enum ReportType {
     return name().toLowerCase(Locale.ROOT).replace('_', '-');
   }
 
+  /** Finds a report type in any letter case. */
+  public static Optional<ReportType> find(final String value) {
+    final String name = value.toLowerCase(Locale.ROOT);
+    return Arrays.stream(values()).filter(type -> type.commandName().equals(name)).findFirst();
+  }
+
   /** Parses a report type in any letter case. */
   public static ReportType parse(final String value) {
-    final String name = value.toLowerCase(Locale.ROOT);
-    return Arrays.stream(values())
-        .filter(type -> type.commandName().equals(name))
-        .findFirst()
+    return find(value)
         .orElseThrow(() -> new IllegalArgumentException(
             "Invalid report type '" + value + "'. Expected one of: " + names() + "."));
   }

@@ -213,14 +213,35 @@ class ChurnReportBuilderTest {
 
     assertThatThrownBy(() -> builder.build(ChurnReportType.JSON, directory.toString(), sample()))
         .isInstanceOf(CognitiveAnalysisException.class)
-        .hasMessage("Failed to write the report to disk: " + directory);
+        .hasMessageStartingWith("Unable to write to file " + directory + ": ");
+  }
+
+  @Test
+  void aFailedWriteLeavesAnExistingFileIntactAndNoTemporaryFileBehind() throws Exception {
+    final Path directory = Files.createDirectory(tempDir.resolve("locked"));
+    final Path file = Files.writeString(directory.resolve("report.json"), "old");
+    assertThat(directory.toFile().setWritable(false)).isTrue();
+    try {
+      org.junit.jupiter.api.Assumptions.assumeTrue(
+          !Files.isWritable(directory), "directory permissions are not enforced, e.g. when running as root");
+
+      assertThatThrownBy(() -> builder.build(ChurnReportType.JSON, file.toString(), sample()))
+          .isInstanceOf(CognitiveAnalysisException.class)
+          .hasMessageStartingWith("Unable to write to file " + file + ": ");
+      assertThat(file).hasContent("old");
+    } finally {
+      directory.toFile().setWritable(true);
+    }
+    try (var files = Files.list(directory)) {
+      assertThat(files).containsExactly(file);
+    }
   }
 
   @Test
   void writesToTheWorkingDirectoryWhenTheFileHasNoParent() {
     assertThatThrownBy(() -> builder.build(ChurnReportType.JSON, "", sample()))
         .isInstanceOf(CognitiveAnalysisException.class)
-        .hasMessageStartingWith("Failed to write the report to disk");
+        .hasMessageStartingWith("Unable to write to file : ");
   }
 
   @Test
