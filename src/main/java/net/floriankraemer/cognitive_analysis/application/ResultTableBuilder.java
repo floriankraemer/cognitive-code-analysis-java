@@ -44,9 +44,9 @@ public class ResultTableBuilder {
     return render(methods, true, withCoverage);
   }
 
-  /** Whether any of the methods has line coverage, so that the tables of one run get the same columns. */
+  /** Whether a coverage report was applied to the methods, so that the tables of one run get the same columns. */
   public static boolean hasCoverage(final List<CognitiveMetrics> methods) {
-    return methods.stream().anyMatch(metrics -> metrics.coverage().isPresent());
+    return methods.stream().anyMatch(CognitiveMetrics::isCoverageProvided);
   }
 
   private String render(final List<CognitiveMetrics> methods, final boolean withClass, final boolean withCoverage) {

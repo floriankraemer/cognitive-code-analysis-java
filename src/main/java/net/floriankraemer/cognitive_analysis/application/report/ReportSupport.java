@@ -79,9 +79,9 @@ final class ReportSupport {
     return sections;
   }
 
-  /** Whether any method has line coverage; the reports have the coverage column only then. */
+  /** Whether a coverage report was applied; the reports have the coverage column only then. */
   static boolean hasCoverage(final List<Row> rows) {
-    return rows.stream().anyMatch(row -> row.metrics().coverage().isPresent());
+    return rows.stream().anyMatch(row -> row.metrics().isCoverageProvided());
   }
 
   /** The number of distinct class names. */

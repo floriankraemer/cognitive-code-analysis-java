@@ -102,9 +102,10 @@ public class ChurnCommand implements Callable<Integer> {
       final Optional<CoverageData> coverageData = coverage.load();
       final CognitiveConfig config =
           new ConfigLoader(Path.of("")).load(configFile == null ? null : Path.of(configFile));
-      final ChurnReportBuilder builder = new ChurnReportBuilder(clock);
+      final ChurnReportBuilder builder = new ChurnReportBuilder(clock, coverageData.isPresent());
       final ChurnReportBuilder.Renderer renderer = reportType == null ? null : builder.resolve(reportType, config);
       final MetricsCollection metrics = new CognitiveMetricsFacade(config, err, Path.of("")).calculateCognitiveMetrics(paths());
+      coverageData.flatMap(data -> data.matchWarning(coverage.file(), metrics.methods())).ifPresent(err::println);
       final List<ChurnMetrics> churn =
           ChurnCalculator.calculate(metrics, new GitChangeCounter(gitExecutable, sinceDate, GIT_TIMEOUT), coverageData);
 
@@ -149,12 +150,12 @@ public class ChurnCommand implements Callable<Integer> {
         BigDecimal.valueOf(metric.score()).stripTrailingZeros().toPlainString(),
         ChurnReportBuilder.fixed(metric.churn())));
     if (withCoverage) {
-      row.add(ChurnReportBuilder.fixed(metric.riskChurn()));
+      row.add(metric.riskChurn() == null ? "N/A" : ChurnReportBuilder.fixed(metric.riskChurn()));
     }
     row.add(String.valueOf(metric.timesChanged()));
     if (withCoverage) {
       row.add(CoverageData.percent(metric.coverage()));
-      row.add(metric.riskLevel().name());
+      row.add(metric.riskLevel() == null ? "N/A" : metric.riskLevel().name());
     }
     return row;
   }

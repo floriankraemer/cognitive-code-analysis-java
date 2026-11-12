@@ -96,12 +96,32 @@ class CoverageE2ETest {
   }
 
   @Test
-  void hasNoCoverageColumnWhenTheReportCoversNoneOfTheAnalysedMethods() throws Exception {
+  void warnsAndShowsNotAvailableWhenTheReportCoversNoneOfTheAnalysedClasses() throws Exception {
     final Path unrelated = Files.writeString(tempDir.resolve("other.xml"),
         "<report name=\"x\"><package name=\"other\"><class name=\"other/B\"/></package></report>");
 
     assertThat(analyse(NO_CACHE_CONFIG, "--coverage-jacoco", unrelated.toString())).isZero();
-    assertThat(console()).doesNotContain("Coverage");
+
+    assertThat(console()).contains("Line").contains("Coverage").contains("N/A")
+        .contains("Coverage report " + unrelated + " matched none of the 3 analysed classes.");
+  }
+
+  @Test
+  void warnsWhenTheReportCoversOnlySomeOfTheAnalysedClasses() {
+    assertThat(analyse(NO_CACHE_CONFIG, "--coverage-jacoco", FIXTURES + "/jacoco.xml")).isZero();
+
+    assertThat(console()).contains("Coverage report " + FIXTURES + "/jacoco.xml matched 2 of 3 analysed classes.");
+  }
+
+  @Test
+  void writesNullCoverageToReportsWhenTheReportCoversNothing() throws Exception {
+    final Path unrelated = Files.writeString(tempDir.resolve("other.xml"), "<report name=\"x\"/>");
+    final Path report = tempDir.resolve("r.json");
+
+    analyse(NO_CACHE_CONFIG, "--coverage-jacoco", unrelated.toString(), "-r", "json", "-f", report.toString());
+
+    assertThat(new ObjectMapper().readTree(report.toFile()).at("/shapes.Shapes/methods/describe/coverage").isNull())
+        .isTrue();
   }
 
   @Test

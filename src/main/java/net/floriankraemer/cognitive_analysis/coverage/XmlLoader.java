@@ -55,8 +55,10 @@ final class XmlLoader {
       final DocumentBuilder builder = factory.newDocumentBuilder();
       builder.setEntityResolver((publicId, systemId) -> new InputSource(new StringReader("")));
       return builder;
-    } catch (ParserConfigurationException e) {
-      throw new IllegalStateException("The XML parser of the JDK lacks a required security feature", e);
+    } catch (ParserConfigurationException | IllegalArgumentException e) {
+      // Fail closed: without every protection the file is not parsed at all.
+      throw new IllegalStateException(
+          "Cannot read coverage files: the XML parser of the JDK lacks a required security feature (" + e.getMessage() + ")", e);
     }
   }
 

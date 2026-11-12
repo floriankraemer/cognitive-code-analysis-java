@@ -39,8 +39,15 @@ public final class ChurnReportBuilder {
   private static final int MAX_LABEL_LENGTH = 40;
 
   private final Clock clock;
+  private final boolean coverageProvided;
 
   public ChurnReportBuilder(final Clock clock) {
+    this(clock, false);
+  }
+
+  /** @param coverageProvided whether a coverage report was given, so that the coverage columns show even when empty */
+  public ChurnReportBuilder(final Clock clock, final boolean coverageProvided) {
+    this.coverageProvided = coverageProvided;
     this.clock = clock;
   }
 
@@ -139,11 +146,11 @@ public final class ChurnReportBuilder {
     }
   }
 
-  private static boolean hasCoverage(final List<ChurnMetrics> metrics) {
-    return metrics.stream().anyMatch(metric -> metric.coverage() != null);
+  private boolean hasCoverage(final List<ChurnMetrics> metrics) {
+    return coverageProvided || metrics.stream().anyMatch(metric -> metric.coverage() != null);
   }
 
-  private static String csv(final List<ChurnMetrics> metrics) throws CognitiveAnalysisException {
+  private String csv(final List<ChurnMetrics> metrics) throws CognitiveAnalysisException {
     final boolean withCoverage = hasCoverage(metrics);
     final StringWriter out = new StringWriter();
     final CSVFormat format = CSVFormat.DEFAULT.builder().setRecordSeparator("\n").get();

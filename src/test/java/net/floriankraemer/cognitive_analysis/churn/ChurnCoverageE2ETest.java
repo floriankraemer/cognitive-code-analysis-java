@@ -84,19 +84,65 @@ class ChurnCoverageE2ETest {
     final int exitCode = run("churn", repo(3).toString(), "--coverage-cobertura", cobertura("0.5", "0.8").toString());
 
     assertThat(exitCode).isZero();
-    assertThat(err.toString()).isEmpty();
+    assertThat(err.toString()).contains("matched 2 of 3 analysed classes.");
     Approvals.verify(out.toString().replace("\r\n", "\n"));
   }
 
   @Test
-  void aClassTheCoverageReportDoesNotKnowCountsAsNotCovered() throws Exception {
+  void aClassTheCoverageReportDoesNotKnowHasNoCoverageAndNoRisk() throws Exception {
     final Path report = Files.writeString(tempDir.resolve("other.xml"),
         "<coverage><packages><package name=\"o\"><classes><class name=\"o.X\" line-rate=\"1.0\"/></classes></package></packages></coverage>");
 
     final int exitCode = run("churn", repo(3).toString(), "--coverage-cobertura", report.toString());
 
     assertThat(exitCode).isZero();
-    assertThat(out.toString()).contains("0.00%").contains("LOW").doesNotContain("N/A");
+    assertThat(out.toString()).contains("Coverage").contains("N/A").doesNotContain("CRITICAL").doesNotContain("0.00%");
+    assertThat(err.toString()).isEqualTo(
+        "Coverage report " + report + " matched none of the 3 analysed classes." + System.lineSeparator());
+  }
+
+  @Test
+  void aMismatchedReportGivesNullsInJsonAndKeepsTheColumnsInOtherReports() throws Exception {
+    final Path report = Files.writeString(tempDir.resolve("other.xml"),
+        "<coverage><packages><package name=\"o\"><classes><class name=\"o.X\" line-rate=\"1.0\"/></classes></package></packages></coverage>");
+    final Path repo = repo(15);
+    final Path json = tempDir.resolve("c.json");
+    final Path csv = tempDir.resolve("c.csv");
+
+    assertThat(run("churn", repo.toString(), "--coverage-cobertura", report.toString(), "-r", "json", "-f", json.toString()))
+        .isZero();
+    assertThat(run("churn", repo.toString(), "--coverage-cobertura", report.toString(), "-r", "csv", "-f", csv.toString()))
+        .isZero();
+
+    final JsonNode busy = new ObjectMapper().readTree(json.toFile()).at("/classes/churn.Busy");
+    assertThat(busy.get("coverage").isNull()).isTrue();
+    assertThat(busy.get("riskChurn").isNull()).isTrue();
+    assertThat(busy.get("riskLevel").isNull()).isTrue();
+    assertThat(Files.readString(csv)).startsWith("Class,File,Score,Churn,Times Changed,Risk Churn,Coverage,Risk Level");
+  }
+
+  @Test
+  void warnsWhenTheReportMatchesOnlySomeOfTheClasses() throws Exception {
+    final Path report = cobertura("0.5", "0.8");
+    Files.writeString(report, Files.readString(report).replace("<class name=\"churn.Light\" line-rate=\"0.8\"/>", ""));
+
+    assertThat(run("churn", repo(3).toString(), "--coverage-cobertura", report.toString())).isZero();
+
+    assertThat(err.toString()).isEqualTo(
+        "Coverage report " + report + " matched 1 of 3 analysed classes." + System.lineSeparator());
+  }
+
+  @Test
+  void doesNotWarnWhenTheReportMatchesEveryClass() throws Exception {
+    final Path report = Files.writeString(tempDir.resolve("all.xml"), """
+        <coverage><packages><package name="churn"><classes>
+          <class name="churn.Busy" line-rate="0.5"/><class name="churn.Light" line-rate="0.5"/>
+          <class name="churn.Calm" line-rate="0.5"/>
+        </classes></package></packages></coverage>""");
+
+    assertThat(run("churn", repo(3).toString(), "--coverage-cobertura", report.toString())).isZero();
+
+    assertThat(err.toString()).isEmpty();
   }
 
   @Test

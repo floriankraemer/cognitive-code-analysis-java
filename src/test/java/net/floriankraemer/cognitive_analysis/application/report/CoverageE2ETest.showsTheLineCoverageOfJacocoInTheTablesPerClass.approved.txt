@@ -2,6 +2,7 @@ Config: src/test/resources/fixtures/no-cache.yaml
 Cache: disabled
 
 Found 2 files. Starting analysis.
+Coverage report src/test/resources/fixtures/coverage/jacoco.xml matched 2 of 3 analysed classes.
 
 Class: shapes.Shapes
 File: src/test/resources/fixtures/coverage/Shapes.java

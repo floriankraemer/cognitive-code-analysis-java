@@ -1,9 +1,11 @@
 package net.floriankraemer.cognitive_analysis.coverage;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import net.floriankraemer.cognitive_analysis.config.MetricName;
 import net.floriankraemer.cognitive_analysis.domain.CognitiveMetrics;
 import net.floriankraemer.cognitive_analysis.domain.ScoredMethod;
@@ -28,6 +30,21 @@ public final class CoverageData {
   /** @param classes by fully qualified class name, nested classes separated by dots */
   CoverageData(final Map<String, ClassCoverage> classes) {
     this.classes = classes;
+  }
+
+  /**
+   * A warning when the report knows none or only some of the classes of the given methods; empty when it knows
+   * all of them or there are no methods.
+   */
+  public Optional<String> matchWarning(final String file, final Iterable<ScoredMethod> methods) {
+    final Set<String> analysed = new HashSet<>();
+    methods.forEach(method -> analysed.add(method.metrics().getClassName()));
+    final long matched = analysed.stream().filter(classes::containsKey).count();
+    if (analysed.isEmpty() || matched == analysed.size()) {
+      return Optional.empty();
+    }
+    final String matching = matched == 0 ? "none of the " + analysed.size() : matched + " of " + analysed.size();
+    return Optional.of("Coverage report " + file + " matched " + matching + " analysed classes.");
   }
 
   /** Sets the coverage of each method, to empty for those the report has no data on. */

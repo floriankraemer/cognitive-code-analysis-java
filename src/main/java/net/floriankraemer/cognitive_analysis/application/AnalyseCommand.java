@@ -163,7 +163,10 @@ public class AnalyseCommand implements Callable<Integer> {
       progress.clear();
       summary.endStage("analysis");
       // Coverage is applied to the analysed metrics, never to what the cache stores.
-      coverageData.ifPresent(data -> data.applyTo(analysed.methods()));
+      coverageData.ifPresent(data -> {
+        data.applyTo(analysed.methods());
+        data.matchWarning(coverage.file(), analysed.methods()).ifPresent(warnings::add);
+      });
 
       final List<ScoredMethod> methods = sorter.sort(analysed.methods());
       if (baseline != null) {

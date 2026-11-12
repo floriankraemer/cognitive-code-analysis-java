@@ -47,7 +47,7 @@ public final class ChurnCalculator {
 
   /**
    * As {@link #calculate(MetricsCollection, ChangeCounter)}, with the risk churn and risk level of each class
-   * when coverage data is given. A class the coverage data has no line coverage for counts as not covered at all.
+   * when coverage data is given. A class the coverage data has no line coverage for has none of the three.
    */
   public static List<ChurnMetrics> calculate(
       final MetricsCollection metrics, final ChangeCounter counter, final Optional<CoverageData> coverage)
@@ -68,7 +68,7 @@ public final class ChurnCalculator {
     classes.forEach((className, totals) -> {
       final double score = round(totals.score);
       final double churn = churn(totals.timesChanged, score);
-      final Double classCoverage = coverage.map(data -> data.classCoverage(className).orElse(0.0)).orElse(null);
+      final Double classCoverage = coverage.flatMap(data -> data.classCoverage(className)).orElse(null);
       result.add(new ChurnMetrics(
           className,
           totals.file,

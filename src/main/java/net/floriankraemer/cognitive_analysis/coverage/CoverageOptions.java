@@ -19,6 +19,11 @@ public final class CoverageOptions {
   @Option(names = "--coverage-clover", paramLabel = "<file>", description = "Clover XML coverage report.")
   String clover;
 
+  /** The file of the coverage option that was given, null when there is none. */
+  public String file() {
+    return jacoco != null ? jacoco : cobertura != null ? cobertura : clover;
+  }
+
   /**
    * Reads the coverage report that was given.
    *

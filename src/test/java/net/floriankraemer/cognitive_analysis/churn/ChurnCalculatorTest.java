@@ -132,7 +132,7 @@ class ChurnCalculatorTest {
     assertThat(result).containsExactly(
         new ChurnMetrics("pkg.A", "A.java", 10, 4, 40, 0.25, 30.0, RiskLevel.CRITICAL),
         new ChurnMetrics("pkg.B", "B.java", 10, 4, 40, 0.9, 4.0, RiskLevel.LOW),
-        new ChurnMetrics("pkg.C", "C.java", 1, 4, 4, 0.0, 4.0, RiskLevel.LOW));
+        new ChurnMetrics("pkg.C", "C.java", 1, 4, 4, null, null, null));
   }
 
   @Test
