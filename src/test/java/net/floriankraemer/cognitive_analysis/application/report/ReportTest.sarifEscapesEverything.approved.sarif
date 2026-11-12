@@ -1,0 +1,46 @@
+{
+  "$schema" : "https://json.schemastore.org/sarif-2.1.0.json",
+  "version" : "2.1.0",
+  "runs" : [ {
+    "tool" : {
+      "driver" : {
+        "name" : "cognitive-analysis",
+        "version" : "0.0.1-SNAPSHOT",
+        "informationUri" : "https://github.com/floriankraemer/cognitive-code-analysis-java",
+        "rules" : [ {
+          "id" : "cognitive-complexity",
+          "name" : "Cognitive Complexity",
+          "shortDescription" : {
+            "text" : "Method exceeds cognitive complexity threshold"
+          },
+          "defaultConfiguration" : {
+            "level" : "warning"
+          },
+          "properties" : {
+            "precision" : "high"
+          }
+        } ]
+      }
+    },
+    "results" : [ {
+      "ruleId" : "cognitive-complexity",
+      "level" : "error",
+      "message" : {
+        "text" : "Method m|\"q\"&'s' äöü 日本 😀 has cognitive complexity 3.0 (threshold: 0.5)"
+      },
+      "locations" : [ {
+        "physicalLocation" : {
+          "artifactLocation" : {
+            "uri" : "src/<dir>/F|le.java"
+          },
+          "region" : {
+            "startLine" : 1
+          }
+        }
+      } ],
+      "partialFingerprints" : {
+        "primaryLocationLineHash" : "acd729a1a94110f06e1716bb43c503d146363393404801b797bb81f8f7198025"
+      }
+    } ]
+  } ]
+}

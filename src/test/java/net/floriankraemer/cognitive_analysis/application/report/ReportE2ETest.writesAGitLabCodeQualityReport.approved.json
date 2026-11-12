@@ -1,0 +1,12 @@
+[ {
+  "description" : "Method methodWithTwoArguments has cognitive complexity 2.2 (threshold: 0.5)",
+  "check_name" : "cognitive-complexity",
+  "fingerprint" : "9ecc8050cb9030b9ebdd2663d1d6bade811376f48085f34c27bddbb3066451b7",
+  "severity" : "blocker",
+  "location" : {
+    "path" : "src/test/resources/fixtures/sample/ClassToAnalyze.java",
+    "lines" : {
+      "begin" : 9
+    }
+  }
+} ]

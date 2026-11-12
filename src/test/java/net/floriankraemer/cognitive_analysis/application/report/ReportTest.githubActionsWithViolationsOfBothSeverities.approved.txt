@@ -1,0 +1,3 @@
+::warning file=src/Levels.java,line=2::Method warning has cognitive complexity 0.8 (threshold: 0.5)
+::error file=src/Levels.java,line=3::Method error has cognitive complexity 1.0 (threshold: 0.5)
+::error file=src/Levels.java,line=4::Method blocker has cognitive complexity 1.5 (threshold: 0.5)

@@ -1,0 +1,34 @@
+[ {
+  "description" : "Method warning has cognitive complexity 0.8 (threshold: 0.5)",
+  "check_name" : "cognitive-complexity",
+  "fingerprint" : "6db70f541fcde3864a8c95619f80764a46b22a9bdca6d80b173af91028a75da8",
+  "severity" : "major",
+  "location" : {
+    "path" : "src/Levels.java",
+    "lines" : {
+      "begin" : 2
+    }
+  }
+}, {
+  "description" : "Method error has cognitive complexity 1.0 (threshold: 0.5)",
+  "check_name" : "cognitive-complexity",
+  "fingerprint" : "35b187be180e9512c2265784f12e8bd08a347676e20001839a9a65cfd408bd42",
+  "severity" : "critical",
+  "location" : {
+    "path" : "src/Levels.java",
+    "lines" : {
+      "begin" : 3
+    }
+  }
+}, {
+  "description" : "Method blocker has cognitive complexity 1.5 (threshold: 0.5)",
+  "check_name" : "cognitive-complexity",
+  "fingerprint" : "b6f6f9a8fbce0d37e88ca47f5f30074a95c2231491a1c1ea36bab6fe42514303",
+  "severity" : "blocker",
+  "location" : {
+    "path" : "src/Levels.java",
+    "lines" : {
+      "begin" : 4
+    }
+  }
+} ]

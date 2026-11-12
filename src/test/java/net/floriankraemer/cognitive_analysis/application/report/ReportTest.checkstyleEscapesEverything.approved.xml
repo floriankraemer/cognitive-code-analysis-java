@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<checkstyle version="8.0">
+  <file name="src/&lt;dir&gt;/F|le.java">
+    <error column="1" line="1" message="Method m|&quot;q&quot;&amp;'s' äöü 日本 &#128512; has cognitive complexity 3.0 (threshold: 0.5)" severity="error" source="CognitiveComplexity"/>
+  </file>
+</checkstyle>

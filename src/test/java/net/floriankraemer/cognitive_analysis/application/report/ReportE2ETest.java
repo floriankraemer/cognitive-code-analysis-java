@@ -84,6 +84,31 @@ class ReportE2ETest {
   }
 
   @Test
+  void writesACheckstyleReport() throws Exception {
+    Approvals.verify(normalized(report("checkstyle", "xml")), new Options().forFile().withExtension(".xml"));
+  }
+
+  @Test
+  void writesAJUnitReport() throws Exception {
+    Approvals.verify(normalized(report("junit", "xml")), new Options().forFile().withExtension(".xml"));
+  }
+
+  @Test
+  void writesASarifReport() throws Exception {
+    Approvals.verify(normalized(report("sarif", "sarif")), new Options().forFile().withExtension(".sarif"));
+  }
+
+  @Test
+  void writesAGitLabCodeQualityReport() throws Exception {
+    Approvals.verify(normalized(report("GitLab-CodeQuality", "json")), new Options().forFile().withExtension(".json"));
+  }
+
+  @Test
+  void writesAGitHubActionsReport() throws Exception {
+    Approvals.verify(normalized(report("github-actions", "txt")), new Options().forFile().withExtension(".txt"));
+  }
+
+  @Test
   void keysTheSameClassInTwoFilesByClassAndFileInTheJsonReport() throws Exception {
     final Path report = tempDir.resolve("report.json");
 
@@ -122,7 +147,8 @@ class ReportE2ETest {
 
     assertThat(exitCode).isEqualTo(1);
     assertThat(out.toString()).isEmpty();
-    assertThat(err.toString()).contains("Invalid report type 'xml'. Expected one of: json, csv, html, markdown.");
+    assertThat(err.toString()).contains("Invalid report type 'xml'. Expected one of: json, csv, html, markdown,"
+        + " checkstyle, junit, sarif, gitlab-codequality, github-actions.");
     assertThat(report).doesNotExist();
   }
 

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites errors="0" failures="3" name="Cognitive Complexity" tests="4">
+  <testsuite errors="0" failures="3" name="Cognitive Complexity" tests="4">
+    <testcase classname="a.Levels" name="atThreshold" time="0"/>
+    <testcase classname="a.Levels" name="warning" time="0">
+      <failure message="Cognitive complexity 0.8 exceeds threshold 0.5" type="CognitiveComplexity"/>
+    </testcase>
+    <testcase classname="a.Levels" name="error" time="0">
+      <failure message="Cognitive complexity 1.0 exceeds threshold 0.5" type="CognitiveComplexity"/>
+    </testcase>
+    <testcase classname="a.Levels" name="blocker" time="0">
+      <failure message="Cognitive complexity 1.5 exceeds threshold 0.5" type="CognitiveComplexity"/>
+    </testcase>
+  </testsuite>
+</testsuites>

@@ -1,9 +1,5 @@
 package net.floriankraemer.cognitive_analysis.application.report;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.util.DefaultIndenter;
-import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Clock;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -23,9 +19,6 @@ import net.floriankraemer.cognitive_analysis.domain.ScoredMethod;
  */
 final class JsonReport implements Report {
 
-  private static final DefaultPrettyPrinter PRINTER =
-      new DefaultPrettyPrinter().withObjectIndenter(new DefaultIndenter("  ", "\n"));
-
   JsonReport(final CognitiveConfig config, final Clock clock) {
     // The JSON report has no use for either.
   }
@@ -34,11 +27,7 @@ final class JsonReport implements Report {
   public String render(final List<ScoredMethod> metrics) throws CognitiveAnalysisException {
     final Map<String, Object> classes = new LinkedHashMap<>();
     ReportSupport.byClass(ReportSupport.rows(metrics)).forEach((key, rows) -> classes.put(key, toClass(rows)));
-    try {
-      return new ObjectMapper().writer(PRINTER).writeValueAsString(classes) + "\n";
-    } catch (JsonProcessingException e) {
-      throw new CognitiveAnalysisException("Failed to serialize report to JSON", e);
-    }
+    return ReportSupport.toJson(classes) + "\n";
   }
 
   private static Map<String, Object> toClass(final List<Row> rows) {
