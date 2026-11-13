@@ -10,12 +10,20 @@ import picocli.CommandLine.Command;
     name = "cognitive-analysis",
     subcommands = {AnalyseCommand.class, ChurnCommand.class, InitCommand.class},
     mixinStandardHelpOptions = true,
-    version = "cognitive-analysis 0.0.1",
+    versionProvider = App.Version.class,
     exitCodeOnInvalidInput = 1
 )
 public class App {
 
   public static void main(final String[] args) {
     System.exit(new CommandLine(new App()).execute(args));
+  }
+
+  /** Prints the version Maven filtered into the build, so a release jar shows its tag. */
+  static final class Version implements CommandLine.IVersionProvider {
+    @Override
+    public String[] getVersion() {
+      return new String[] {"cognitive-analysis " + BuildInfo.version().orElse("unknown")};
+    }
   }
 }

@@ -4,10 +4,12 @@ Cognitive Code Analysis measures how hard methods are to understand, in Java and
 It reports a cognitive complexity score per method, next to the metrics that explain it, and it can write the results as console tables, reports for CI systems, and baselines to compare against.
 Java and Kotlin files are measured with the same metrics, so mixed projects can be analysed in one run.
 
-## Requirements and build
+## Requirements and installation
 
-The tool needs Java 21 to run and to build.
-Build the executable jar with the Maven wrapper:
+The tool needs Java 21 to run.
+Download `cognitive-analysis.jar` from the [latest release](https://github.com/floriankraemer/cognitive-code-analysis-java/releases/latest) and run it with `java -jar cognitive-analysis.jar`.
+
+To build the jar yourself, use the Maven wrapper:
 
 ```bash
 ./mvnw -B verify

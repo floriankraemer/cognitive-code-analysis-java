@@ -1,0 +1,65 @@
+name: Build and Release JAR
+
+on:
+  push:
+    tags:
+      - '*'
+
+permissions:
+  contents: read
+
+jobs:
+  build-jar:
+    name: Build JAR
+    runs-on: ubuntu-24.04
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v7
+
+    - name: Set up JDK 21
+      uses: actions/setup-java@v6
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+        cache: maven
+
+    - name: Inject version from tag
+      run: ./mvnw -B -q versions:set -DnewVersion="${{ github.ref_name }}" -DgenerateBackupPoms=false
+
+    - name: Verify and build the jar
+      run: ./mvnw -B verify
+
+    - name: Check the jar version
+      run: |
+        actual="$(java -jar target/cognitive-analysis.jar --version)"
+        test "$actual" = "cognitive-analysis ${{ github.ref_name }}" || { echo "Unexpected version: $actual"; exit 1; }
+
+    - name: Upload JAR artifact
+      uses: actions/upload-artifact@v7
+      with:
+        name: cognitive-analysis.jar
+        path: target/cognitive-analysis.jar
+
+  release:
+    name: Create Release
+    needs: build-jar
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+
+    steps:
+    - name: Download JAR artifact
+      uses: actions/download-artifact@v8
+      with:
+        name: cognitive-analysis.jar
+
+    - name: Create GitHub Release
+      uses: ncipollo/release-action@v1
+      with:
+        artifacts: cognitive-analysis.jar
+        token: ${{ secrets.GITHUB_TOKEN }}
+        tag: ${{ github.ref_name }}
+        name: Release ${{ github.ref_name }}
+        draft: true
+        generateReleaseNotes: true
