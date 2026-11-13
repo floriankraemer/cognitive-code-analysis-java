@@ -283,6 +283,8 @@
 						<param>net.floriankraemer.cognitive_analysis.report.*</param>
 					</targetClasses>
 					<mutationThreshold>80</mutationThreshold>
+					<timeoutConstant>10000</timeoutConstant>
+					<timeoutFactor>2.0</timeoutFactor>
 					<timestampedReports>false</timestampedReports>
 					<outputFormats>
 						<outputFormat>HTML</outputFormat>

@@ -104,12 +104,14 @@ public class ChurnCommand implements Callable<Integer> {
     if (!SUPPORTED_VCS.equals(vcs)) {
       return "Unknown VCS type: " + vcs + ". Supported: " + SUPPORTED_VCS;
     }
+    final LocalDate sinceDate;
     try {
-      LocalDate.parse(since);
-      return null;
+      sinceDate = LocalDate.parse(since);
     } catch (DateTimeParseException e) {
       return "Invalid --since date '" + since + "'. Expected format: YYYY-MM-DD.";
     }
+    // git misreads dates far ahead and reports the full history, so such a date is refused instead.
+    return sinceDate.isAfter(LocalDate.now(clock)) ? "--since must not be in the future." : null;
   }
 
   private void run(final PrintWriter err) throws CognitiveAnalysisException {
