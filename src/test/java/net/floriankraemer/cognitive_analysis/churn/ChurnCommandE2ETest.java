@@ -26,6 +26,7 @@ class ChurnCommandE2ETest {
   private final StringWriter out = new StringWriter();
   private final StringWriter err = new StringWriter();
   private String gitExecutable = "git";
+  private Instant now = Instant.parse("2023-10-01T12:00:00Z");
 
   /**
    * A repository with the fixture classes: Busy changed three times, Light twice, Calm once. The last two
@@ -71,6 +72,7 @@ class ChurnCommandE2ETest {
   @Test
   void sinceLimitsTheCountedChanges() throws Exception {
     final Path repo = repoWithHistory();
+    now = Instant.parse("2025-01-01T12:00:00Z");
 
     assertThat(run("churn", repo.toString(), "-s", "2024-03-01")).isZero();
 
@@ -82,11 +84,42 @@ class ChurnCommandE2ETest {
   @Test
   void aSinceDateAfterAllCommitsLeavesAnEmptyTable() throws Exception {
     final Path repo = repoWithHistory();
+    now = Instant.parse("2030-06-01T12:00:00Z");
 
     assertThat(run("churn", repo.toString(), "--since", "2030-01-01")).isZero();
 
     assertThat(table(out.toString())).isEmpty();
     assertThat(out.toString()).contains("Class").contains("Times Changed");
+  }
+
+  @Test
+  void acceptsTodayAsTheSinceDate() throws Exception {
+    final Path repo = repoWithHistory();
+    now = Instant.parse("2025-01-01T23:59:59Z");
+
+    assertThat(run("churn", repo.toString(), "--since", "2025-01-01")).isZero();
+
+    assertThat(err.toString()).isEmpty();
+  }
+
+  @Test
+  void failsOnASinceDateInTheFuture() throws Exception {
+    final Path repo = repoWithHistory();
+
+    assertThat(run("churn", repo.toString(), "--since", "2023-10-02")).isEqualTo(1);
+
+    assertThat(out.toString()).isEmpty();
+    assertThat(err.toString()).isEqualTo("--since must not be in the future" + System.lineSeparator());
+  }
+
+  @Test
+  void failsOnAFarFutureSinceDateInsteadOfListingTheFullHistory() throws Exception {
+    final Path repo = repoWithHistory();
+
+    assertThat(run("churn", repo.toString(), "--since", "2999-01-01")).isEqualTo(1);
+
+    assertThat(out.toString()).isEmpty();
+    assertThat(err.toString()).isEqualTo("--since must not be in the future" + System.lineSeparator());
   }
 
   @Test
@@ -247,7 +280,7 @@ class ChurnCommandE2ETest {
     commandLine.setOut(new PrintWriter(out, true));
     commandLine.setErr(new PrintWriter(err, true));
     final ChurnCommand churn = (ChurnCommand) commandLine.getSubcommands().get("churn").getCommand();
-    churn.clock = Clock.fixed(Instant.parse("2023-10-01T12:00:00Z"), ZoneOffset.UTC);
+    churn.clock = Clock.fixed(now, ZoneOffset.UTC);
     churn.gitExecutable = gitExecutable;
     // A run without a configuration of its own gets the no-cache fixture, so no test writes a cache into the project.
     final java.util.List<String> effective = new java.util.ArrayList<>(java.util.List.of(args));

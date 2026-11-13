@@ -32,7 +32,7 @@ The console shows the classes with a score and a churn above zero.
 | --- | --- | --- |
 | `<path>` | required | Comma-separated Java and Kotlin files and directories; directories are searched recursively. |
 | `-c`, `--config <file>` | `./jcca.yaml` if it exists | YAML configuration file, see [Configuration](./Configuration.md#choosing-a-configuration-file). |
-| `-s`, `--since <date>` | `2000-01-01` | Count the changes since the start of this day, in the format `YYYY-MM-DD`. |
+| `-s`, `--since <date>` | `2000-01-01` | Count the changes since the start of this day, in the format `YYYY-MM-DD`, not after today. |
 | `--vcs <type>` | `git` | Version control system. Only `git` is supported. |
 | `-r`, `--report-type <type>` | console table | `json`, `csv`, `html`, `markdown`, `svg-treemap` or `svg`, in any letter case. `svg` is an alias of `svg-treemap`. A key of `customReporters.churn` is also accepted, see [Custom Reporters](./Custom-Reporters.md). |
 | `-f`, `--report-file <file>` | none | The file the report is written to. |
@@ -48,7 +48,8 @@ Only one coverage option can be given.
 The command needs a `git` executable on the `PATH`, and the analysed files must be inside a git repository.
 Otherwise it prints `git executable not found` or `Not a git repository: <directory>` and exits with status 1.
 
-Changes are counted with `git rev-list --since=<date> --no-merges --count HEAD -- <file>`, so the history of the current branch is used.
+Changes are counted with `git --literal-pathspecs rev-list --since=<date> --no-merges --count HEAD -- <file>`, so the history of the current branch is used.
+File names are matched literally, even when they contain glob characters such as `[`.
 The history must be complete, so a shallow clone can report fewer changes than it has.
 
 ## Reports
