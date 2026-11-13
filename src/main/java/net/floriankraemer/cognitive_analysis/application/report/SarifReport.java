@@ -1,17 +1,14 @@
 package net.floriankraemer.cognitive_analysis.application.report;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import net.floriankraemer.cognitive_analysis.BuildInfo;
 import net.floriankraemer.cognitive_analysis.CognitiveAnalysisException;
 import net.floriankraemer.cognitive_analysis.application.report.ReportSupport.Row;
 import net.floriankraemer.cognitive_analysis.config.CognitiveConfig;
@@ -29,7 +26,6 @@ final class SarifReport implements Report {
   private static final String RULE_ID = "cognitive-complexity";
   private static final String TOOL_NAME = "cognitive-analysis";
   private static final String INFORMATION_URI = "https://github.com/floriankraemer/cognitive-code-analysis-java";
-  private static final String BUILD_RESOURCE = "/jcca-build.properties";
   /** The SARIF base for paths relative to the working directory, the source root of the run. */
   private static final String SRCROOT = "%SRCROOT%";
   /** A path with a drive letter, such as {@code C:/work/A.java}. */
@@ -57,7 +53,7 @@ final class SarifReport implements Report {
   private Map<String, Object> run(final List<Map<String, Object>> results) {
     final Map<String, Object> driver = new LinkedHashMap<>();
     driver.put("name", TOOL_NAME);
-    toolVersion().ifPresent(version -> driver.put("version", version));
+    BuildInfo.version().ifPresent(version -> driver.put("version", version));
     driver.put("informationUri", INFORMATION_URI);
     driver.put("rules", List.of(rule()));
 
@@ -143,20 +139,5 @@ final class SarifReport implements Report {
     return (character >= 'A' && character <= 'Z') || (character >= 'a' && character <= 'z')
         || (character >= '0' && character <= '9') || character == '-' || character == '.'
         || character == '_' || character == '~';
-  }
-
-  /** The version of this build, or empty when the build did not filter it in. */
-  private static Optional<String> toolVersion() {
-    try (InputStream in = SarifReport.class.getResourceAsStream(BUILD_RESOURCE)) {
-      if (in == null) {
-        return Optional.empty();
-      }
-      final Properties properties = new Properties();
-      properties.load(in);
-      final String version = properties.getProperty("version");
-      return version == null || version.contains("${") ? Optional.empty() : Optional.of(version);
-    } catch (IOException e) {
-      return Optional.empty();
-    }
   }
 }
