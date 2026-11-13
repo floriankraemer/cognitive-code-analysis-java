@@ -109,7 +109,7 @@ class ChurnCommandE2ETest {
     assertThat(run("churn", repo.toString(), "--since", "2023-10-02")).isEqualTo(1);
 
     assertThat(out.toString()).isEmpty();
-    assertThat(err.toString()).isEqualTo("--since must not be in the future" + System.lineSeparator());
+    assertThat(err.toString()).isEqualTo("--since must not be in the future." + System.lineSeparator());
   }
 
   @Test
@@ -119,7 +119,7 @@ class ChurnCommandE2ETest {
     assertThat(run("churn", repo.toString(), "--since", "2999-01-01")).isEqualTo(1);
 
     assertThat(out.toString()).isEmpty();
-    assertThat(err.toString()).isEqualTo("--since must not be in the future" + System.lineSeparator());
+    assertThat(err.toString()).isEqualTo("--since must not be in the future." + System.lineSeparator());
   }
 
   @Test
