@@ -47,7 +47,8 @@ public final class GitChangeCounter implements ChangeCounter {
 
   private Process start(final Path file) throws CognitiveAnalysisException {
     final ProcessBuilder builder = new ProcessBuilder(
-        executable, "-C", file.getParent().toString(), "rev-list", "--since=" + since + " 00:00:00", "--no-merges",
+        executable, "--literal-pathspecs", "-C", file.getParent().toString(), "rev-list",
+        "--since=" + since + " 00:00:00", "--no-merges",
         "--count", "HEAD", "--", file.toString());
     builder.environment().put("LC_ALL", "C"); // stable messages, so that "not a git repository" is recognisable
     try {

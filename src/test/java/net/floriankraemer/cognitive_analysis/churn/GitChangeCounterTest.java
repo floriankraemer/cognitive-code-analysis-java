@@ -56,6 +56,22 @@ class GitChangeCounterTest {
   }
 
   @Test
+  void readsFileNamesWithGlobCharactersLiterally() throws Exception {
+    final TempGitRepo repo = TempGitRepo.init(tempDir);
+    final Path bracketed = repo.write("C[1].java", "class C {}\n");
+    final Path plain = repo.write("C1.java", "class C {}\n");
+    repo.commitAll("add", "2010-01-01T12:00:00+0000");
+    repo.write("C1.java", "class C { int x; }\n");
+    repo.commitAll("change c1", "2024-01-01T12:00:00+0000");
+    repo.write("C1.java", "class C { int y; }\n");
+    repo.commitAll("change c1 again", "2024-06-01T12:00:00+0000");
+
+    // as a glob, C[1].java would match C1.java and report its three commits
+    assertThat(counter("2000-01-01").count(bracketed)).isEqualTo(1);
+    assertThat(counter("2000-01-01").count(plain)).isEqualTo(3);
+  }
+
+  @Test
   void doesNotCountMergeCommits() throws Exception {
     final TempGitRepo repo = TempGitRepo.init(tempDir);
     final Path a = repo.write("A.java", "class A {}\n");
